@@ -1,0 +1,10 @@
+#
+# Copy this file to /etc/udev/rules.d/
+# Once connected through USB, Power supply will appear
+# as serial port /dev/ttyUSB-QL355TP
+#
+# -------- QL355TP Power Supply -------------------
+#
+# SUBSYSTEMS=="usb-serial", DRIVERS=="ftdi_sio", ATTRS{idVendor}=="103e", ATTRS{idProduct}=="03e8", ATTRS{interface}=="QL355TP Power Supply", SYMLINK+="ttyUSB-TTiQL355TP"
+ATTRS{interface}=="QL355TP Power Supply", SYMLINK+="ttyUSB-TTiQL355TP"
+

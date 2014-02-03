@@ -1,0 +1,132 @@
+#! /usr/bin/env python
+
+import sys
+import os, os.path
+import subprocess
+import time
+
+# COMMUNITY = "raritan_public"
+COMMUNITY = "raritan_private"
+SNMPGET = "snmpget"
+SNMPSET = "snmpset"
+SNMP_OPTIONS = ["-v2c", "-Ovq", "-c", COMMUNITY]
+PORT = 161
+OID_PREFIX = "1.3.6.1.4.1.13742.4.1.2.2.1.3"
+
+outlets = { 'dicehead-rpc': { "PC-LEDs":            1,
+                              "Outlet 2":           2,
+                              "POWER-SUPPLY-LEDs":  3,
+                              "MOTORS-LENS-PLANET": 4,
+                              "MOTORS-TX-TY":       5,
+                              "Outlet 6":           6,
+                              "Outlet 7":           7,
+                              "Outlet 8":           8 },
+            #
+            'diceclap-rpc': { "Outlet 1":           1,
+                              "Outlet 2":           2,
+                              "Outlet 3":           3,
+                              "Outlet 4":           4,
+                              "Outlet 5":           5,
+                              "Outlet 6":           6,
+                              "CLAP-POWER":         7,
+                              "CLAP-PC":            8 }
+            }
+
+hosts = outlets.keys()
+
+def get_status(host, outlet):
+    oid = OID_PREFIX + "." + str(outlet)
+    cmd = [SNMPGET] + SNMP_OPTIONS + [host  + ":" + str(PORT)] + [oid]
+    cmd = " ".join(cmd)
+    # print cmd
+    output = subprocess.Popen(cmd, stdout = subprocess.PIPE, shell=True).communicate()[0]
+    # print output
+    return bool(int(output))
+    # os.system(cmd)
+
+def set_status(host, outlet, on):
+    oid = OID_PREFIX + "." + str(outlet)
+    cmd = [SNMPSET] + SNMP_OPTIONS + [host  + ":" + str(PORT)] + \
+        [oid] + ["i"] + [str(int(on))]
+    cmd = " ".join(cmd)
+    # print cmd
+    output = subprocess.Popen(cmd, stdout = subprocess.PIPE, shell=True).communicate()[0]
+    # print output
+    return bool(int(output))
+    # os.system(cmd)
+
+
+def display(host, outlet):
+    result = get_status(host, outlet)
+    print "RPC " + host + ": " + outlet,
+    if result:
+        print "ON"
+    else:
+        print "OFF"
+
+
+def usage():
+    print >>sys.stderr, "usage: rpc-on-off <host> <outlet> [ON|OFF]"
+
+
+host = None
+outlet = None
+on = None  # True / False
+
+# print sys.argv
+
+if len(sys.argv) < 3:
+    usage()
+    sys.exit(1)
+
+host   = sys.argv[1]
+outlet = sys.argv[2]
+
+if outlet not in ["1","2","3","4","5","6","7","8","all"]:
+    if host in hosts:
+        if outlet in outlets[host].keys():
+            outlet = str(outlets[host][outlet])
+        else:
+            print >>sys.stderr, "error: Unknown outlet on this device"
+            sys.exit(2)
+
+if outlet.upper() == "ALL":
+    outlets_to_look = ["1","2","3","4","5","6","7","8"]
+    # outlets_to_look = ["2","3","4","5","6","7","8"]
+else:
+    outlets_to_look = [outlet]
+
+
+if len(sys.argv) == 4:
+    on_arg = sys.argv[3]
+    on_arg = on_arg.upper()
+    if (on_arg == "ON") or (on_arg == "1"):
+        on = True
+    elif (on_arg == "OFF") or (on_arg == "0"):
+        on = False
+    else:
+        usage()
+        sys.exit(1)
+
+
+for outl in outlets_to_look:
+    display(host, outl) # If no ON/OFF, just display the state
+
+if on in [True, False]:
+    for outl in outlets_to_look:
+        result = set_status(host, outl, on)
+        time.sleep(0.5)
+        display(host, outl)
+
+# snmpget -v2c -c raritan_public dicehead-rpc:161 1.3.6.1.4.1.13742.4.1.2.2.1.2.4
+# SNMPv2-SMI::enterprises.13742.4.1.2.2.1.2.4 = label outlet 4
+
+
+# snmpget -v2c -c raritan_public dicehead-rpc:161 1.3.6.1.4.1.13742.4.1.2.2.1.3.5
+
+# snmpset -v2c -c raritan_public dicehead-rpc:161 1.3.6.1.4.1.13742.4.1.2.2.1.3.5 i 1
+
+# snmpset -v2c -c raritan_public dicehead-rpc:161 1.3.6.1.4.1.13742.4.1.2.2.1.3.5 i 0
+
+
+

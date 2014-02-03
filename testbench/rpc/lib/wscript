@@ -1,0 +1,7 @@
+# -*- mode: python; -*- 
+
+def build(bld):
+    
+    bld.install_as('${PREFIX}/bin/rpc-on-off', 
+                   'rpc-on-off', 
+                   chmod=0755)

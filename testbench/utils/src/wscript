@@ -1,0 +1,14 @@
+# -*- mode: python; -*- 
+
+def build(bld):
+
+    bld(features = 'c cshlib pyext', 
+        source = 'pulse_wrapper.c pulse.c', 
+        target = 'pulse_wrapper',
+        includes = ['.'],
+        lib = [],
+        use = ['m'],
+        install_path = '${PYTHONDIR}/lsst/testbench/utils')
+
+
+

@@ -1,0 +1,227 @@
+#!/usr/bin/env python
+
+# ============================================================================
+
+import sys
+import os, os.path
+import getopt
+import pyinotify
+import Gnuplot
+
+# ======================================================================
+
+def usage():
+    print "Usage: livegraph [--options <opts>] <datafile> [<columns>]"
+
+def help():
+    print "Usage: livegraph [--options <opts>] <datafile> [<columns>]"
+    print ""
+    print "Options:"
+    print "     -h, --help             give this help message."
+    print ""
+
+# ============================================================================
+
+# ---- parse command line -------------
+
+try:
+    opts, args = \
+        getopt.getopt(sys.argv[1:], "hvdo:", \
+                          ["help", "verbose","debug","options=", 
+                           "xlabel=", "ylabel=", "title="])
+except getopt.GetoptError:
+    # print help information and exit
+    usage()
+    sys.exit(1)
+        
+verbose = False
+debug = False
+options = "lp"   
+column_spec = ""
+
+xlabel = None
+ylabel = None
+title = None
+
+for option, arg in opts:
+    if option in ("-h", "--help"):
+        help()
+        sys.exit(0)
+    if option in ("-d", "--debug"):
+        debug = True
+    if option in ("-v", "--verbose"):
+        verbose = True
+    if option in ("-o", "--options"):
+        options = arg
+    if option in ("--xlabel",):
+        xlabel = arg
+    if option in ("--ylabel",):
+        ylabel = arg
+    if option in ("--title",):
+        title = arg
+
+if len(args) < 1:
+    usage()
+    sys.exit(1)
+
+datafile = args[0]
+
+if len(args) >= 2:
+    column_spec = args[1]
+
+if column_spec == "":
+    # default column spec
+    if "splot" in options:
+        column_spec = "1:2:3"
+    else:
+        column_spec = "1:2"
+
+print "datafile    = ", datafile
+print "column_spec = ", column_spec
+
+# ============================================================================
+
+g = Gnuplot.Gnuplot()
+
+config_commands = []
+draw_command = ""
+
+if "splot" in options:
+    draw_command += "splot "
+else:
+    draw_command += "plot "
+
+draw_command += '"' + datafile + '" '
+
+draw_command += 'using ' + column_spec
+
+draw_options = []
+
+if "linepoints" in options:
+    draw_options.append('linepoints')
+elif "lines" in options:
+    draw_options.append('lines')
+elif "points" in options:
+    draw_options.append('points')
+
+if len(draw_options) >= 1:    
+    draw_command += " with " + " ".join(draw_options)
+
+print "draw_command = [", draw_command, "]"
+
+if title:
+    config_commands.append('set title "%s"' % title)
+if xlabel:
+    config_commands.append('set xlabel "%s"' % xlabel)
+if ylabel:
+    config_commands.append('set ylabel "%s"' % ylabel)
+    
+if "logx" in options:
+    config_commands.append("set logscale x")
+if "logy" in options:
+    config_commands.append("set logscale y")
+if "logz" in options:
+    config_commands.append("set logscale z")
+
+config_command = ";".join(config_commands)
+
+print "config_command = [", config_command, "]"
+
+# ============================================================================
+
+class ProcessDataFile(pyinotify.ProcessEvent):
+
+    def my_init(self, datafile = datafile, gnuplot_instance = g, gnuplot_command = draw_command, gnuplot_config = config_command):
+        # print "INIT"
+        print >>sys.stderr, "Starting monitor on data file %s." % datafile
+        self.gnuplot_instance = gnuplot_instance
+        self.datafile = datafile
+        self.gnuplot_command = gnuplot_command
+        self.gnuplot_config = gnuplot_config
+        self.columns = {}
+        self.already_drawn = False
+
+        self.draw()
+
+
+    def draw(self):
+        print >>sys.stderr, "Update graph from data file %s." % self.datafile
+        if not(self.already_drawn):
+            if not(os.path.isfile(self.datafile)):
+                # File does not yet exist
+                return
+
+            f = open(self.datafile, 'r')
+            lines = f.readlines()
+            lines = [l.strip() for l in lines]
+            # print lines
+            f.close()
+            # print "N lines = ", len(lines)
+            if len(lines) < 1:
+                # empty file (or no data): wait
+                pass
+            else:
+                for line in lines:
+                    if len(line) == 0:
+                        continue
+                    elif (len(line) > 0) and (line[0] == '#'):
+                        continue
+                    else:
+                        # there are some data: let's plot the data
+                        self.gnuplot_instance(self.gnuplot_config)
+                        self.gnuplot_instance(self.gnuplot_command)
+                        self.already_drawn = True
+                        break
+        else:
+            self.gnuplot_instance("reread; replot")
+
+
+    def process_IN_MODIFY(self, event):
+        # print "MODIFY"
+        # We have explicitely registered for this kind of event.
+        # print '\t', event.pathname, ' -> written'
+        # self.gnuplot_instance("plot '%s' u 1:2 w lp" % self.datafile)
+        #
+        # Check the number of lines in the datafile
+        # and analyse datafile header (comments '#')
+        print >>sys.stderr, "File %s has been modified." % self.datafile
+        self.draw()
+
+    # def process_default(self, event):
+    #     # Implicitely IN_CREATE and IN_DELETE are watched too. You can
+    #     # ignore them and provide an empty process_default or you can
+    #     # process them, either with process_default or their dedicated
+    #     # method (process_IN_CREATE, process_IN_DELETE) which would
+    #     # override process_default.
+    #     print 'default: ', event.maskname
+
+    def process_IN_CREATE(self, event):
+        # File has just been created
+        # parse columns ? 
+        # Open gnuplot window
+        # print "CREATE", event.maskname, event.name
+        print >>sys.stderr, "File %s has been created." % self.datafile
+        self.draw()
+
+
+    def process_IN_DELETE(self, event):
+        # print "DELETE", event.maskname, event.name
+        print >>sys.stderr, "File %s has been removed. Quit." % self.datafile
+        # close the gnuplot window
+        sys.exit(0)
+
+# ============================================================================
+
+print "[1]"
+wm = pyinotify.WatchManager()
+print "[2]"
+notifier = pyinotify.Notifier(wm)
+# In this case you must give the class object (ProcessTransientFile)
+# as last parameter not a class instance.
+# wm.watch_transient_file(datafile, pyinotify.IN_MODIFY, ProcessDataFile)
+wm.watch_transient_file(datafile, pyinotify.IN_MODIFY, ProcessDataFile)
+print "[4]"
+notifier.loop()
+print "[5]"
+
+# ============================================================================

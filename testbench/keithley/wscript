@@ -1,0 +1,29 @@
+# -*- mode: python; -*- 
+
+APPNAME = 'lsst-testbench-keithley'
+VERSION = '0.0.1'
+top = '.'
+build = 'build'
+
+# submodules = ['keithley2000']
+# submodules = ['keithley2000', 'keithley6514']
+
+def options(ctx):
+    ctx.load('python')        
+    ctx.load('compiler_c')
+
+def configure(ctx):
+    ctx.load('python')
+    ctx.load('compiler_c')
+    ctx.check_python_headers()
+    
+def build(ctx):
+    ctx(features = 'py', 
+        # source = ctx.path.ant_glob('*.py'), 
+        source = ['__init__.py', 'keithley2000.py', 'keithley6514.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/keithley')
+
+    # ctx.recurse(submodules)
+
+
+    

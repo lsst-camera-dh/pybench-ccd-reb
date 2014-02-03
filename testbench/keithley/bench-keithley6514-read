@@ -1,0 +1,75 @@
+#! /usr/bin/env python
+
+import sys, os, os.path, getopt
+import subprocess
+import time
+
+import lsst.testbench.keithley.keithley6514 as multi
+
+# --------- Parse command line arguments ------------------
+
+def usage():
+    print >>sys.stderr, \
+        "usage: bench-keithley6514-read [port]"
+
+# ---- parse command line -------------
+
+try:
+    opts, args = \
+        getopt.getopt(sys.argv[1:], "hvrnp:", \
+                          ["help", "verbose", "no-init", "port="])
+except getopt.GetoptError:
+    # print help information and exit
+    usage()
+    sys.exit(1)
+        
+# print opts
+# print args
+
+init = True
+port = "/dev/ttyS3"
+    
+for option, arg in opts:
+    if option in ("-h", "--help"):
+        help()
+        sys.exit(0)
+    if option in ("-v", "--verbose"):
+        verbose = True
+    if option in ("-r", "--reset"):
+        reset = True
+    if option in ("-n", "--no-init"):
+        init = False
+    if option in ("-p", "--port"):
+        port = arg
+
+# --------- Init multimeter Keithley 6514 -----------------
+
+K = multi.Multimeter(port = port)
+
+K.open()
+if init:
+    K.reset()
+    K.write("CURR:RANG 2e-7")
+    K.write("FUNC 'CURR:DC'")
+    K.write("SYST:ZCH OFF")
+
+# --------- Read ------------------------------------------
+
+K.write("READ?")
+data_str = K.read()
+parts = data_str.split(',')
+if (len(parts) != 3):
+    print >>sys.stderr, "No data. stop."
+    sys.exit(2)
+
+flux = float(parts[0])
+print time.time(), flux
+
+# ---------------------------------------------------------
+
+K.close()
+
+# ---------------------------------------------------------
+
+
+

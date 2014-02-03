@@ -1,0 +1,30 @@
+# -*- mode: python; -*- 
+
+APPNAME = 'lsst-testbench'
+VERSION = '0.0.1'
+top = '.'
+build = 'build'
+
+submodules = ['keithley', 
+              'lakeshore', 
+              'powersupply']
+
+def options(ctx):
+    ctx.load('python')        
+    ctx.load('compiler_c')
+
+def configure(ctx):
+    ctx.load('python')
+    ctx.load('compiler_c')
+    ctx.check_python_headers()
+    
+def build(ctx):
+    ctx(features = 'py', 
+        # source = bld.path.ant_glob('*.py'), 
+        source = ['__init__.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench')
+
+    ctx.recurse(submodules)
+
+
+    

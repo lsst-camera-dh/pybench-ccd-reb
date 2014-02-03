@@ -1,0 +1,27 @@
+# -*- mode: python; -*- 
+
+APPNAME = 'lsst.testbench.utils'
+VERSION = '0.0.1'
+top = '.'
+build = 'build'
+
+def options(opt):
+    opt.load('python')        
+    opt.load('compiler_c')
+
+def configure(conf):
+    conf.load('python')
+    conf.load('compiler_c')
+    conf.check_python_headers()
+    
+def build(bld):
+    
+    bld(features = 'py', 
+        # source = bld.path.ant_glob('*.py'), 
+        source = ['__init__.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/utils')
+
+    bld.install_as('${PREFIX}/bin/livegraph', 
+                   'livegraph', 
+                   chmod=0755)
+

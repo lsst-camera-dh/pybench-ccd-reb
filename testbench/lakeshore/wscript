@@ -1,0 +1,28 @@
+# -*- mode: python; -*- 
+
+APPNAME = 'lsst.testbench.lakeshore'
+VERSION = '0.0.1'
+top = '.'
+build = 'build'
+
+def options(ctx):
+    ctx.load('python')        
+    ctx.load('compiler_c')
+
+def configure(ctx):
+    ctx.load('python')
+    ctx.load('compiler_c')
+    ctx.check_python_headers()
+    
+def build(ctx):
+    ctx(features = 'py', 
+        source = ctx.path.ant_glob('*.py'), 
+        # source = ['__init__.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/lakeshore')
+
+    ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
+                   'bench-lakeshore325-read', 
+                   chmod=0755)
+
+
+    
