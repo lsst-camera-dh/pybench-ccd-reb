@@ -1,12 +1,9 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-testbench-keithley'
+APPNAME = 'lsst.testbench.laser'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
-
-# submodules = ['keithley2000']
-# submodules = ['keithley2000', 'keithley6514']
 
 def options(ctx):
     ctx.load('python')        
@@ -20,10 +17,12 @@ def configure(ctx):
 def build(ctx):
     ctx(features = 'py', 
         source = ctx.path.ant_glob('*.py'), 
-        # source = ['__init__.py', 'keithley2000.py', 'keithley6514.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/keithley')
+        # source = ['__init__.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/lakeshore')
 
-    # ctx.recurse(submodules)
+    ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
+                   'bench-lakeshore325-read', 
+                   chmod=0755)
 
 
     
