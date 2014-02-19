@@ -18,7 +18,7 @@ def build(ctx):
     ctx(features = 'py', 
         source = ctx.path.ant_glob('*.py'), 
         # source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/lakeshore')
+        install_path = '${PYTHONDIR}/lsst/testbench/laser')
 
     # ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
     #                'bench-lakeshore325-read', 
