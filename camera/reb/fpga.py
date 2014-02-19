@@ -519,6 +519,7 @@ class FPGA(object):
 
     def __init__(self, ctrl_host = None, reb_id = 2):
         self.reb_id = reb_id
+        self.ctrl_host = ctrl_host
 
     def open(self):
         "Opening the connection ?"
@@ -533,12 +534,17 @@ class FPGA(object):
         Read a FPGA register and return its value.
         if n > 1, returns a list of values.
         """
-        # rriClient invocation... (for the moment)
+        # local/remote rriClient invocation... (for the moment)
         # to be replaced
 
         command = ( "rriClient %d read 0x%0x %d" % (self.reb_id, address, n) )
-        # remote_command = "ssh %s %s" % (ctrl_host, command)
-        proc = subprocess.Popen(command, shell=True,
+
+        if self.ctrl_host == None:
+            remote_command = command
+        else:
+            remote_command = "ssh %s %s" % (self.ctrl_host, command)
+            
+        proc = subprocess.Popen(remote_command, shell=True,
                                 stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE)
         (out, err) = proc.communicate()
@@ -578,8 +584,13 @@ class FPGA(object):
 
         command = ( "rriClient %d write 0x%0x 0x%0x" % 
                     (self.reb_id, address, value) )
-        # remote_command = "ssh %s %s" % (ctrl_host, command)
-        proc = subprocess.Popen(command, shell=True,
+
+        if self.ctrl_host == None:
+            remote_command = command
+        else:
+            remote_command = "ssh %s %s" % (self.ctrl_host, command)
+
+        proc = subprocess.Popen(remote_command, shell=True,
                                 stdout = subprocess.PIPE,
                                 stderr = subprocess.PIPE)
         (out, err) = proc.communicate()
@@ -745,6 +756,35 @@ class FPGA(object):
         
     # ----------------------------------------------------------
 
+    def get_state(self):
+        result = self.read(address = 0x8)
+        return result[0x8]
+
+    state = property(get_state, 
+                    "FPGA current time (internal clock, in 10ns units)")
+
+    # ----------------------------------------------------------
+
+    def set_trigger(self, trigger):
+        self.write(0x9, trigger)
+
+    # ----------------------------------------------------------
+
+    def start_clock(self):
+        """
+        Start the FPGA internal clock counter.
+        """
+        st = self.get_state()
+        self.set_trigger(st | 0x2)
+
+    def stop_clock(self):
+        """
+        Stop the FPGA internal clock counter.
+        """
+        st = self.get_state()
+        self.set_trigger(st ^ 0x2)
+
+
     def get_time(self):
         result = self.read(address = 0x4, n = 2)
         t = (result[0x5] << 32) | result[0x4]
@@ -758,20 +798,6 @@ class FPGA(object):
 
     time = property(get_time, set_time, 
                     "FPGA current time (internal clock, in 10ns units)")
-
-    # ----------------------------------------------------------
-
-    def get_state(self):
-        result = self.read(address = 0x8)
-        return result[0x8]
-
-    state = property(get_state, 
-                    "FPGA current time (internal clock, in 10ns units)")
-
-    # ----------------------------------------------------------
-
-    def set_trigger(self, trigger):
-        self.write(0x9, trigger)
 
     # ----------------------------------------------------------
 
@@ -796,8 +822,66 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
+    def get_board_temperatures(self):
+        st = self.get_state()
+        self.set_trigger(st | 0x10)
+        n_sensors = 10
+        raw = self.read(0x600010, n_sensors)
+        temperatures = {}
+        for i in xrange(n_sensors):
+            temperatures[i] = raw[0x600010 + i] * 0.0078
+        return raw, temperatures
 
+    # ----------------------------------------------------------
+
+    def get_input_voltages_currents(self):
+        st = self.get_state()
+        self.set_trigger(st | 0x08)
+        raw = self.read(0x600000, 8)
+        voltages = {}
+        currents = {}
+
+        # 0x600000 6V voltage
+        voltages["6V"]  = (raw[0x600000] & 0xffff) * 0.025 # 25 mV
+        # 0x600001 6V current
+        currents["6V"]  = (raw[0x600001] & 0xffff) * 25e-6 # 25 uA
+
+        # 0x600002 9V voltage
+        voltages["9V"]  = (raw[0x600002] & 0xffff) * 0.025 # 25 mV
+        # 0x600003 9V current
+        currents["9V"]  = (raw[0x600003] & 0xffff) * 25e-6 # 25 uA
+
+        # 0x600004 24V voltage
+        voltages["24V"] = (raw[0x600004] & 0xffff) * 0.025 # 25 mV
+        # 0x600005 24V current
+        currents["24V"] = (raw[0x600005] & 0xffff) * 8e-6  # 8 uA
+
+        # 0x600005 40V voltage
+        voltages["40V"] = (raw[0x600006] & 0xffff) * 0.025 # 25 mV
+        # 0x600006 40V current
+        currents["40V"] = (raw[0x600007] & 0xffff) * 8e-6  # 8 uA
+
+        return raw, voltages, currents
+
+    # ----------------------------------------------------------
+
+    def get_cabac_config(self, s): # strip 's'
+        """
+        read CABAC configuration for strip <s>.
+        """
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB strip (%d)" % s)
+
+        self.write(0x500001, s) # starts the CABAC config readout
+
+        top_config    = self.read(0x500110, 5) # 0 - 4
+        bottom_config = self.read(0x500120, 5) # 0 - 4
+
+        return top_config, bottom_config
     
+    # ----------------------------------------------------------
+
+    # def set_cabac_config(self, s, ...): # strip 's'
     
 
          
