@@ -20,9 +20,9 @@ def build(ctx):
         # source = ['__init__.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench/lakeshore')
 
-    ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
-                   'bench-lakeshore325-read', 
-                   chmod=0755)
+    # ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
+    #                'bench-lakeshore325-read', 
+    #                chmod=0755)
 
 
     
