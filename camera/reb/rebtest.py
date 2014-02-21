@@ -17,7 +17,8 @@ R.fpga.start_clock()
 
 
 # starting the imageClient process
-subprocess.Popen("imageClient %d" % reb_id)
+# subprocess.Popen("imageClient %d" % reb_id) -> path problem
+subprocess.Popen("imageClient %d" % reb_id, shell=True)
 
 # launching a clear 10 times
 R.run_subroutine('clear', repeat = 10)
