@@ -769,7 +769,7 @@ class FPGA(object):
         return seq_func
 
     def load_functions(self, functions):
-
+        pass
 
     # --------------------------------------------------------------------
 
