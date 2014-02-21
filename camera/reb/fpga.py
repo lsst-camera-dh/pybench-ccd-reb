@@ -38,6 +38,24 @@ class Program(object):
 
         return s
 
+    def bytecode(self):
+        """
+        Return the 32 bits byte code for the FPGA compiled program.
+        (with relative memory addresses)
+        """
+
+        instrs = self.instructions
+        addrs = instrs.keys()
+        addrs.sort()
+
+        bcs = {}
+        for addr in addrs:
+            instr = instrs[addr]
+            bc = instr.bytecode()
+            bcs[addr] = bc
+
+        return bcs
+
 # shortcut
 Prg = Program
 
@@ -61,7 +79,7 @@ class Instruction(object):
     pattern_JSR_addr = re.compile(
         "JSR\s+((0[xX])?[\dA-Fa-f]+)\s+repeat\((\d+)\)")
     pattern_JSR_name = re.compile(
-        "JSR\s+([\dA-Za-z]+)\s+repeat\((\d+)\)")
+        "JSR\s+([\dA-Za-z0-9\_]+)\s+repeat\((\d+)\)")
 
     def __init__(self, 
                  opcode, 
@@ -180,7 +198,17 @@ class Instruction(object):
         Return None for an empty string.
         Raise an exception if the syntax is wrong.
         """
+
+        # looking for a comment part and remove it
+
+        pos = s.find('#')
+        if pos != -1:
+            s = s[:pos]
+
         s = s.strip()
+
+        if len(s) == 0:
+            return None
 
         # CALL
         m = cls.pattern_CALL.match(s)
@@ -210,6 +238,7 @@ class Instruction(object):
 
         # JSR name
         m = cls.pattern_JSR_name.match(s)
+        print m, s
         if m != None:
             opcode = Instruction.OP_JumpToSubroutine
             subroutine = m.group(1)
@@ -217,6 +246,8 @@ class Instruction(object):
             return Instruction(opcode = Instruction.OP_JumpToSubroutine,
                                subroutine = subroutine,
                                repeat = repeat)
+
+        print "ICICICIC", "[",s,"]"
 
         # RTS
         if s == "RTS":
@@ -289,6 +320,7 @@ class Program_UnAssembled(object):
     
     def __init__(self):
         self.subroutines = {} # key = name, value = subroutine object
+        self.subroutines_names = [] # to keep the order
         self.instructions = [] # main program instruction list
 
     # I/O XML -> separate python file
@@ -312,10 +344,14 @@ class Program_UnAssembled(object):
             current_addr += 1
 
         # then, each subroutine
-        for subr_name, subr in self.subroutines.iteritems():
+        # for subr_name, subr in self.subroutines.iteritems():
+        for subr_name in self.subroutines_names:
+            subr = self.subroutines[subr_name]
             # alignment
-            current_addr = (current_addr / alig + 1) * alig
+            if current_addr > 0:
+                current_addr = (current_addr / alig + 1) * alig
             subroutines_addr[subr_name] = current_addr
+            result.subroutines[subr_name] = current_addr
             for instr in subr.instructions:
                 result.instructions[current_addr] = instr
                 current_addr += 1
@@ -326,13 +362,17 @@ class Program_UnAssembled(object):
         addrs.sort()
         for addr in addrs:
             instr = result.instructions[addr]
+            print addr, instr
             if instr.opcode == Instruction.OP_JumpToSubroutine:
                 if not(subroutines_addr.has_key(instr.subroutine)):
                     raise ValueError("Undefine subroutine %s" % 
                                      instr.subroutine)
-                instr.subroutine = None
-                instr.address = subroutines_addrs
+                # instr.subroutine = None
+                instr.address = subroutines_addr[instr.subroutine]
+            print addr, instr
         
+        return result
+
 
     @classmethod
     def fromstring(cls, s):
@@ -362,6 +402,7 @@ class Program_UnAssembled(object):
                 # first elt is a label -> start of a subroutine
                 subroutine_name = elts[0][:-1]
                 prg.subroutines[subroutine_name] = Subroutine()
+                prg.subroutines_names.append(subroutine_name)
                 current_subroutine = prg.subroutines[subroutine_name]
                 elts = elts[1:]
             
@@ -600,6 +641,15 @@ class FPGA(object):
         # print err
 
 
+    def send_program_instruction(self, addr, instr):
+        """
+        Load the program instruction <instr> at relative address <addr>.
+        """
+        mem_addr = self.program_base_addr | addr
+        bc = instr.bytecode()
+        self.write(mem_addr, bc)
+
+
     def send_program(self, program, clear = True):
         """
         Load the program <program> into the FPGA program memory.
@@ -608,7 +658,8 @@ class FPGA(object):
         # Second, clear the whole memory to avoid mixing with remains
         # of the previous programs
 
-        self.clear_program()
+        if clear:
+            self.clear_program()
         
         # Load the instructions
 
@@ -617,10 +668,7 @@ class FPGA(object):
         addrs.sort()
         
         for addr in addrs:
-            mem_addr = self.program_base_addr | addr
-            instr = instrs[addr]
-            bc = instr.bytecode()
-            self.write(mem_addr, bc)
+            self.send_program_instruction(addr, instrs[addr])
 
 
 
@@ -733,32 +781,44 @@ class FPGA(object):
     # ----------------------------------------------------------
 
     def get_schema(self):
-        result = self.read(address = 0x0)
-        return result[0x0]
+        addr = 0x0
+        result = self.read(address = addr)
+        if not(result.has_key(addr)):
+            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        return result[addr]
 
     schema = property(get_schema, "FPGA address map version")
 
     # ----------------------------------------------------------
 
     def get_version(self):
-        result = self.read(address = 0x1)
-        return result[0x1]
+        addr = 0x1
+        result = self.read(address = addr)
+        if not(result.has_key(addr)):
+            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        return result[addr]
 
     version = property(get_version, "FPGA VHDL version")
 
     # ----------------------------------------------------------
 
     def get_sci_id(self):
-        result = self.read(address = 0x2)
-        return result[0x2]
+        addr = 0x2
+        result = self.read(address = addr)
+        if not(result.has_key(addr)):
+            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        return result[addr]
 
     sci_id = property(get_sci_id, "SCI's own address")
         
     # ----------------------------------------------------------
 
     def get_state(self):
-        result = self.read(address = 0x8)
-        return result[0x8]
+        addr = 0x8
+        result = self.read(address = addr)
+        if not(result.has_key(addr)):
+            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        return result[addr]
 
     state = property(get_state, 
                     "FPGA current time (internal clock, in 10ns units)")
