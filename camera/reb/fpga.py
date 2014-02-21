@@ -359,14 +359,14 @@ class Program_UnAssembled(object):
         addrs.sort()
         for addr in addrs:
             instr = result.instructions[addr]
-            print addr, instr
+            # print addr, instr
             if instr.opcode == Instruction.OP_JumpToSubroutine:
                 if not(subroutines_addr.has_key(instr.subroutine)):
                     raise ValueError("Undefine subroutine %s" % 
                                      instr.subroutine)
                 # instr.subroutine = None
                 instr.address = subroutines_addr[instr.subroutine]
-            print addr, instr
+            # print addr, instr
         
         return result
 
