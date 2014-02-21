@@ -10,6 +10,7 @@ import os, os.path
 import re
 import subprocess
 
+## -----------------------------------------------------------------------
 
 class Program(object):
     """
@@ -247,8 +248,6 @@ class Instruction(object):
                                subroutine = subroutine,
                                repeat = repeat)
 
-        print "ICICICIC", "[",s,"]"
-
         # RTS
         if s == "RTS":
             opcode = Instruction.OP_ReturnFromSubroutine
@@ -307,8 +306,6 @@ class Instruction(object):
 
 # shortcut
 Instr = Instruction
-
-## ------------------------------------------------------------
 
 class Subroutine(object):
 
@@ -438,7 +435,7 @@ class Program_UnAssembled(object):
 
 Prg_NA = Program_UnAssembled
 
-
+## -----------------------------------------------------------------------
 
 class Sequencer(object):
     # 32 outputs are available
@@ -510,6 +507,7 @@ class Sequencer(object):
 
         return self.functions[func_id]
 
+## -----------------------------------------------------------------------
 
 class Function(object):
 
@@ -548,6 +546,8 @@ class Function(object):
         return None
 
 
+## -----------------------------------------------------------------------
+
 class FPGA(object):
 
     # ctrl_host = "lpnws4122"
@@ -558,18 +558,21 @@ class FPGA(object):
     program_base_addr = 0x300000
     program_mem_size  = 1024 # ???
 
+    # --------------------------------------------------------------------
+
     def __init__(self, ctrl_host = None, reb_id = 2):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
 
-    def open(self):
-        "Opening the connection ?"
-        pass
+    # def open(self):
+    #     "Opening the connection ?"
+    #     pass
 
-    def close(self):
-        pass
+    # def close(self):
+    #     pass
 
-    # def read(self, reb, address, n = 1):
+    # --------------------------------------------------------------------
+
     def read(self, address, n = 1):
         """
         Read a FPGA register and return its value.
@@ -640,6 +643,7 @@ class FPGA(object):
         # '  Register 0x4 (4): 0x9164efa8 (-1855656024)\n'
         # print err
 
+    # --------------------------------------------------------------------
 
     def send_program_instruction(self, addr, instr):
         """
@@ -702,7 +706,8 @@ class FPGA(object):
         for i in xrange(self.program_mem_size):
             self.write(prg_addr + i, 0) 
        
-        
+
+    # --------------------------------------------------------------------
 
     def send_function(self, function_id, function):
         """
@@ -763,6 +768,10 @@ class FPGA(object):
 
         return seq_func
 
+    def load_functions(self, functions):
+
+
+    # --------------------------------------------------------------------
 
     def dump_sequencer(self):
         """

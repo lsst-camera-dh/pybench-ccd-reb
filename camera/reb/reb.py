@@ -77,13 +77,28 @@ read_line_fake:
         self.fpga = fpga.FPGA(ctrl_host = self.ctrl_host, 
                               reb_id = self.reb_id)
 
-        # self.set_program(self.default_program)
+    # --------------------------------------------------------------------
 
-    def set_functions(self, functions):
+
+    # --------------------------------------------------------------------
+
+    def load_function(self, function_id, function):
+        """
+        Send the function <function> into the FPGA memory 
+        at the #function_id slot.
+        """
+        self.fpga.send_function(function_id, function)
+
+    def dump_function(self, function_id):
+        """
+        Dump the function #function_id from the FPGA memory.
+        """
+        return self.fpga.dump_function(function_id)
+
+    def load_functions(self, functions):
         pass
 
-    def get_functions(self):
-        pass
+    # --------------------------------------------------------------------
 
     def load_program(self, program = default_program):
         """
@@ -120,7 +135,7 @@ read_line_fake:
         self.fpga.start()
 
     
-    def setup_subroutine(self, subname, repeat = 1): 
+    def select_subroutine(self, subname, repeat = 1): 
         """
         Modify the main subroutine to be a call (JSR) to the subroutine.
         """
@@ -136,9 +151,8 @@ read_line_fake:
             address = self.program.subroutines[subname],
             repeat = repeat)
 
-        print "ICICICI"
-        print first_instr
-        print first_instr.bytecode()
+        # print first_instr
+        # print first_instr.bytecode()
 
         # load it at the very beginning of the program (rel addr 0x0)
         self.fpga.send_program_instruction(0x0, first_instr)
@@ -146,9 +160,10 @@ read_line_fake:
 
 
     def run_subroutine(self, subname, repeat = 1): 
-        self.setup_subroutine(subname = subname, repeat = repeat)
+        self.select_subroutine(subname = subname, repeat = repeat)
         self.run_program()
 
+    # --------------------------------------------------------------------
 
 
 # """
