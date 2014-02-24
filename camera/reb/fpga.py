@@ -520,18 +520,16 @@ class Function(object):
         self.outputs = dict(outputs) # bit setup
 
     def __repr__(self):
-        s =  "                                \t RRRCRRRRPPPPS\n"
-        s += "slice\t duration (x10ns)\t\t UDSL123G1234T\n"
+        s = "Function: " + self.name + "\n"
+        s += ("                                \t " + 
+              "               S   SPPPPRRRRCRRR\n")
+        s += ("slice\t duration (x10ns)\t\t " + 
+              "               H   T4321G321LSDU\n")
         s += ( 73 * "-" ) + "\n"
         for sl in xrange(16):
-            # infame magouille...
-            bit_str = "%032d" % int(bin(self.outputs[sl])[2:])
-            bit_str = list(bit_str)
-            bit_str.reverse()
-            bit_str = "".join(bit_str)
-
+            bit_str = "%032d" % int(bin(self.outputs.get(sl, 0x0))[2:])
             s += "%02d\t %8d\t\t\t %s\n" % ( sl, 
-                                             self.timelengths[sl], 
+                                             self.timelengths.get(sl, 0), 
                                              bit_str )
         return s
 
