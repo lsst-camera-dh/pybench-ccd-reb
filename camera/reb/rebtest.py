@@ -352,10 +352,12 @@ func[7] = \
                                    6 : 0b0000000010000011000101100,
                                    7 : 0 } )
 
-id_funcs = func.keys()
-id_funcs.sort()
-for id_func in id_funcs:
-    R.load_function(id_func, func[id_func])
+# id_funcs = func.keys()
+# id_funcs.sort()
+# for id_func in id_funcs:
+#     R.load_function(id_func, func[id_func])
+
+R.load_functions(func)
 
 
 program = """
@@ -424,16 +426,21 @@ read_line_fake:
 # loading the default sequencer program
 R.load_program(program)
 
+# Compute image size and configure the REB accordingly
+# It should be computed for a given sub_routine
+## image_size = R.count_subroutine('acq', bit = 12, transition = 'up')
+# rriClient 2 write 0x400005 0x0010F3D8
+R.set_image_size(2020 * 550)
+
 # starting the clock register
 R.fpga.start_clock()
 
-# starting the imageClient process
+# starting the imageClient process (requested!)
 # subprocess.Popen("imageClient %d" % reb_id) -> path problem
 # subprocess.Popen("imageClient %d" % reb_id, shell=True)
 
 # launching a clear 10 times
 R.run_subroutine('clear', repeat = 10)
-
 
 # taking a bias
 time.sleep(1)

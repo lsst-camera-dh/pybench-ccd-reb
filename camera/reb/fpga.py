@@ -572,7 +572,7 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def read(self, address, n = 1):
+    def read(self, address, n = 1, check = True):
         """
         Read a FPGA register and return its value.
         if n > 1, returns a list of values.
@@ -614,13 +614,18 @@ class FPGA(object):
 
             result[r] = v
 
+        # if the number of resulting values is different 
+        # from the one requested, and check is True, raise an error
+        if check and (len(result) < n):
+            raise IOError("Failed to read all the requested registers from the FPGA memory")
+
         return result
                 
         
-    # def write(self, reb, address, value):
-    def write(self, address, value):
+    def write(self, address, value, check = True):
         """
-        Write a given value into a FPGA register.
+        Write a given value into a FPGA register. 
+        TODO : implement 'check'
         """
         # "rriClient invocation... (for the moment)
         # to be replaced
@@ -708,7 +713,7 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def send_function(self, function_id, function):
+    def load_function(self, function_id, function):
         """
         Send the function <function> into the FPGA memory 
         at the #function_id slot.
@@ -734,6 +739,11 @@ class FPGA(object):
             if function_id == 0:
                 output = 0
             self.write(output_addr, output)
+
+
+    def load_functions(self, functions):
+        for i,f in functions.iteritems():
+            self.load_function(i,f)
 
 
     def dump_function(self, function_id):
@@ -767,8 +777,23 @@ class FPGA(object):
 
         return seq_func
 
-    def load_functions(self, functions):
-        pass
+    def dump_functions(self):
+        """
+        Dump all functions from the FPGA memory.
+        """
+        funcs = {}
+        for i in xrange(16):
+            funcs[i] = self.dump_function(i)
+        return funcs
+
+    # --------------------------------------------------------------------
+
+    def set_image_size(self, size):
+        """
+        Set image size (in ADC count).
+        """
+        # rriClient 2 write 0x400005 0x0010F3D8
+        self.write(0x400005, size)
 
     # --------------------------------------------------------------------
 
@@ -828,8 +853,7 @@ class FPGA(object):
             raise IOError("Failed to read FPGA memory at address " + str(addr))
         return result[addr]
 
-    state = property(get_state, 
-                    "FPGA current time (internal clock, in 10ns units)")
+    state = property(get_state, "FPGA state")
 
     # ----------------------------------------------------------
 

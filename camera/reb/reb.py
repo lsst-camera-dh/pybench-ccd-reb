@@ -404,19 +404,115 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
+    def read(self, address, n = 1, check = True):
+        """
+        Read a FPGA register and return its value.
+        if n > 1, returns a list of values as a dictionary.
+        """
+        return self.fpga.read(address = address, n = n, check = check)
+
+    def write(self, address, value, check = True):
+        """
+        Write a given value into a FPGA register.
+        """
+        return self.fpga.write(address = address, value = value, check = check)
+
+    # --------------------------------------------------------------------
+
+    def get_schema(self):
+        addr = 0x0
+        result = self.read(address = addr)
+        if not(result.has_key(addr)):
+            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        return result[addr]
+
+    schema = property(get_schema, "FPGA address map version")
+
+    # ----------------------------------------------------------
+
+    def get_version(self):
+        return self.fpga.get_version()
+
+    version = property(get_version, "FPGA VHDL version")
+
+    # ----------------------------------------------------------
+
+    def get_sci_id(self):
+        return self.fpga.get_sci_id()
+
+    sci_id = property(get_sci_id, "SCI's own address")
+
+    # ----------------------------------------------------------
+
+    def get_state(self):
+        return self.fpga.get_state()
+
+    state = property(get_state, "FPGA state")
+
+    # ----------------------------------------------------------
+
+    def set_trigger(self, trigger):
+        self.fpga.set_trigger(trigger)
+
+    # --------------------------------------------------------------------
+
+    def start_clock(self):
+        """
+        Start the FPGA internal clock counter.
+        """
+        self.fpga.start_clock()
+
+    def stop_clock(self):
+        """
+        Stop the FPGA internal clock counter.
+        """
+        self.fpga.stop_clock()
+
+    def get_time(self):
+        return self.fpga.get_time()
+
+    def set_time(self, t):
+        self.fpga.set_time(t)
+
+    time = property(get_time, set_time, 
+                    "FPGA current time (internal clock, in 10ns units)")
+
+    # --------------------------------------------------------------------
+
+    def start(self):
+        """
+        Start the sequencer program.
+        """
+        self.fpga.start()
+
+    def stop(self):
+        """
+        Send the command STOP.
+        """
+        self.fpga.stop()
+
+    def step(self):
+        """
+        Send the command STEP.
+        """
+        self.fpga.step()
+
+    # --------------------------------------------------------------------
+
     def load_function(self, function_id, function):
         """
         Send the function <function> into the FPGA memory 
         at the #function_id slot.
         """
-        self.fpga.send_function(function_id, function)
+        self.fpga.load_function(function_id, function)
+        self.functions[function_id] = function # to keep memory
 
     def load_functions(self, functions):
         """
         Load all functions from dict <functions> into the FPGA memory.
         """
-        for i,f in functions.iteritems():
-            self.load_function(i,f)
+        self.fpga.load_functions(functions)
+        self.functions.update(functions)
 
     def dump_function(self, function_id):
         """
@@ -428,14 +524,24 @@ read_line_fake:
         """
         Dump all functions from the FPGA memory.
         """
-        funcs = {}
-        for i in xrange(16):
-            funcs[i] = self.dump_function(i)
-        return funcs
-
+        return self.fpga.dump_functions()
+        
     # --------------------------------------------------------------------
 
-    def load_program(self, program = default_program):
+    def send_program_instruction(self, addr, instr):
+        """
+        Load the program instruction <instr> at relative address <addr> 
+        into the FPGA program memory.
+        """
+        self.fpga.send_program_instruction(addr, instr)
+
+    def send_program(self, program, clear = True):
+        """
+        Load the compiled program <program> into the FPGA program memory.
+        """
+        self.fpga.send_program(program, clear = clear)
+
+    def load_program(self, program = default_program, clear = True):
         """
         Load the compiled program <program> into the FPGA program memory.
         The program may also be provided as an uncompiled text string.
@@ -447,7 +553,7 @@ read_line_fake:
             program = p_u.compile()
         
         # loading it into the FPGA program memory
-        self.fpga.send_program(program)
+        self.send_program(program, clear = clear)
 
         self.program = program # to keep it in memory
 
@@ -498,7 +604,48 @@ read_line_fake:
         self.select_subroutine(subname = subname, repeat = repeat)
         self.run_program()
 
+    def count_subroutine(self, subname, bit, transition = 'on'):
+        """
+        Counts how many time bit <bit> is switched on/off 
+        (depending of <transition> value) when subroutine 
+        <subname> is called.
+        Useful to compute the image size.
+
+        TO BE WRITTEN (not so simple)
+
+        """
+        pass
+
     # --------------------------------------------------------------------
+
+    def set_image_size(self, size):
+        """
+        Set image size (in ADC count).
+        """
+        self.fpga.set_image_size(size)
+
+    # --------------------------------------------------------------------
+
+    def get_board_temperatures(self):
+        return self.fpga.get_board_temperatures()
+
+    # --------------------------------------------------------------------
+
+    def get_input_voltages_currents(self):
+        return self.fpga.get_input_voltages_currents()
+
+    # --------------------------------------------------------------------
+
+    def get_cabac_config(self, s): # strip 's'
+        """
+        read CABAC configuration for strip <s>.
+        """
+        return self.fpga.get_cabac_config(s)
+    
+    # --------------------------------------------------------------------
+
+    # def set_cabac_config(self, s, ...): # strip 's'
+    
 
 
 # """
