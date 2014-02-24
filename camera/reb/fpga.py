@@ -511,12 +511,13 @@ class Sequencer(object):
 
 class Function(object):
 
-    def __init__(self, name = ""):
+    def __init__(self, name = "", timelengths = {}, outputs = {}):
         # timelengths = id: duration (10ns unit), etc...
         # self.timelengths = {0: 12, 1: 14}
         # self.outputs = {0: '0b01001101...', 1: '0b1111000...', ... }
-        self.timelengths = {} # 16 max, (or last one is zero duration)
-        self.outputs = {} # bit setup
+        self.name = name
+        self.timelengths = dict(timelengths) # 16 max, (last one zero duration)
+        self.outputs = dict(outputs) # bit setup
 
     def __repr__(self):
         s =  "                                \t RRRCRRRRPPPPS\n"
