@@ -404,9 +404,6 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-
-    # --------------------------------------------------------------------
-
     def load_function(self, function_id, function):
         """
         Send the function <function> into the FPGA memory 
@@ -414,14 +411,27 @@ read_line_fake:
         """
         self.fpga.send_function(function_id, function)
 
+    def load_functions(self, functions):
+        """
+        Load all functions from dict <functions> into the FPGA memory.
+        """
+        for i,f in functions.iteritems():
+            self.load_function(i,f)
+
     def dump_function(self, function_id):
         """
         Dump the function #function_id from the FPGA memory.
         """
         return self.fpga.dump_function(function_id)
 
-    def load_functions(self, functions):
-        pass
+    def dump_functions(self):
+        """
+        Dump all functions from the FPGA memory.
+        """
+        funcs = {}
+        for i in xrange(16):
+            funcs[i] = self.dump_function(i)
+        return funcs
 
     # --------------------------------------------------------------------
 
