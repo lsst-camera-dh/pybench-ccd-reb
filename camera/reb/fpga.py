@@ -730,13 +730,13 @@ class FPGA(object):
         for sl in xrange(16):
             slice_addr = slices_addr | sl
             duration = function.timelengths.get(sl, 0) & 0xffff
-            if function_id == 0:
+            if (function_id == 0) and (sl > 0):
                 duration = 0
             self.write(slice_addr, duration)
 
             output_addr = outputs_addr | sl
             output = function.outputs.get(sl, 0) & 0xffffffff
-            if function_id == 0:
+            if (function_id == 0) and (sl > 0):
                 output = 0
             self.write(output_addr, output)
 

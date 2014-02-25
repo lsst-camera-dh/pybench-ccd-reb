@@ -396,11 +396,14 @@ read_line_fake:
              RTS 
 """
 
-    def __init__(self, ctrl_host = None, reb_id = 2):
+    def __init__(self, reb_id = 2, ctrl_host = None):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
         self.fpga = fpga.FPGA(ctrl_host = self.ctrl_host, 
                               reb_id = self.reb_id)
+
+        self.program = None
+        self.functions = {}
 
     # --------------------------------------------------------------------
 
