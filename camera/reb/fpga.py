@@ -545,6 +545,75 @@ class Function(object):
         return None
 
 
+    # @classmethod
+    # def fromtransitions(cls, initials):
+    #     """
+    #     Create a function from an initial state 
+    #     and a list of state transitions.
+    #     """
+
+    #     # looking for a comment part and remove it
+
+    #     pos = s.find('#')
+    #     if pos != -1:
+    #         s = s[:pos]
+
+    #     s = s.strip()
+
+    #     if len(s) == 0:
+    #         return None
+
+    #     # CALL
+    #     m = cls.pattern_CALL.match(s)
+    #     if m != None:
+    #         opcode = Instruction.OP_CallFunction
+    #         function_id = int(m.group(1))
+    #         if m.group(2) == "infinity":
+    #             return Instruction(opcode = Instruction.OP_CallFunction,
+    #                                function_id = function_id,
+    #                                infinite_loop = True)
+    #         else:
+    #             repeat = int(m.group(2))
+    #             return Instruction(opcode = Instruction.OP_CallFunction,
+    #                                function_id = function_id,
+    #                                repeat = repeat)
+        
+    #     # JSR addr
+    #     m = cls.pattern_JSR_addr.match(s)
+    #     if m != None:
+    #         opcode = Instruction.OP_JumpToSubroutine
+    #         print m.groups()
+    #         address = int(m.group(1), base=16)
+    #         repeat = int(m.group(3))
+    #         return Instruction(opcode = Instruction.OP_JumpToSubroutine,
+    #                            address = address,
+    #                            repeat = repeat)
+
+    #     # JSR name
+    #     m = cls.pattern_JSR_name.match(s)
+    #     print m, s
+    #     if m != None:
+    #         opcode = Instruction.OP_JumpToSubroutine
+    #         subroutine = m.group(1)
+    #         repeat = int(m.group(2))
+    #         return Instruction(opcode = Instruction.OP_JumpToSubroutine,
+    #                            subroutine = subroutine,
+    #                            repeat = repeat)
+
+    #     # RTS
+    #     if s == "RTS":
+    #         opcode = Instruction.OP_ReturnFromSubroutine
+    #         return Instruction(opcode = Instruction.OP_ReturnFromSubroutine)
+
+    #     # END
+    #     if s == "END":
+    #         opcode = Instruction.OP_EndOfProgram
+    #         return Instruction(opcode = Instruction.OP_EndOfProgram)
+
+    #     raise ValueError("Unknown instruction")
+
+
+
 ## -----------------------------------------------------------------------
 
 class FPGA(object):
