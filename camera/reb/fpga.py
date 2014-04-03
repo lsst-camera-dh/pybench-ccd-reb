@@ -9,6 +9,7 @@ import sys
 import os, os.path
 import re
 import subprocess
+import cabac
 
 ## -----------------------------------------------------------------------
 
@@ -631,6 +632,8 @@ class FPGA(object):
     def __init__(self, ctrl_host = None, reb_id = 2):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
+        self.cabac_top = cabac.CABAC()
+        self.cabac_bottom = cabac.CABAC()
 
     # def open(self):
     #     "Opening the connection ?"
@@ -1038,12 +1041,22 @@ class FPGA(object):
         top_config    = self.read(0x500110, 5) # 0 - 4
         bottom_config = self.read(0x500120, 5) # 0 - 4
 
-        return top_config, bottom_config
-    
+        self.cabac_top.set_from_registers(top_config)
+        self.cabac_bottom.set_from_registers(bottom_config)
+
     # ----------------------------------------------------------
 
     # def set_cabac_config(self, s, ...): # strip 's'
     
+    # ----------------------------------------------------------
 
-         
-                 
+    def get_operating_header(self, headername = "CCDoperating.txt"):
+        """
+        Fills FITS header for CCD operating conditions
+        """
+        headerfile = open(headername,'w')
+        headerfile.write(self.cabac_top.print_to_header("T"))
+        headerfile.write(self.cabac_bottom.print_to_header("B"))
+        #need to add clocking rails, currents and voltages, CSgate value, back substrate value and current (added elsewhere ?)
+
+
