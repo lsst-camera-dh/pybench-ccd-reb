@@ -1003,24 +1003,24 @@ class FPGA(object):
         currents = {}
 
         # 0x600000 6V voltage
-        voltages["6V"]  = (raw[0x600000] & 0xffff) * 0.025 # 25 mV
+        voltages["6V"]  = ((raw[0x600000] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600001 6V current
-        currents["6V"]  = (raw[0x600001] & 0xffff) * 25e-6 # 25 uA
+        currents["6V"]  = ((raw[0x600001] & 0xfff0)>>4) * 250e-6 # 25 uA (250 uA in reality ?)
 
         # 0x600002 9V voltage
-        voltages["9V"]  = (raw[0x600002] & 0xffff) * 0.025 # 25 mV
+        voltages["9V"]  = ((raw[0x600002] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600003 9V current
-        currents["9V"]  = (raw[0x600003] & 0xffff) * 25e-6 # 25 uA
+        currents["9V"]  = ((raw[0x600003] & 0xfff0)>>4) * 250e-6 # 25 uA (250 uA in reality ?)
 
         # 0x600004 24V voltage
-        voltages["24V"] = (raw[0x600004] & 0xffff) * 0.025 # 25 mV
+        voltages["24V"] = ((raw[0x600004] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600005 24V current
-        currents["24V"] = (raw[0x600005] & 0xffff) * 8e-6  # 8 uA
+        currents["24V"] = ((raw[0x600005] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
 
         # 0x600005 40V voltage
-        voltages["40V"] = (raw[0x600006] & 0xffff) * 0.025 # 25 mV
+        voltages["40V"] = ((raw[0x600006] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600006 40V current
-        currents["40V"] = (raw[0x600007] & 0xffff) * 8e-6  # 8 uA
+        currents["40V"] = ((raw[0x600007] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
 
         return raw, voltages, currents
 
