@@ -22,6 +22,20 @@ def build(ctx):
         source = ['__init__.py','reb.py','fpga.py','testfpga.py'], 
         install_path = '${PYTHONDIR}/lsst/camera/reb')
 
+
+    ctx.install_as('${PREFIX}/bin/reb-server', 
+                   'reb-server', 
+                   chmod=0755)
+
+    ctx.install_as('${PREFIX}/bin/reb-echo-server', 
+                   'reb-server', 
+                   chmod=0755)
+
+    ctx.install_as('${PREFIX}/bin/reb-client', 
+                   'reb-client', 
+                   chmod=0755)
+    
+
     # ctx.recurse(submodules)
 
 

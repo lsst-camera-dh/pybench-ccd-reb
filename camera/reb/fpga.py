@@ -437,66 +437,107 @@ Prg_NA = Program_UnAssembled
 
 ## -----------------------------------------------------------------------
 
+class ChannelMap(object):
+    """
+    Bidirectional channel map
+    (very crude)
+    """
+    def __init__(self, channels, names):
+        self.dictionary  = dict(zip(channels, names))
+        self.reverse = {v: k for k, v in self.dictionary.iteritems()}
+        self.dictionary.update(self.reverse)
+    #
+    def __getitem__(self, k):
+        return self.dictionary[k]
+
+    def has_key(self, k):
+        return self.dictionary.has_key(k)
+
+    def get(self, k, d=None):
+        if self.has_key(k):
+            return self[k]
+        return d
+
+    def __repr__(self):
+        return repr(self.dictionary)
+
+
+## -----------------------------------------------------------------------
+
 class Sequencer(object):
     # 32 outputs are available
-    outputs = {
-        0: { 'channel': 0, 
-             'name': 'RU', 
-             'fullname': 'ASPIC ramp-up integration',
-             'FPGA': 'ASPIC_r_up' },
-        1: { 'channel': 1, 
-             'name': 'RD', 
-             'fullname': 'ASPIC ramp-down integration',
-             'FPGA': 'ASPIC_r_down' },
-        2: { 'channel': 2, 
-             'name': 'RST', 
-             'fullname': 'ASPIC integrator reset',
-             'FPGA': 'ASPIC_reset' },
-        3: { 'channel': 3, 
-             'name': 'CL', 
-             'fullname': 'ASPIC clamp',
-             'FPGA': 'ASPIC_clamp' },
-        4: { 'channel': 4, 
-             'name': 'R1', 
-             'fullname': 'Serial clock 1',
-             'FPGA': 'CCD_ser_clk(0)' },
-        5: { 'channel': 5, 
-             'name': 'R2', 
-             'fullname': 'Serial clock 2',
-             'FPGA': 'CCD_ser_clk(1)' },
-        6: { 'channel': 6, 
-             'name': 'R3', 
-             'fullname': 'Serial clock 3',
-             'FPGA': 'CCD_ser_clk(2)' },
-        7: { 'channel': 7, 
-             'name': 'RG', 
-             'fullname': 'Serial reset clock',
-             'FPGA': 'CCD_reset_gate' },
-        8: { 'channel': 8, 
-             'name': 'P1', 
-             'fullname': 'Parallel clock 1',
-             'FPGA': 'CCD_par_clk(0)' },
-        9: { 'channel': 9, 
-             'name': 'P2', 
-             'fullname': 'Parallel clock 2',
-             'FPGA': 'CCD_par_clk(1)' },
-        10: { 'channel': 10, 
-             'name': 'P3', 
-             'fullname': 'Parallel clock 3',
-             'FPGA': 'CCD_par_clk(2)' },
-        11: { 'channel': 11, 
-             'name': 'P4', 
-             'fullname': 'Parallel clock 4',
-             'FPGA': 'CCD_par_clk(3)' },
-        12: { 'channel': 12, 
-             'name': 'SPL', 
-             'fullname': 'ADC sampling signal',
-             'FPGA': 'ADC_trigger' }
-        }
 
-    def __init__(self):
-        self.functions = {}   # max 16 functions (#0 is special)
-        self.program = Program()
+    default_channels_desc = {
+            0: { 'channel': 0, 
+                 'name': 'RU', 
+                 'fullname': 'ASPIC ramp-up integration',
+                 'FPGA': 'ASPIC_r_up' },
+            1: { 'channel': 1, 
+                 'name': 'RD', 
+                 'fullname': 'ASPIC ramp-down integration',
+                 'FPGA': 'ASPIC_r_down' },
+            2: { 'channel': 2, 
+                 'name': 'RST', 
+                 'fullname': 'ASPIC integrator reset',
+                 'FPGA': 'ASPIC_reset' },
+            3: { 'channel': 3, 
+                 'name': 'CL', 
+                 'fullname': 'ASPIC clamp',
+                 'FPGA': 'ASPIC_clamp' },
+            4: { 'channel': 4, 
+                 'name': 'R1', 
+                 'fullname': 'Serial clock 1',
+                 'FPGA': 'CCD_ser_clk(0)' },
+            5: { 'channel': 5, 
+                 'name': 'R2', 
+                 'fullname': 'Serial clock 2',
+                 'FPGA': 'CCD_ser_clk(1)' },
+            6: { 'channel': 6, 
+                 'name': 'R3', 
+                 'fullname': 'Serial clock 3',
+                 'FPGA': 'CCD_ser_clk(2)' },
+            7: { 'channel': 7, 
+                 'name': 'RG', 
+                 'fullname': 'Serial reset clock',
+                 'FPGA': 'CCD_reset_gate' },
+            8: { 'channel': 8, 
+                 'name': 'P1', 
+                 'fullname': 'Parallel clock 1',
+                 'FPGA': 'CCD_par_clk(0)' },
+            9: { 'channel': 9, 
+                 'name': 'P2', 
+                 'fullname': 'Parallel clock 2',
+                 'FPGA': 'CCD_par_clk(1)' },
+            10: { 'channel': 10, 
+                  'name': 'P3', 
+                  'fullname': 'Parallel clock 3',
+                  'FPGA': 'CCD_par_clk(2)' },
+            11: { 'channel': 11, 
+                  'name': 'P4', 
+                  'fullname': 'Parallel clock 4',
+                  'FPGA': 'CCD_par_clk(3)' },
+            12: { 'channel': 12, 
+                  'name': 'SPL', 
+                  'fullname': 'ADC sampling signal',
+                  'FPGA': 'ADC_trigger' }, 
+            16: { 'channel': 16, 
+                  'name': 'SHU', 
+                  'fullname': 'Shutter TTL',
+                  'FPGA': 'shutter' }
+            }
+
+
+    default_channels = ChannelMap( [v['channel'] for v in default_channels_desc.values()],
+                                   [v['name']    for v in default_channels_desc.values()] )
+
+    def __init__(self, 
+                 channels = default_channels, 
+                 functions = {}, 
+                 program = Program()):
+        #
+        self.channels = channels
+        self.functions = functions   # max 16 functions (#0 is special)
+        self.program = program       # empty program
 
     def function(self, func):
         if func in range(16):
@@ -511,20 +552,50 @@ class Sequencer(object):
 
 class Function(object):
 
-    def __init__(self, name = "", timelengths = {}, outputs = {}):
+    def __init__(self, 
+                 name = "", fullname = "", 
+                 timelengths = {}, outputs = {}, channels = Sequencer.default_channels):
         # timelengths = id: duration (10ns unit), etc...
         # self.timelengths = {0: 12, 1: 14}
         # self.outputs = {0: '0b01001101...', 1: '0b1111000...', ... }
         self.name = name
+        self.fullname = fullname
         self.timelengths = dict(timelengths) # 16 max, (last one zero duration)
         self.outputs = dict(outputs) # bit setup
+        self.channels = channels  # mapping bit/symbolic name
+
+        # TODO: add flexibility on the clock line bit map
 
     def __repr__(self):
         s = "Function: " + self.name + "\n"
-        s += ("                                \t " + 
-              "               S   SPPPPRRRRCRRR\n")
-        s += ("slice\t duration (x10ns)\t\t " + 
-              "               H   T4321G321LSDU\n")
+        s += "    " + self.fullname + "\n"
+
+        # s += ("                                \t " + 
+        #       "               S   SPPPPRRRRCRRR\n")
+        # s += ("slice\t duration (x10ns)\t\t " + 
+        #       "               H   P4321G321LSDU\n")
+        # s += ("                        \t\t " + 
+        #       "               U   L|||||||||T||\n")
+
+        l0 = "                                \t "
+        l1 = "slice\t duration (x10ns)\t\t "
+        l2 = "                        \t\t "
+
+        for i in xrange(32):
+            c = 32 - 1 - i
+            if self.channels.has_key(c):
+                name = self.channels[c]
+                named = dict(zip(xrange(len(name)),list(name)))
+                l0 += named.get(0, '|')
+                l1 += named.get(1, '|')
+                l2 += named.get(2, '|')
+            else:
+                l0 += ' '
+                l1 += ' '
+                l2 += ' '
+            
+        s += l0 + '\n' + l1 + '\n' + l2 + '\n'
+
         s += ( 73 * "-" ) + "\n"
         for sl in xrange(16):
             bit_str = "%032d" % int(bin(self.outputs.get(sl, 0x0))[2:])
@@ -538,81 +609,16 @@ class Function(object):
         Return the state (0/1) of channel #channel during
         the time slice #timeslice. Return None if undefined.
         """
+        if isinstance(channel, str):
+            c = self.channels[channel]
+        else:
+            c = channel
+
         if self.timelengths.has_key(timeslice):
-            state = int( self.outputs[timeslice] & (1<<channel) != 0)
+            state = int( self.outputs[timeslice] & (1<<c) != 0)
             return state
 
         return None
-
-
-    # @classmethod
-    # def fromtransitions(cls, initials):
-    #     """
-    #     Create a function from an initial state 
-    #     and a list of state transitions.
-    #     """
-
-    #     # looking for a comment part and remove it
-
-    #     pos = s.find('#')
-    #     if pos != -1:
-    #         s = s[:pos]
-
-    #     s = s.strip()
-
-    #     if len(s) == 0:
-    #         return None
-
-    #     # CALL
-    #     m = cls.pattern_CALL.match(s)
-    #     if m != None:
-    #         opcode = Instruction.OP_CallFunction
-    #         function_id = int(m.group(1))
-    #         if m.group(2) == "infinity":
-    #             return Instruction(opcode = Instruction.OP_CallFunction,
-    #                                function_id = function_id,
-    #                                infinite_loop = True)
-    #         else:
-    #             repeat = int(m.group(2))
-    #             return Instruction(opcode = Instruction.OP_CallFunction,
-    #                                function_id = function_id,
-    #                                repeat = repeat)
-        
-    #     # JSR addr
-    #     m = cls.pattern_JSR_addr.match(s)
-    #     if m != None:
-    #         opcode = Instruction.OP_JumpToSubroutine
-    #         print m.groups()
-    #         address = int(m.group(1), base=16)
-    #         repeat = int(m.group(3))
-    #         return Instruction(opcode = Instruction.OP_JumpToSubroutine,
-    #                            address = address,
-    #                            repeat = repeat)
-
-    #     # JSR name
-    #     m = cls.pattern_JSR_name.match(s)
-    #     print m, s
-    #     if m != None:
-    #         opcode = Instruction.OP_JumpToSubroutine
-    #         subroutine = m.group(1)
-    #         repeat = int(m.group(2))
-    #         return Instruction(opcode = Instruction.OP_JumpToSubroutine,
-    #                            subroutine = subroutine,
-    #                            repeat = repeat)
-
-    #     # RTS
-    #     if s == "RTS":
-    #         opcode = Instruction.OP_ReturnFromSubroutine
-    #         return Instruction(opcode = Instruction.OP_ReturnFromSubroutine)
-
-    #     # END
-    #     if s == "END":
-    #         opcode = Instruction.OP_EndOfProgram
-    #         return Instruction(opcode = Instruction.OP_EndOfProgram)
-
-    #     raise ValueError("Unknown instruction")
-
-
 
 ## -----------------------------------------------------------------------
 
