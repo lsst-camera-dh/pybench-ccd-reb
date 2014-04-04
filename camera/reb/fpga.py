@@ -1056,7 +1056,7 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def set_cabac_config(self, s, ...): # strip 's'
+    def set_cabac_config(self, s): # strip 's'
         """
         Writes the current CABAC objects to the FPGA registers
         """
@@ -1088,12 +1088,11 @@ class FPGA(object):
         """
         Gets the current value of the CABAC objects for the given parameter and checks that it is correct.
         """
-        prgm = self.cabac_top.get_cabac_fromstring(param)
-        prgm.append(self.cabac_bottom.get_cabac_fromstring(param))
+        prgm = self.cabac_top.get_cabac_fromstring(param) + self.cabac_bottom.get_cabac_fromstring(param)
 
         for prgmval in prgm:
             if (abs(prgmval - value)>0.2):
-                raise StandardError("CABAC readback different from setting for %s" % param)
+                raise StandardError("CABAC readback different from setting for %s: %f != %f" % (param, prgmval, value) )
 
 
 

@@ -54,6 +54,9 @@ class Bench(object):
 
 
         #rewrite default state of sequencer (to avoid reloading functions)
+        self.reb.load_function(0, fpga.Function(name = "default state",
+                                                timelengths = {0:2, 1:0},
+                                                outputs = {0:0x6bc, 1:0}))
 
 
         time.sleep(1)
