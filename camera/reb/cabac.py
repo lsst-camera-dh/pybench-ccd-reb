@@ -54,7 +54,6 @@ class CABAC(object):
         self.OD0 = value_int
         self.OD1 = value_int
     
-    
     def set_I_parallel(self, value_int):
     
         self.I_parallel = value_int & 0xff
@@ -91,6 +90,51 @@ class CABAC(object):
         value_int = int(value_V // self.RDconv) & 0xff #valid only above 7 V
         self.RD = value_int
     
+    def set_cabac_fromstring(self, param, value):
+    
+        if param == "OD":
+            self.set_OD(value)
+        else if param == "GD":
+            self.set_GD(value)
+        else if param == "RD":
+            self.set_RD(value)
+        else if param == "OG":
+            self.set_OG(value)
+        else if param == "IP":
+            self.set_I_parallel(value)
+        else if param == "IS":
+            self.set_I_serial(value)
+        else if param == "IRG":
+            self.set_I_RG(value)
+        else if param == "IC":
+            self.set_I_clocks(value)
+        else :
+            raise ValueError("No CABAC parameter with this name: "+ param)
+                
+                
+    def get_cabac_fromstring(self, param):
+        
+        value = []
+        if param == "OD":
+            value = [self.OD0, self.OD1]
+        else if param == "GD":
+            value = [self.GD]
+        else if param == "RD":
+            value = [self.RD]
+        else if param == "OG":
+            value = [self.set_OG]
+        else if param == "IP":
+            value = [self.set_I_parallel]
+        else if param == "IS":
+            value = [self.set_I_serial]
+        else if param == "IRG":
+            value = [self.set_I_RG]
+        else if param == "IC":
+            value = [self.set_I_parallel, self.set_I_serial, self.set_I_RG]
+        else :
+            raise ValueError("No CABAC parameter with this name: "+ param)
+
+        return value
 
     # ----------------------------------------------------------
 

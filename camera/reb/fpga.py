@@ -1037,7 +1037,7 @@ class FPGA(object):
 
     def get_cabac_config(self, s): # strip 's'
         """
-        read CABAC configuration for strip <s>.
+        read CABAC configuration for strip <s>,writes to CABAC objects and to header string.
         """
         if s not in [0,1,2]:
             raise ValueError("Invalid REB strip (%d)" % s)
@@ -1050,19 +1050,50 @@ class FPGA(object):
         self.cabac_top.set_from_registers(top_config)
         self.cabac_bottom.set_from_registers(bottom_config)
 
+        config = ''.join([self.cabac_top.print_to_header("T"),self.cabac_bottom.print_to_header("B")])
+            
+        return config
+
     # ----------------------------------------------------------
 
-    # def set_cabac_config(self, s, ...): # strip 's'
+    def set_cabac_config(self, s, ...): # strip 's'
+        """
+        Writes the current CABAC objects to the FPGA registers
+        """
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB strip (%d)" % s)
+        
+        regs_top = self.cabac_top.write_to_registers()
+        regs_bottom = self.cabac_bottom.write_to_registers()
+        
+        for regnum in range(0,5):
+            self.write(0x500010 + regnum, regs_top[regnum])
+            self.write(0x500020 + regnum, regs_bottom[regnum])
+        
+        self.write(0x500000, s) # starts the CABAC configuration
+
+    # ----------------------------------------------------------
+
+    def set_cabac_value(self, param, value):
+        """
+        Sets the CABAC parameter at the given value on both CABACs.
+        """
     
+        self.cabac_top.set_cabac_fromstring(param, value)
+        self.cabac_bottom.set_cabac_fromstring(param, value)
+
     # ----------------------------------------------------------
 
-    def get_operating_header(self, headername = "CCDoperating.txt"):
+    def check_cabac_value(self, param, value):
         """
-        Fills FITS header for CCD operating conditions
+        Gets the current value of the CABAC objects for the given parameter and checks that it is correct.
         """
-        headerfile = open(headername,'w')
-        headerfile.write(self.cabac_top.print_to_header("T"))
-        headerfile.write(self.cabac_bottom.print_to_header("B"))
-        #need to add clocking rails, currents and voltages, CSgate value, back substrate value and current (added elsewhere ?)
+        prgm = self.cabac_top.get_cabac_fromstring(param)
+        prgm.append(self.cabac_bottom.get_cabac_fromstring(param))
+
+        for prgmval in prgm:
+            if (abs(prgmval - value)>0.2):
+                raise StandardError("CABAC readback different from setting for %s" % param)
+
 
 
