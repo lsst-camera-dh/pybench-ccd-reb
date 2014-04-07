@@ -788,7 +788,7 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def load_function(self, function_id, function):
+    def send_function(self, function_id, function):
         """
         Send the function <function> into the FPGA memory 
         at the #function_id slot.
@@ -816,9 +816,9 @@ class FPGA(object):
             self.write(output_addr, output)
 
 
-    def load_functions(self, functions):
+    def send_functions(self, functions):
         for i,f in functions.iteritems():
-            self.load_function(i,f)
+            self.send_function(i,f)
 
 
     def dump_function(self, function_id):
@@ -872,11 +872,17 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
+    def send_sequencer(self, seq, clear = True):
+        """
+        Load the functions and the program at once.
+        """
+        self.send_program(seq.program, clear = clear)
+        self.send_functions(seq.functions)
+
     def dump_sequencer(self):
         """
         Dump the sequencer program and the 16 functions from the FPGA memory.
         """
-
         seq = Sequencer()
         seq_prg = self.dump_program()
         seq.program = seq_prg

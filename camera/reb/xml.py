@@ -5,9 +5,14 @@
 # XML IO
 #
 
+# En cours...
+
 from lxml import etree
 
 from fpga import *
+
+def validate(f):
+    pass
 
 def xmlparse(f):
     tree = etree.parse(f)
