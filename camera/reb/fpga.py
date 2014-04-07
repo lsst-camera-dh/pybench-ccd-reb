@@ -632,6 +632,8 @@ class FPGA(object):
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
     program_mem_size  = 1024 # ???
+    serial_conv = 0.00306 #rough conversion for DACs, no guarantee
+    parallel_conv = 0.00348
 
     # --------------------------------------------------------------------
 
@@ -640,7 +642,8 @@ class FPGA(object):
         self.ctrl_host = ctrl_host
         self.cabac_top = cabac.CABAC()
         self.cabac_bottom = cabac.CABAC()
-        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0}
+        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
+
 
     # def open(self):
     #     "Opening the connection ?"
@@ -1043,14 +1046,12 @@ class FPGA(object):
         
         #values to be set in the register for each output
         outputnum = {"V_SL":0,"V_SH":1,"V_RGL":2,"V_RGH":3,"V_PL":4,"V_PH":5,"HEAT1":6,"HEAT2":7}
-        serial_conv = 0.00306 #rough conversion, no guarantee
-        parallel_conv = 0.00348
 
         for key in iter(voltages):
             if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                self.dacs[key] = (voltages[key]/serial_conv)& 0xfff
+                self.dacs[key] = (voltages[key]/self.serial_conv)& 0xfff
             elif key in ["V_PL", "V_PH"]:
-                self.dacs[key] = (voltages[key]/parallel_conv)& 0xfff
+                self.dacs[key] = (voltages[key]/self.parallel_conv)& 0xfff
             elif key in ["HEAT1", "HEAT2"]:
                 self.dacs[key] = voltages[key] & 0xfff
             else:
@@ -1060,6 +1061,53 @@ class FPGA(object):
          
          #activates DAC outputs
          self.write(0x400001, 1)
+
+    # ----------------------------------------------------------
+
+    def get_clock_voltages(self):
+        """
+        No readback available, using values stored in fpga object.
+        """
+        headerlines = []
+        for key in iter(self.dacs):
+            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+                headerlines.append("{}= {:.2f}\n".format(key, dacs[key]*self.serial_conv))
+            elif key in ["V_PL", "V_PH"]:
+                headerlines.append("{}= {:.2f}\n".format(key, dacs[key]*self.parallel_conv))
+            else:
+                headerlines.append("{}= {:d}\n".format(key, dacs[key]))
+
+        return ''.join(headerlines)
+
+    # ----------------------------------------------------------
+
+    def set_current_source(self, currents, ccdnum = 0):
+        """
+        Sets current source DAC value for given CCD (0, 1, 2).
+        """
+        
+        key = "I_OS"
+        
+        if key in currents:
+            self.dacs[key] = currents[key] & 0xfff
+        else:
+            raise ValueError("Unknown currents key: %s, could not be set" % key)
+            
+        self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
+                
+        #activates DAC output
+        self.write(0x400011, 1)
+
+    # ----------------------------------------------------------
+
+    def get_current_source(self):
+        """
+        No readback available, using values stored in fpga object.
+        """
+        
+        key = "I_OS"
+    
+        return "{}= {:d}\n".format(key, dacs[key])
 
     # ----------------------------------------------------------
 

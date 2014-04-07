@@ -649,6 +649,14 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
+#def set_dacs(self, dacs):
+        """
+        Sets CS gate or clock voltage DACs.
+        """
+    
+
+    # --------------------------------------------------------------------
+
     def get_cabac_config(self): 
         """
         read CABAC configuration.
@@ -682,7 +690,10 @@ read_line_fake:
         """
         headerfile = open(headername,'w')
         headerfile.write(self.get_cabac_config())
-#need to add clocking rails, currents and voltages, CSgate value, back substrate value and current (added elsewhere ?)
+        headerfile.write(self.fpga.get_clock_voltage())
+        headerfile.write(self.fpga.get_current_source())
+
+#need to add power currents and voltages, back substrate value and current (added elsewhere ?)
 
 
 # """
