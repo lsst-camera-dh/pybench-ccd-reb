@@ -640,6 +640,7 @@ class FPGA(object):
         self.ctrl_host = ctrl_host
         self.cabac_top = cabac.CABAC()
         self.cabac_bottom = cabac.CABAC()
+        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0}
 
     # def open(self):
     #     "Opening the connection ?"
@@ -1026,12 +1027,39 @@ class FPGA(object):
         # 0x600005 24V current
         currents["24V"] = ((raw[0x600005] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
 
-        # 0x600005 40V voltage
+        # 0x600006 40V voltage
         voltages["40V"] = ((raw[0x600006] & 0xfff0)>>4) * 0.025 # 25 mV
-        # 0x600006 40V current
+        # 0x600007 40V current
         currents["40V"] = ((raw[0x600007] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
 
         return raw, voltages, currents
+    
+    # ----------------------------------------------------------
+    
+    def set_clock_voltages(self, voltages):
+        """
+        Sets voltages as defined in the input dictionary, keeps others as previously.
+        """
+        
+        #values to be set in the register for each output
+        outputnum = {"V_SL":0,"V_SH":1,"V_RGL":2,"V_RGH":3,"V_PL":4,"V_PH":5,"HEAT1":6,"HEAT2":7}
+        serial_conv = 0.00306 #rough conversion, no guarantee
+        parallel_conv = 0.00348
+
+        for key in iter(voltages):
+            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+                self.dacs[key] = (voltages[key]/serial_conv)& 0xfff
+            elif key in ["V_PL", "V_PH"]:
+                self.dacs[key] = (voltages[key]/parallel_conv)& 0xfff
+            elif key in ["HEAT1", "HEAT2"]:
+                self.dacs[key] = voltages[key] & 0xfff
+            else:
+                raise ValueError("Unknown voltage key: %s, could not be set" % key)
+    
+            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12) )
+         
+         #activates DAC outputs
+         self.write(0x400001, 1)
 
     # ----------------------------------------------------------
 

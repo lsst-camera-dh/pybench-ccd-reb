@@ -681,7 +681,7 @@ read_line_fake:
         Fills FITS header for CCD operating conditions
         """
         headerfile = open(headername,'w')
-        headerfile.write(self.get_cabac_config(self.strip_id))
+        headerfile.write(self.get_cabac_config())
 #need to add clocking rails, currents and voltages, CSgate value, back substrate value and current (added elsewhere ?)
 
 
