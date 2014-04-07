@@ -1,5 +1,6 @@
 
 import fpga
+import time
 
 
 class REB(object):
@@ -404,11 +405,12 @@ read_line_fake:
              RTS 
 """
 
-    def __init__(self, reb_id = 2, ctrl_host = None):
+    def __init__(self, reb_id = 2, ctrl_host = None, strip_id = 0):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
         self.fpga = fpga.FPGA(ctrl_host = self.ctrl_host, 
                               reb_id = self.reb_id)
+    	self.strip_id = strip_id
 
         self.program = None
         self.functions = {}
@@ -664,16 +666,51 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-    def get_cabac_config(self, s): # strip 's'
+#def set_dacs(self, dacs):
         """
-        read CABAC configuration for strip <s>.
+        Sets CS gate or clock voltage DACs.
         """
-        return self.fpga.get_cabac_config(s)
+    
+
+    # --------------------------------------------------------------------
+
+    def get_cabac_config(self): 
+        """
+        read CABAC configuration.
+        """
+        return self.fpga.get_cabac_config(self.strip_id)
     
     # --------------------------------------------------------------------
 
-    # def set_cabac_config(self, s, ...): # strip 's'
+    def set_cabac_config(self, params):
+        """
+        Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
+        """
     
+        for param in iter(params):
+            self.fpga.set_cabac_value(param, params[param])
+
+        self.fpga.set_cabac_config(self.strip_id)
+        
+        time.sleep(0.5)
+        
+        self.fpga.get_cabac_config(self.strip_id)
+
+        for param in iter(params):
+            self.fpga.check_cabac_value(param, params[param])
+
+    # ----------------------------------------------------------
+    
+    def get_operating_header(self, headername = "CCDoperating.txt"):
+        """
+        Fills FITS header for CCD operating conditions
+        """
+        headerfile = open(headername,'w')
+        headerfile.write(self.get_cabac_config())
+        headerfile.write(self.fpga.get_clock_voltage())
+        headerfile.write(self.fpga.get_current_source())
+
+#need to add power currents and voltages, back substrate value and current (added elsewhere ?)
 
 
 # """

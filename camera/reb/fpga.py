@@ -9,6 +9,7 @@ import sys
 import os, os.path
 import re
 import subprocess
+import cabac
 
 ## -----------------------------------------------------------------------
 
@@ -631,12 +632,18 @@ class FPGA(object):
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
     program_mem_size  = 1024 # ???
+    serial_conv = 0.00306 #rough conversion for DACs, no guarantee
+    parallel_conv = 0.00348
 
     # --------------------------------------------------------------------
 
     def __init__(self, ctrl_host = None, reb_id = 2):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
+        self.cabac_top = cabac.CABAC()
+        self.cabac_bottom = cabac.CABAC()
+        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
+
 
     # def open(self):
     #     "Opening the connection ?"
@@ -1015,32 +1022,104 @@ class FPGA(object):
         currents = {}
 
         # 0x600000 6V voltage
-        voltages["6V"]  = (raw[0x600000] & 0xffff) * 0.025 # 25 mV
+        voltages["6V"]  = ((raw[0x600000] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600001 6V current
-        currents["6V"]  = (raw[0x600001] & 0xffff) * 25e-6 # 25 uA
+        currents["6V"]  = ((raw[0x600001] & 0xfff0)>>4) * 250e-6 # 25 uA (250 uA in reality ?)
 
         # 0x600002 9V voltage
-        voltages["9V"]  = (raw[0x600002] & 0xffff) * 0.025 # 25 mV
+        voltages["9V"]  = ((raw[0x600002] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600003 9V current
-        currents["9V"]  = (raw[0x600003] & 0xffff) * 25e-6 # 25 uA
+        currents["9V"]  = ((raw[0x600003] & 0xfff0)>>4) * 250e-6 # 25 uA (250 uA in reality ?)
 
         # 0x600004 24V voltage
-        voltages["24V"] = (raw[0x600004] & 0xffff) * 0.025 # 25 mV
+        voltages["24V"] = ((raw[0x600004] & 0xfff0)>>4) * 0.025 # 25 mV
         # 0x600005 24V current
-        currents["24V"] = (raw[0x600005] & 0xffff) * 8e-6  # 8 uA
+        currents["24V"] = ((raw[0x600005] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
 
-        # 0x600005 40V voltage
-        voltages["40V"] = (raw[0x600006] & 0xffff) * 0.025 # 25 mV
-        # 0x600006 40V current
-        currents["40V"] = (raw[0x600007] & 0xffff) * 8e-6  # 8 uA
+        # 0x600006 40V voltage
+        voltages["40V"] = ((raw[0x600006] & 0xfff0)>>4) * 0.025 # 25 mV
+        # 0x600007 40V current
+        currents["40V"] = ((raw[0x600007] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
 
         return raw, voltages, currents
+    
+    # ----------------------------------------------------------
+    
+    def set_clock_voltages(self, voltages):
+        """
+        Sets voltages as defined in the input dictionary, keeps others as previously.
+        """
+        
+        #values to be set in the register for each output
+        outputnum = {"V_SL":0,"V_SH":1,"V_RGL":2,"V_RGH":3,"V_PL":4,"V_PH":5,"HEAT1":6,"HEAT2":7}
+
+        for key in iter(voltages):
+            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+                self.dacs[key] = (voltages[key]/self.serial_conv)& 0xfff
+            elif key in ["V_PL", "V_PH"]:
+                self.dacs[key] = (voltages[key]/self.parallel_conv)& 0xfff
+            elif key in ["HEAT1", "HEAT2"]:
+                self.dacs[key] = voltages[key] & 0xfff
+            else:
+                raise ValueError("Unknown voltage key: %s, could not be set" % key)
+    
+            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12) )
+         
+         #activates DAC outputs
+         self.write(0x400001, 1)
+
+    # ----------------------------------------------------------
+
+    def get_clock_voltages(self):
+        """
+        No readback available, using values stored in fpga object.
+        """
+        headerlines = []
+        for key in iter(self.dacs):
+            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+                headerlines.append("{}= {:.2f}\n".format(key, dacs[key]*self.serial_conv))
+            elif key in ["V_PL", "V_PH"]:
+                headerlines.append("{}= {:.2f}\n".format(key, dacs[key]*self.parallel_conv))
+            else:
+                headerlines.append("{}= {:d}\n".format(key, dacs[key]))
+
+        return ''.join(headerlines)
+
+    # ----------------------------------------------------------
+
+    def set_current_source(self, currents, ccdnum = 0):
+        """
+        Sets current source DAC value for given CCD (0, 1, 2).
+        """
+        
+        key = "I_OS"
+        
+        if key in currents:
+            self.dacs[key] = currents[key] & 0xfff
+        else:
+            raise ValueError("Unknown currents key: %s, could not be set" % key)
+            
+        self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
+                
+        #activates DAC output
+        self.write(0x400011, 1)
+
+    # ----------------------------------------------------------
+
+    def get_current_source(self):
+        """
+        No readback available, using values stored in fpga object.
+        """
+        
+        key = "I_OS"
+    
+        return "{}= {:d}\n".format(key, dacs[key])
 
     # ----------------------------------------------------------
 
     def get_cabac_config(self, s): # strip 's'
         """
-        read CABAC configuration for strip <s>.
+        read CABAC configuration for strip <s>,writes to CABAC objects and to header string.
         """
         if s not in [0,1,2]:
             raise ValueError("Invalid REB strip (%d)" % s)
@@ -1050,12 +1129,52 @@ class FPGA(object):
         top_config    = self.read(0x500110, 5) # 0 - 4
         bottom_config = self.read(0x500120, 5) # 0 - 4
 
-        return top_config, bottom_config
-    
+        self.cabac_top.set_from_registers(top_config)
+        self.cabac_bottom.set_from_registers(bottom_config)
+
+        config = ''.join([self.cabac_top.print_to_header("T"),self.cabac_bottom.print_to_header("B")])
+            
+        return config
+
     # ----------------------------------------------------------
 
-    # def set_cabac_config(self, s, ...): # strip 's'
-    
+    def set_cabac_config(self, s): # strip 's'
+        """
+        Writes the current CABAC objects to the FPGA registers
+        """
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB strip (%d)" % s)
+        
+        regs_top = self.cabac_top.write_to_registers()
+        regs_bottom = self.cabac_bottom.write_to_registers()
+        
+        for regnum in range(0,5):
+            self.write(0x500010 + regnum, regs_top[regnum])
+            self.write(0x500020 + regnum, regs_bottom[regnum])
+        
+        self.write(0x500000, s) # starts the CABAC configuration
 
-         
-                 
+    # ----------------------------------------------------------
+
+    def set_cabac_value(self, param, value):
+        """
+        Sets the CABAC parameter at the given value on both CABACs.
+        """
+    
+        self.cabac_top.set_cabac_fromstring(param, value)
+        self.cabac_bottom.set_cabac_fromstring(param, value)
+
+    # ----------------------------------------------------------
+
+    def check_cabac_value(self, param, value):
+        """
+        Gets the current value of the CABAC objects for the given parameter and checks that it is correct.
+        """
+        prgm = self.cabac_top.get_cabac_fromstring(param) + self.cabac_bottom.get_cabac_fromstring(param)
+
+        for prgmval in prgm:
+            if (abs(prgmval - value)>0.2):
+                raise StandardError("CABAC readback different from setting for %s: %f != %f" % (param, prgmval, value) )
+
+
+
