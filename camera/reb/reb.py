@@ -649,11 +649,15 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-#def set_dacs(self, dacs):
+    def set_dacs(self, dacs):
         """
-        Sets CS gate or clock voltage DACs.
+        Sets CS gate or clock voltage DACs, but not both at the same time (for extra safety).
         """
-    
+
+        if "I_OS" in dacs:
+            self.fpga.set_current_source(dacs)
+        else:
+            self.fpga.set_clock_voltages(dacs)
 
     # --------------------------------------------------------------------
 

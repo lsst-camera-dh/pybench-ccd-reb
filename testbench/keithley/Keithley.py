@@ -5,6 +5,7 @@ class Keithley(object):
   answer="initial answer..."  
   model=""
   current=""
+  volt=""
   def __init__(self, dev = None):
     try:
       self.serialport = serial.Serial()
@@ -30,25 +31,28 @@ class Keithley(object):
   def disconnectInstrument(self):
     self.serialport.close()
 
-  def selectOutputVoltageRange(self,range):
+  def selectOutputVoltageRange(self,range,ilim = 2.5e-3):
     if self.model == "6487":
       self.send("SOUR:VOLT:RANG " + str(range))
-      self.send("SOUR:VOLT:ILIM 2.5e-3")
+      self.send("SOUR:VOLT:ILIM " + str(ilim))
 
   def setOutputVoltage(self,value):
     self.send("SOUR:VOLT " + str(value))
-    
+  
   def voltageSourceOperate(self,value):
     if value:
       self.send("SOUR:VOLT:STAT ON")
     else:
       self.send("SOUR:VOLT:STAT OFF")
 
-  def selectCurrent(self):
+  def selectCurrent(self, range = None):
     if self.model != "6485":
       self.send("FUNC 'CURR:DC'")
     self.send("FORM:ELEM READ,TIME")
-    self.send("CURR:RANG:AUTO ON")
+    if not range:
+      self.send("CURR:RANG:AUTO ON")
+    else:
+      self.send("CURR:RANG " + str(range))
 
   def zeroCorrect(self):
     self.send("SYST:ZCH ON")
@@ -80,7 +84,12 @@ class Keithley(object):
     p = re.compile(r',MODEL (\d+),')
     m = p.search(self.answer)
     self.model = m.group(1)
-
+  
+  def getOutputVoltage(self):
+    if self.model == "6487":
+      self.send("SOUR:VOLT?")
+      self.volt = self.answer
+  
   def send(self,command):
     try:
       self.serialport.write(command + "\n")

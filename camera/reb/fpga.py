@@ -1091,7 +1091,7 @@ class FPGA(object):
         if key in currents:
             self.dacs[key] = currents[key] & 0xfff
         else:
-            raise ValueError("Unknown currents key: %s, could not be set" % key)
+            raise ValueError("No key found for current source (%s), could not be set." % key)
             
         self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
                 
