@@ -115,13 +115,12 @@ def xmlparse(f):
     for func in funcs:
         fullname =  func.xpath('fullname/text()')
         name =  func.get('id')
-        value =  func.xpath('value/text()')[0]
 
         clocks    = func.xpath('clocklist')
         slices    = func.xpath('slicelist')
         constants = func.xpath('constants')
 
-        func_dict = { 'value' : value }
+        func_dict = { }
         
         if fullname != None:
              func_dict['fullname'] = fullname[0]

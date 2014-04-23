@@ -1062,11 +1062,11 @@ class FPGA(object):
                 self.dacs[key] = voltages[key] & 0xfff
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
-    
+            
             self.write(0x400000, self.dacs[key] + (outputnum[key]<<12) )
          
-         #activates DAC outputs
-         self.write(0x400001, 1)
+        # activates DAC outputs
+        self.write(0x400001, 1)
 
     # ----------------------------------------------------------
 
