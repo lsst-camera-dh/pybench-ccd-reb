@@ -1,31 +1,37 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-testbench'
-VERSION = '0.0.1'
+APPNAME = 'dice-testbench'
+VERSION = '0.0.2'
 top = '.'
 build = 'build'
 
-submodules = ['keithley', 
-              'lakeshore', 
-              'powersupply',
-              'laser']
+submodules = ['monochromator', 
+              'powersupply', 
+              'multimeter', 
+              'utils', 
+              'motor',
+              'temperature']
+# submodules = ['monochromator', 'powersupply', 'multimeter', 'utils']
+# submodules = ['camera', 'monochromator', 'motor', 'multimeter', 'powersupply']
 
-def options(ctx):
-    ctx.load('python')        
-    ctx.load('compiler_c')
+def options(opt):
+    opt.load('python')        
+    opt.load('compiler_c')
+    # opt.sub_options(submodules)
 
-def configure(ctx):
-    ctx.load('python')
-    ctx.load('compiler_c')
-    ctx.check_python_headers()
+def configure(conf):
+    conf.load('python')
+    conf.load('compiler_c')
+    conf.check_python_headers()
+    # conf.sub_config(submodules)
     
-def build(ctx):
-    ctx(features = 'py', 
+def build(bld):
+    bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench')
+        install_path = '${PYTHONDIR}/dice/testbench')
 
-    ctx.recurse(submodules)
+    bld.add_subdirs(submodules)
 
 
     
