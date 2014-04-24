@@ -355,9 +355,9 @@ func[7] = \
 # id_funcs = func.keys()
 # id_funcs.sort()
 # for id_func in id_funcs:
-#     R.load_function(id_func, func[id_func])
+#     R.send_function(id_func, func[id_func])
 
-R.load_functions(func)
+R.send_functions(func)
 
 
 program = """
