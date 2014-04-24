@@ -287,6 +287,8 @@ class Pollux_motor(object):
         using range (find the range, so the upper limit)
 
         When power-on for the first time, default zero position is the actual position
+
+        Then it goes to the middle of the axis
         """
 
         limits = {}
@@ -310,7 +312,7 @@ class Pollux_motor(object):
             limits['up'] = self.position
 
         self.__limits = dict(limits)
-            
+        
         return limits
 
     # ---------- Set zero at the current position ------------ 
