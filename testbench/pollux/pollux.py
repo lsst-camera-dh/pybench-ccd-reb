@@ -252,7 +252,7 @@ class Pollux_motor(object):
 
         # Here add a limit check on the position ?
 
-        command = "%f " + self.axis + " nm" % position
+        command = ("%f " + self.axis + " nm") % position
         answer = self.send(command)
         # in ECHO=1 no answer []
 
@@ -266,7 +266,7 @@ class Pollux_motor(object):
         Move the axis of relative offset 'offset'.
         @param offset: position offset (positive or negative)
         """
-        command = "%f " + self.axis + " nr" % offset
+        command = ("%f " + self.axis + " nr") % offset
         answer = self.send(command)
         # in ECHO=1 no answer []
 
