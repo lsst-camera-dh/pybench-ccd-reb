@@ -244,35 +244,52 @@ class Pollux_motor(object):
             return False
         
 
-    def move_absolute(self, position, wait=True):
+    def move_absolute(self, position, wait=True, check = False):
         """
         Move the axis to absolute position 'position'.
         @param position: target position.
+        @param check: to take into account the limits of the range, if False, move without constraints.
         """
+        
+        if check == False:
+            command = ("%f " + self.axis + " nm") % position
+            answer = self.send(command)
+            # in ECHO=1 no answer []
 
-        # Here add a limit check on the position ?
+            if wait:
+                while (self.is_moving()):
+                    pass
 
-        command = ("%f " + self.axis + " nm") % position
-        answer = self.send(command)
-        # in ECHO=1 no answer []
+        if check == True:
+            if (len(self._Pollux_motor__limits['down']) < 1) | (len(self._Pollux_motor__limits['up']) < 1):
+                raise ValueError ("There are no limits to check. \n Please do find_limits before.")
+            else:
+                if (position < self._Pollux_motor__limits['up']) & (position > self._Pollux_motor__limits['down']) : 
+                    command = ("%f " + self.axis + " nm") % position
+                    answer = self.send(command)
+                    # in ECHO=1 no answer []
+                
+                    if wait:
+                        while (self.is_moving()):
+                            pass
+                else:
+                    raise ValueError ("You have chosen a position outside of the range.")
 
-        if wait:
-            while (self.is_moving()):
-                pass
-
-
-    def move_relative(self, offset, wait = True):
+    def move_relative(self, offset, wait = True, check = False):
         """
         Move the axis of relative offset 'offset'.
         @param offset: position offset (positive or negative)
+        @param check: to take into account the limits of the range. If False, move without constraints.
         """
-        command = ("%f " + self.axis + " nr") % offset
-        answer = self.send(command)
-        # in ECHO=1 no answer []
 
-        if wait:
-            while (self.is_moving()):
-                pass
+        if check == False:
+            command = ("%f " + self.axis + " nr") % offset
+            answer = self.send(command)
+            # in ECHO=1 no answer []
+            
+            if wait:
+                while (self.is_moving()):
+                    pass
 
     # =========================================================
 
