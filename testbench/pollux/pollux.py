@@ -256,15 +256,15 @@ class Pollux_motor(object):
             answer = self.send(command)
             # in ECHO=1 no answer []
 
-            if wait:
-                while (self.is_moving()):
-                    pass
+            #if wait:
+             #   while (self.is_moving()):
+              #      pass
 
         if check == True:
-            if (len(self._Pollux_motor__limits['down']) < 1) | (len(self._Pollux_motor__limits['up']) < 1):
+            if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
                 raise ValueError ("There are no limits to check. \n Please do find_limits before.")
             else:
-                if (position < self._Pollux_motor__limits['up']) & (position > self._Pollux_motor__limits['down']) : 
+                if (position < self._Pollux_motor__limits['up']) and (position > self._Pollux_motor__limits['down']) : 
                     command = ("%f " + self.axis + " nm") % position
                     answer = self.send(command)
                     # in ECHO=1 no answer []
@@ -287,9 +287,25 @@ class Pollux_motor(object):
             answer = self.send(command)
             # in ECHO=1 no answer []
             
-            if wait:
-                while (self.is_moving()):
-                    pass
+            #if wait:
+             #   while (self.is_moving()):
+              #      pass
+
+        if check == True:
+            if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
+                raise ValueError ("There are no limits to check. \n Please do find_limits before.")
+            else:
+                get_position(self)
+                if (self.position + offset < self._Pollux_motor__limits['up']) and (self.position + offset > self._Pollux_motor__limits['down']) : 
+                    command = ("%f " + self.axis + " nr") % offset
+                    answer = self.send(command)
+                    # in ECHO=1 no answer []
+                
+                    if wait:
+                        while (self.is_moving()):
+                            pass
+                else:
+                    raise ValueError ("You have chosen a position outside of the range.")
 
     # =========================================================
 
