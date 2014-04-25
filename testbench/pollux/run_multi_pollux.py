@@ -72,4 +72,8 @@ def move_rel_axis(mm_x, mm_y, mm_z, check = False):
 
 move_abs_axis(limits_x['up']/2., limits_y['up']/2., 0) #Changer la valeur par defaut de z en "limits_y['up']/2.".
 
+pos_ini_x = x.get_position()
+pos_ini_y = y.get_position()
+pos_ini_z = z.get_position()
+
 #Then chose the positions you want to go to...
