@@ -207,11 +207,12 @@ class Pollux_motor(object):
         """
 
         if not(minimal):
-            self.send('1.0 ' + self.axis + ' sna')
+            self.send('0.5 ' + self.axis + ' snv')
+            self.send('0.5 ' + self.axis + ' sna')
             self.send('500.0 ' + self.axis + ' setnstopdecel')
             self.send('0.5 ' + self.axis + ' setcalvel')
-            self.send('1.0 ' + self.axis + ' setnrmvel')
-            self.send('1.0 ' + self.axis + ' setnrefvel')
+            self.send('0.5 ' + self.axis + ' setnrmvel')
+            self.send('0.5 ' + self.axis + ' setnrefvel')
 
     # ---------- Current motor position ---------------------- 
 
@@ -256,9 +257,9 @@ class Pollux_motor(object):
             answer = self.send(command)
             # in ECHO=1 no answer []
 
-            #if wait:
-             #   while (self.is_moving()):
-              #      pass
+            if wait:
+                while (self.is_moving()):
+                    pass
 
         if check == True:
             if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
@@ -287,9 +288,9 @@ class Pollux_motor(object):
             answer = self.send(command)
             # in ECHO=1 no answer []
             
-            #if wait:
-             #   while (self.is_moving()):
-              #      pass
+            if wait:
+                while (self.is_moving()):
+                    pass
 
         if check == True:
             if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):

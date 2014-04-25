@@ -10,8 +10,10 @@
 
 import pollux as p  
 
-x = p.Pollux_motor()
-y = p.Pollux_motor(port = "/dev/ttyUSB1")
+#Attention au nom des peripheriques
+
+x = p.Pollux_motor(port = "/dev/ttyUSB2")
+y = p.Pollux_motor(port = "/dev/ttyUSB3")
 #z = p.Pollux_motor(port = "/dev/ttyUSB2")
 
 #Open the axis
@@ -74,6 +76,6 @@ move_abs_axis(limits_x['up']/2., limits_y['up']/2., 0) #Changer la valeur par de
 
 pos_ini_x = x.get_position()
 pos_ini_y = y.get_position()
-pos_ini_z = z.get_position()
+#pos_ini_z = z.get_position()
 
 #Then chose the positions you want to go to...
