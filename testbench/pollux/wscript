@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'dice.testbench.motor'
+APPNAME = 'lsst.testbench.pollux'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -18,20 +18,20 @@ def build(bld):
     
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py', 'bench.py', 'mdrive_xy.py', 'microlynx_z.py'], 
-        install_path = '${PYTHONDIR}/dice/testbench/motor')
+        source = ['__init__.py', 'pollux.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/pollux')
 
-    bld.install_as('${PREFIX}/bin/bench-source-position', 
-                   'bench-source-position', 
-                   chmod=0755)
-    bld.install_as('${PREFIX}/bin/bench-sensor-position', 
-                   'bench-sensor-position', 
-                   chmod=0755)
-    bld.install_as('${PREFIX}/bin/bench-source-move', 
-                   'bench-source-move', 
-                   chmod=0755)
-    bld.install_as('${PREFIX}/bin/bench-sensor-move', 
-                   'bench-sensor-move', 
-                   chmod=0755)
+    # bld.install_as('${PREFIX}/bin/bench-source-position', 
+    #                'bench-source-position', 
+    #                chmod=0755)
+    # bld.install_as('${PREFIX}/bin/bench-sensor-position', 
+    #                'bench-sensor-position', 
+    #                chmod=0755)
+    # bld.install_as('${PREFIX}/bin/bench-source-move', 
+    #                'bench-source-move', 
+    #                chmod=0755)
+    # bld.install_as('${PREFIX}/bin/bench-sensor-move', 
+    #                'bench-sensor-move', 
+    #                chmod=0755)
 
     

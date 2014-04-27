@@ -1,18 +1,16 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'dice-testbench'
-VERSION = '0.0.2'
+APPNAME = 'lsst.testbench'
+VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['monochromator', 
+submodules = ['pollux', 
+              'keithley',
+              'rpc',
+              'digisense',
               'powersupply', 
-              'multimeter', 
-              'utils', 
-              'motor',
-              'temperature']
-# submodules = ['monochromator', 'powersupply', 'multimeter', 'utils']
-# submodules = ['camera', 'monochromator', 'motor', 'multimeter', 'powersupply']
+              'utils']
 
 def options(opt):
     opt.load('python')        
@@ -29,7 +27,7 @@ def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/dice/testbench')
+        install_path = '${PYTHONDIR}/lsst/testbench')
 
     bld.add_subdirs(submodules)
 
