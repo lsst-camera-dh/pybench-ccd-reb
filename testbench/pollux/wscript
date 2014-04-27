@@ -1,7 +1,7 @@
 # -*- mode: python; -*- 
 
 APPNAME = 'lsst.testbench.pollux'
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 top = '.'
 build = 'build'
 
@@ -18,20 +18,14 @@ def build(bld):
     
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py', 'pollux.py'], 
+        source = ['__init__.py', 'pollux.py', 'xyz.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench/pollux')
 
-    # bld.install_as('${PREFIX}/bin/bench-source-position', 
-    #                'bench-source-position', 
-    #                chmod=0755)
-    # bld.install_as('${PREFIX}/bin/bench-sensor-position', 
-    #                'bench-sensor-position', 
-    #                chmod=0755)
-    # bld.install_as('${PREFIX}/bin/bench-source-move', 
-    #                'bench-source-move', 
-    #                chmod=0755)
-    # bld.install_as('${PREFIX}/bin/bench-sensor-move', 
-    #                'bench-sensor-move', 
-    #                chmod=0755)
+    bld.install_as('${PREFIX}/bin/xyz-position', 
+                   'xyz-position', 
+                   chmod=0755)
+    bld.install_as('${PREFIX}/bin/xyz-move', 
+                   'xyz-move', 
+                   chmod=0755)
 
     
