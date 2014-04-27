@@ -4,21 +4,23 @@ import sys, os, os.path
 import getopt
 import time
 
-import dice.testbench.motor as dtm
+import lsst.testbench.pollux as ltp
 
 # --------- Parse command line arguments ------------------
 
 def usage():
-    print >>sys.stderr, "usage: bench-source-move"
-    print >>sys.stderr, "               [--xy <port>]"
-    print "                             a=position[unit] | da=offset[unit]"
-    print >>sys.stderr, "Move axis 'a' (X,Y) to position 'position'" 
-    print >>sys.stderr, "on the (SN/Sky)Dice test bench."
+    print >>sys.stderr, "usage: xyz-move"
+    print >>sys.stderr, "         [--x <port>]"
+    print >>sys.stderr, "         [--y <port>]"
+    print >>sys.stderr, "         [--z <port>]"
+    print >>sys.stderr, "         a=position | da=offset"
+    print >>sys.stderr, "Move axis 'a' (X,Y,Z) to position 'position'" 
+    print >>sys.stderr, "on the LSST test bench (unit is mm)."
 
 try:
     opts, args = \
         getopt.getopt(sys.argv[1:], "hv", \
-                          ["help", "verbose", "z="])
+                          ["help", "verbose", "x=", "y=", "z="])
 except getopt.GetoptError:
     # print help information and exit
     usage()
@@ -27,10 +29,10 @@ except getopt.GetoptError:
 # print opts
 # print args
 
-inputs = []
 verbose = False
-
-source_xy_port = dtm.Bench.default_source_xy_port
+x_port = ltp.XYZ.default_x_port
+y_port = ltp.XYZ.default_y_port
+z_port = ltp.XYZ.default_z_port
 
 for option, arg in opts:
     if option in ("-h", "--help"):
@@ -38,8 +40,21 @@ for option, arg in opts:
         sys.exit(0)
     if option in ("-v", "--verbose"):
         verbose = True
-    if option in ("--xy"):
-        source_xy_port = arg
+    if option in ("--x"):
+        if (arg == "") or (arg == "None"):
+            x_port = None
+        else:
+            x_port = arg
+    if option in ("--y"):
+        if (arg == "") or (arg == "None"):
+            y_port = None
+        else:
+            y_port = arg
+    if option in ("--z"):
+        if (arg == "") or (arg == "None"):
+            z_port = None
+        else:
+            z_port = arg
 
 if len(args) < 1:
     usage()
@@ -60,21 +75,21 @@ for arg in args:
         usage()
         sys.exit(3)
     
-    axis_spec = eqparts[0].upper()
+    axis_spec = eqparts[0].lower()
     if len(axis_spec) < 1:
         print >>sys.stderr, "error: invalid argument format (axis) [%s]" % arg
         usage()
         sys.exit(4)
     relative = False
-    if axis_spec[0] == 'D': # relative
+    if axis_spec[0] == 'd': # relative
         relative = True
         if len(axis_spec) != 2:
             print >>sys.stderr, \
                 "error: invalid argument format (axis) [%s]" % arg
             usage()
             sys.exit(5)
-    axis = axis_spec[-1]
-    if axis not in ['X', 'Y', 'H', 'V']:
+    axis = axis_spec[-1].lower()
+    if axis not in ['x', 'y', 'z']:
         print >>sys.stderr, \
             "error: invalid argument format (unknown axis) [%s]" % arg
         usage()
@@ -86,44 +101,36 @@ for arg in args:
         usage()
         sys.exit(4)
 
-    unit = "step"
-    if (len(value) > 2) and (value[-2:] == 'mm'):
-        unit = "mm"
-        position = float(value[:-2])
-    elif (len(value) > 4) and (value[-4:] == 'mm'):
-        unit = "step"
-        position = float(value[:-4])
-    else:
-        unit = "step"
-        position = float(value)
+        value = float(value)
         
-    commands.append(dict({'axis': axis,
-                          'relative': relative,
-                          'position': position,
-                          'unit': unit}))
+    commands.append(dict({ 'axis': axis,
+                           'relative': relative,
+                           'value': value }))
 
-# print commands
+if verbose:
+    print >sys.stderr, commands
 
 # ----- Init testbench motors, send request, then close ---
 
-B = dtm.Bench(sensor_xy_port = None,
-              sensor_z_port  = None,
-              source_xy_port = source_xy_port,
+xyz = ltp.XYZ(x_port = x_port,
+              y_port = y_port,
+              z_port = z_port,
               debug = verbose)
-B.open()
-B.setup() # Full setup
+xyz.open()
+xyz.setup()
 
 for command in commands:
+    arguments = { 'check': True, 'wait': True }
     if command['relative']:
-        B.source_move_relative(command['axis'], 
-                               command['position'],
-                               command['unit'])
+        arguments['d%s' % command['axis']] = command['value']
     else:
-        B.source_move_absolute(command['axis'], 
-                               command['position'],
-                               command['unit'])
+        arguments['%s'  % command['axis']] = command['value']
+    if verbose:
+        print >sys.stderr, arguments
 
-B.close()
+    xyz.move(**arguments)
+
+xyz.close()
 
 # ---------------------------------------------------------
 

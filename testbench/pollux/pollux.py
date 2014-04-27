@@ -4,7 +4,7 @@
 #
 # Pollux Motors control commands
 #
-# Authors: Laurent Le Guillou & Pier-Francesco Rocci & Remy Le Breton
+# Authors: Laurent Le Guillou, Remy Le Breton
 #
 # ==================================================================
 
@@ -14,11 +14,11 @@ import time
 import serial
 
 
-# ============ Class Controller ZED =============================================
+# ============ Class Pollux controller ==============================
 
-class Pollux_motor(object):
+class Pollux(object):
     """
-    The Controller class represents the Pollux board.
+    The Controller class represents the Pollux controller.
     """
 
     # ---------- Constructor ---------------------------------
@@ -47,12 +47,19 @@ class Pollux_motor(object):
         # ---- default axis
         self.axis = "1"
 
+        # ---- limits (range)
+        self.__limits = None
+
+
+
     # ---------- Open the controller device ------------------
 
     def open(self):
         """
         Open the Pollux device.
+        Check if there's something connected (echotest).
         """
+
         if self.debug: print >>sys.stderr,  "Opening port %s ..." % self.port
      
         self.serial_port = serial.Serial(port = self.port, 
@@ -79,7 +86,7 @@ class Pollux_motor(object):
         # self.clear()
 
 
-# ---------- Close the controller device ----------------- 
+    # ---------- Close the controller device ----------------- 
 
     def close(self):
  
@@ -201,18 +208,19 @@ class Pollux_motor(object):
 
     def setup(self, minimal = False):
         """
-        Initialize the controller board.
+        Initialize the controller. 
+        Setup the speed and accelerations.
         Disable ECHO.
-        Configure each connected motor (init strings)
         """
 
         if not(minimal):
-            self.send('0.5 ' + self.axis + ' snv')
-            self.send('0.5 ' + self.axis + ' sna')
+            self.send('0.5 '   + self.axis + ' snv')
+            self.send('0.5 '   + self.axis + ' sna')
             self.send('500.0 ' + self.axis + ' setnstopdecel')
-            self.send('0.5 ' + self.axis + ' setcalvel')
-            self.send('0.5 ' + self.axis + ' setnrmvel')
-            self.send('0.5 ' + self.axis + ' setnrefvel')
+            self.send('0.5 '   + self.axis + ' setcalvel')
+            self.send('0.5 '   + self.axis + ' setnrmvel')
+            self.send('0.5 '   + self.axis + ' setnrefvel')
+
 
     # ---------- Current motor position ---------------------- 
 
@@ -249,32 +257,25 @@ class Pollux_motor(object):
         """
         Move the axis to absolute position 'position'.
         @param position: target position.
+        @param wait: control is returned only when the movement is finished.
         @param check: to take into account the limits of the range, if False, move without constraints.
         """
         
-        if check == False:
-            command = ("%f " + self.axis + " nm") % position
-            answer = self.send(command)
-            # in ECHO=1 no answer []
+        if check and self.__limits:
+            # Limits are already known so we can check
+            if ( (position < self.__limits['down']) or 
+                 (position > self.__limits['up']) ):
+                raise ValueError("Invalid position (out of range)")
 
-            if wait:
-                while (self.is_moving()):
-                    pass
+        command = ("%f " + self.axis + " nm") % position
+        answer = self.send(command)
+        # in ECHO=1 no answer []
 
-        if check == True:
-            if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
-                raise ValueError ("There are no limits to check. \n Please do find_limits before.")
-            else:
-                if (position < self._Pollux_motor__limits['up']) and (position > self._Pollux_motor__limits['down']) : 
-                    command = ("%f " + self.axis + " nm") % position
-                    answer = self.send(command)
-                    # in ECHO=1 no answer []
-                
-                    if wait:
-                        while (self.is_moving()):
-                            pass
-                else:
-                    raise ValueError ("You have chosen a position outside of the range.")
+        if wait:
+            while (self.is_moving()):
+                pass
+
+
 
     def move_relative(self, offset, wait = True, check = False):
         """
@@ -283,30 +284,21 @@ class Pollux_motor(object):
         @param check: to take into account the limits of the range. If False, move without constraints.
         """
 
-        if check == False:
-            command = ("%f " + self.axis + " nr") % offset
-            answer = self.send(command)
-            # in ECHO=1 no answer []
-            
-            if wait:
-                while (self.is_moving()):
-                    pass
+        if check and self.__limits:
+            target = self.get_position() + offset
+            # Limits are already known so we can check
+            if ( (target < self.__limits['down']) or 
+                 (target > self.__limits['up']) ):
+                raise ValueError("Invalid position (out of range)")
 
-        if check == True:
-            if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
-                raise ValueError ("There are no limits to check. \n Please do find_limits before.")
-            else:
-                get_position(self)
-                if (self.position + offset < self._Pollux_motor__limits['up']) and (self.position + offset > self._Pollux_motor__limits['down']) : 
-                    command = ("%f " + self.axis + " nr") % offset
-                    answer = self.send(command)
-                    # in ECHO=1 no answer []
-                
-                    if wait:
-                        while (self.is_moving()):
-                            pass
-                else:
-                    raise ValueError ("You have chosen a position outside of the range.")
+        command = ("%f " + self.axis + " nr") % position
+        answer = self.send(command)
+        # in ECHO=1 no answer []
+
+        if wait:
+            while (self.is_moving()):
+                pass
+
 
     # =========================================================
 
@@ -314,40 +306,37 @@ class Pollux_motor(object):
     
     # ---------- Detect limits (range) -------------------------- 
 
-    def find_limits(self, up = True, down = True):
+    def find_limits(self):
         """
         Pollux motors is supposed to find its limits on its own,
-        using calibrate (lower limit, set to zero after calibration) and
-        using range (find the range, so the upper limit)
+        using calibrate command (lower limit, set to zero after calibration) 
+        and using range (find the range, so the upper limit).
 
-        When power-on for the first time, default zero position is the actual position
-
-        Then it goes to the middle of the axis
+        When power-on for the first time, the actual position
+        is thought to be zero, whatever the position is.
         """
 
-        limits = {}
+        self.__limits = {}
 
-        if down:
-            command = self.axis + " ncal"
-            answer = self.send(command)
-            
-            while (self.is_moving()): 
-                pass
-            
-            limits['down'] = self.position
+        # first look for the lower limit (and set that position to zero)
 
-        if up:
-            command = self.axis + " nrm"
-            answer = self.send(command)
+        command = self.axis + " ncal"
+        answer = self.send(command)
+        while (self.is_moving()): 
+            pass
             
-            while (self.is_moving()): 
-                pass
-            
-            limits['up'] = self.position
+        self.__limits['down'] = self.position  # zero in fact
 
-        self.__limits = dict(limits)
-        
-        return limits
+        # then look for the upper limit 
+
+        command = self.axis + " nrm"
+        answer = self.send(command)
+        while (self.is_moving()): 
+            pass
+            
+        self.__limits['up'] = self.position
+
+        return self.__limits
 
     # ---------- Set zero at the current position ------------ 
 
@@ -370,13 +359,12 @@ class Pollux_motor(object):
         Look for the limits (find_limits()), move the motor
         to the middle position, and then set the zero there.
 
-        Please use this procedure instead of find_limits()
+        Please use this procedure instead of find_limits().
         """
         limits = self.find_limits(up = True, down = True)
         # use the middle point as zero
         middle = (limits['up'] + limits['down'])/2.0
-        offset = middle
-        self.move_absolute(offset, wait = True, check = False)
+        self.move_absolute(middle, wait = True, check = False)
         self.set_zero()
 
         for k in ['up', 'down']:
@@ -391,12 +379,13 @@ class Pollux_motor(object):
 
     def check_limits(self, position):
         if self.__limits.has_key('up'):
-            if position >= self.__limits['up']:
+            if position > self.__limits['up']:
                 return False
 
         if self.__limits.has_key('down'):
-            if position <= self.__limits['down']:
+            if position < self.__limits['down']:
                 return False
 
         return True
 
+# ===================================================================
