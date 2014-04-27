@@ -2,11 +2,9 @@
 
 # ==================================================================
 #
-# SkyDice
+# Pollux Motors control commands
 #
-# Low level control for the MDrive controller - 
-#
-# Authors: Laurent Le Guillou & Pier-Francesco Rocci
+# Authors: Laurent Le Guillou & Pier-Francesco Rocci & Remy Le Breton
 #
 # ==================================================================
 
@@ -18,21 +16,19 @@ import serial
 
 # ============ Class Controller ZED =============================================
 
-class MDrive_Z(object):
+class Pollux_motor(object):
     """
-    The Controller class represents the MicroLynx board.
+    The Controller class represents the Pollux board.
     """
 
     # ---------- Constructor ---------------------------------
 
     def __init__(self,
-                 port = '/dev/ttyS1',
+                 port = '/dev/ttyUSB0',
                  debug = True):
 
         self.port = port
-        self.baudrate = 9600
-        self.rtscts = 0
-        self.xonxoff = 0
+        self.baudrate = 19200
         # self.timeout = 1.0 # Non-blocking & non waiting mode
         self.timeout = 0.5 # Non-blocking & non waiting mode
         self.repr_mode = 0
@@ -40,7 +36,7 @@ class MDrive_Z(object):
         self.bytesize = serial.EIGHTBITS
         self.stopbits = serial.STOPBITS_ONE
         self.serial_port = None
-        self.EOL = '\r'
+        self.EOL = '\n'
     
         # ---- debug mode
         self.debug = debug
@@ -48,18 +44,19 @@ class MDrive_Z(object):
         # ---- action timeout 
         self.action_timeout = 10
 
+        # ---- default axis
+        self.axis = "1"
+
     # ---------- Open the controller device ------------------
 
     def open(self):
         """
-        Open the MicroLynx device.
+        Open the Pollux device.
         """
         if self.debug: print >>sys.stderr,  "Opening port %s ..." % self.port
      
         self.serial_port = serial.Serial(port = self.port, 
                                          baudrate = self.baudrate,
-                                         rtscts = self.rtscts, 
-                                         xonxoff = self.xonxoff,
                                          bytesize = self.bytesize, 
                                          parity = self.parity,
                                          stopbits = self.stopbits, 
@@ -67,18 +64,16 @@ class MDrive_Z(object):
         
         if ( (self.serial_port == None) or
              not(self.serial_port.isOpen()) ):
-            raise IOError("MicroLynx: " + 
-                          "Failed to open serial port %s" % self.port)
+            raise IOError("Failed to open serial port %s" % self.port)
         
         self.serial_port.flushOutput()
         
         if not(self.echotest()):
-            raise IOError(("MicroLynx: " + 
-                           "not echoing on serial port %s") % 
+            raise IOError(("Not echoing on serial port %s") % 
                           self.port)
            
         if self.debug: 
-            print >>sys.stderr, ( "MicroLynx: Opening port %s done." % 
+            print >>sys.stderr, ( "Opening port %s done." % 
                                   self.port )
         
         # self.clear()
@@ -100,11 +95,10 @@ class MDrive_Z(object):
         """
         if not( self.serial_port and
                 self.serial_port.isOpen() ):
-            raise IOError("MicroLynx: " + 
-                          "Port %s not yet opened" % self.port)
+            raise IOError("Port %s not yet opened" % self.port)
 
         if self.debug: print >>sys.stderr, \
-                "MicroLynx: Sending command [" + command + "]"
+                "Sending command [" + command + "]"
         self.serial_port.write(command + self.EOL)
 
     # ---------- Define read command  ----------------------- 
@@ -119,15 +113,14 @@ class MDrive_Z(object):
         
         if not( self.serial_port and
                 self.serial_port.isOpen() ):
-            raise IOError("MicroLynx: " + 
-                          "Port %s not yet opened" % self.port)
+            raise IOError("Port %s not yet opened" % self.port)
 
-        if self.debug: print >>sys.stderr, "MicroLynx: " + \
+        if self.debug: print >>sys.stderr, \
                 "Reading serial port buffer"
 
         if timeout != None:
             self.serial_port.timeout = timeout
-            if self.debug: print >>sys.stderr, "MicroLynx: " + \
+            if self.debug: print >>sys.stderr, \
                     "Timeout specified: ", timeout
             
         answer = self.serial_port.readlines() # return buffer
@@ -135,7 +128,7 @@ class MDrive_Z(object):
         # Restoring timeout to default one
         self.serial_port.timeout = self.timeout
         # answer = answer.strip()
-        if self.debug: print >>sys.stderr, "MicroLynx: " + \
+        if self.debug: print >>sys.stderr, \
                 "Received [" + str(answer) + "]"
 
         return answer
@@ -153,13 +146,11 @@ class MDrive_Z(object):
     # ---------- Define read command  ----------------------- 
 
     def echotest(self):
-        self.write("PRINT SER")
+        self.write(self.axis + " getserialno")
         answer = self.read()
 
         if len(answer) < 1:
             return False
-
-        # TODO Here improve the test
 
         return True
 
@@ -167,7 +158,7 @@ class MDrive_Z(object):
 
     def send(self, cmd):
         """
-        Send a command (MicroLynx language) to the motor and
+        Send a command (Venus-2 language) to the motor and
         return the answer (if any).
 
         @param cmd: the command to send.
@@ -214,17 +205,14 @@ class MDrive_Z(object):
         Disable ECHO.
         Configure each connected motor (init strings)
         """
-        # Disable ECHO MODE
-
-        answer = self.send("ECHO=1")
 
         if not(minimal):
-            self.send('ACCL=25000')
-            self.send('DECL=25000')
-            self.send('VI=1000')
-            self.send('VM=50000')
-      
-        # Here we need a check !
+            self.send('0.5 ' + self.axis + ' snv')
+            self.send('0.5 ' + self.axis + ' sna')
+            self.send('500.0 ' + self.axis + ' setnstopdecel')
+            self.send('0.5 ' + self.axis + ' setcalvel')
+            self.send('0.5 ' + self.axis + ' setnrmvel')
+            self.send('0.5 ' + self.axis + ' setnrefvel')
 
     # ---------- Current motor position ---------------------- 
 
@@ -232,60 +220,183 @@ class MDrive_Z(object):
         """
         Return the current axis position.
         """
-        answer = self.send('PRINT POS')
+        answer = self.send(self.axis + " np")
 
         if len(answer) < 1:
-            raise IOError(("MicroLynx: " + 
-                           "not responding to PRINT POS on serial port %s") % 
+            raise IOError(("Not responding to " + self.axis + " np on serial port %s") % 
                           self.port)
         
         position = float(answer[0])
         return position
 
+    position = property(get_position, doc="Axis current position")
 
     # ---------- Move absolute and relative ------------------ 
 
     def is_moving(self):
-        answer = self.send("PRINT MVG")
+        answer = self.send(self.axis + " nst")
         if len(answer) < 1:
-            raise IOError(("MicroLynx: " + 
-                           "not responding to PRINT MVG on serial port %s") % 
+            raise IOError(("Not responding to 1 nst on serial port %s") % 
                           self.port)
         answer = answer[0].strip()
-        if answer == 'TRUE':
+        if answer == '1':
             return True
         else:
             return False
         
 
-    def move_absolute(self, position, wait=True):
+    def move_absolute(self, position, wait=True, check = False):
         """
         Move the axis to absolute position 'position'.
         @param position: target position.
+        @param check: to take into account the limits of the range, if False, move without constraints.
         """
+        
+        if check == False:
+            command = ("%f " + self.axis + " nm") % position
+            answer = self.send(command)
+            # in ECHO=1 no answer []
 
-        # Here add a limit check on the position ?
+            if wait:
+                while (self.is_moving()):
+                    pass
 
-        command = "MOVA %f" % position
-        answer = self.send(command)
-        # in ECHO=1 no answer []
+        if check == True:
+            if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
+                raise ValueError ("There are no limits to check. \n Please do find_limits before.")
+            else:
+                if (position < self._Pollux_motor__limits['up']) and (position > self._Pollux_motor__limits['down']) : 
+                    command = ("%f " + self.axis + " nm") % position
+                    answer = self.send(command)
+                    # in ECHO=1 no answer []
+                
+                    if wait:
+                        while (self.is_moving()):
+                            pass
+                else:
+                    raise ValueError ("You have chosen a position outside of the range.")
 
-        if wait:
-            while (self.is_moving()):
-                pass
-
-
-    def move_relative(self, offset, wait = True):
+    def move_relative(self, offset, wait = True, check = False):
         """
         Move the axis of relative offset 'offset'.
         @param offset: position offset (positive or negative)
+        @param check: to take into account the limits of the range. If False, move without constraints.
         """
-        command = "MOVR %f" % offset
-        answer = self.send(command)
-        # in ECHO=1 no answer []
 
-        if wait:
-            while (self.is_moving()):
+        if check == False:
+            command = ("%f " + self.axis + " nr") % offset
+            answer = self.send(command)
+            # in ECHO=1 no answer []
+            
+            if wait:
+                while (self.is_moving()):
+                    pass
+
+        if check == True:
+            if (len(self._Pollux_motor__limits['down']) < 1) or (len(self._Pollux_motor__limits['up']) < 1):
+                raise ValueError ("There are no limits to check. \n Please do find_limits before.")
+            else:
+                get_position(self)
+                if (self.position + offset < self._Pollux_motor__limits['up']) and (self.position + offset > self._Pollux_motor__limits['down']) : 
+                    command = ("%f " + self.axis + " nr") % offset
+                    answer = self.send(command)
+                    # in ECHO=1 no answer []
+                
+                    if wait:
+                        while (self.is_moving()):
+                            pass
+                else:
+                    raise ValueError ("You have chosen a position outside of the range.")
+
+    # =========================================================
+
+    # Adapted from SkyDice motors
+    
+    # ---------- Detect limits (range) -------------------------- 
+
+    def find_limits(self, up = True, down = True):
+        """
+        Pollux motors is supposed to find its limits on its own,
+        using calibrate (lower limit, set to zero after calibration) and
+        using range (find the range, so the upper limit)
+
+        When power-on for the first time, default zero position is the actual position
+
+        Then it goes to the middle of the axis
+        """
+
+        limits = {}
+
+        if down:
+            command = self.axis + " ncal"
+            answer = self.send(command)
+            
+            while (self.is_moving()): 
                 pass
+            
+            limits['down'] = self.position
 
-# =========================================================
+        if up:
+            command = self.axis + " nrm"
+            answer = self.send(command)
+            
+            while (self.is_moving()): 
+                pass
+            
+            limits['up'] = self.position
+
+        self.__limits = dict(limits)
+        
+        return limits
+
+    # ---------- Set zero at the current position ------------ 
+
+    def set_zero(self, position=0):
+        """
+        Define the current position of the motor to be 'position'. 
+        From then on, all positions reported for that motor will
+        be relative to that point.
+
+        @param position: new value for the current position.
+        """
+       
+        command = "%d " + self.axis + " setnpos" % position
+        answer = self.send(command)
+
+    # ---------- Home : find_limits and set zeros ------------ 
+
+    def home(self):
+        """
+        Look for the limits (find_limits()), move the motor
+        to the middle position, and then set the zero there.
+
+        Please use this procedure instead of find_limits()
+        """
+        limits = self.find_limits(up = True, down = True)
+        # use the middle point as zero
+        middle = (limits['up'] + limits['down'])/2.0
+        offset = middle
+        self.move_absolute(offset, wait = True, check = False)
+        self.set_zero()
+
+        for k in ['up', 'down']:
+            if self.__limits.has_key(k):
+                self.__limits[k] -= offset # subtract the offset
+
+
+    # ---------- Return limits ------------------------------- 
+
+    def get_limits(self):
+        return self.__limits
+
+    def check_limits(self, position):
+        if self.__limits.has_key('up'):
+            if position >= self.__limits['up']:
+                return False
+
+        if self.__limits.has_key('down'):
+            if position <= self.__limits['down']:
+                return False
+
+        return True
+
