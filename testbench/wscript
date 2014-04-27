@@ -1,7 +1,7 @@
 # -*- mode: python; -*- 
 
 APPNAME = 'lsst.testbench'
-VERSION = '0.0.1'
+VERSION = '0.0.3'
 top = '.'
 build = 'build'
 
@@ -9,7 +9,9 @@ submodules = ['pollux',
               'keithley',
               'rpc',
               'digisense',
+              'laser',
               'powersupply', 
+              'sp_dk240',
               'utils']
 
 def options(opt):
