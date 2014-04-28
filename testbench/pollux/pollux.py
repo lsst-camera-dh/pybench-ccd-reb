@@ -47,7 +47,7 @@ class Pollux(object):
         self.action_timeout = 10
 
         # ---- default axis
-        self.axis = "1"
+        self.axis = 1
 
         # ---- limits (range)
         self.__limits = None
@@ -155,7 +155,7 @@ class Pollux(object):
     # ---------- Define read command  ----------------------- 
 
     def echotest(self):
-        self.write(self.axis + " getserialno")
+        self.write(("%d" % self.axis) + " getserialno")
         answer = self.read()
 
         if len(answer) < 1:
@@ -208,20 +208,20 @@ class Pollux(object):
 
     # ---------- Setup the motors ----------------------------
 
-    def setup(self, minimal = False):
+    def setup(self):
         """
         Initialize the controller. 
         Setup the speed and accelerations.
-        Disable ECHO.
         """
 
-        if not(minimal):
-            self.send('0.5 '   + self.axis + ' snv')
-            self.send('0.5 '   + self.axis + ' sna')
-            self.send('500.0 ' + self.axis + ' setnstopdecel')
-            self.send('0.5 '   + self.axis + ' setcalvel')
-            self.send('0.5 '   + self.axis + ' setnrmvel')
-            self.send('0.5 '   + self.axis + ' setnrefvel')
+        pass
+
+        # self.send('1.0 '   + ("%d" % self.axis) + ' snv')
+        # self.send('1.0 '   + ("%d" % self.axis) + ' sna')
+        # self.send('500.0 ' + ("%d" % self.axis) + ' setnstopdecel')
+        # # self.send('1.0 '   + ("%d" % self.axis) + ' setcalvel')
+        # # self.send('1.0 '   + ("%d" % self.axis) + ' setnrmvel')
+        # self.send('1.0 '   + ("%d" % self.axis) + ' setnrefvel')
 
 
     # ---------- Current motor position ---------------------- 
@@ -230,10 +230,10 @@ class Pollux(object):
         """
         Return the current axis position.
         """
-        answer = self.send(self.axis + " np")
+        answer = self.send(("%d" % self.axis) + " np")
 
         if len(answer) < 1:
-            raise IOError(("Not responding to " + self.axis + " np on serial port %s") % 
+            raise IOError(("Not responding to " + ("%d" % self.axis) + " np on serial port %s") % 
                           self.port)
         
         position = float(answer[0])
@@ -244,7 +244,7 @@ class Pollux(object):
     # ---------- Move absolute and relative ------------------ 
 
     def is_moving(self):
-        answer = self.send(self.axis + " nst")
+        answer = self.send(("%d" % self.axis) + " nst")
         if len(answer) < 1:
             raise IOError(("Not responding to 1 nst on serial port %s") % 
                           self.port)
@@ -269,7 +269,7 @@ class Pollux(object):
                  (position > self.__limits['up']) ):
                 raise ValueError("Invalid position (out of range)")
 
-        command = ("%f " + self.axis + " nm") % position
+        command = ("%f" % position) + " " + ("%d" % self.axis) + " nm"
         answer = self.send(command)
         # in ECHO=1 no answer []
 
@@ -293,7 +293,7 @@ class Pollux(object):
                  (target > self.__limits['up']) ):
                 raise ValueError("Invalid position (out of range)")
 
-        command = ("%f " + self.axis + " nr") % position
+        command = ("%f" % offset) + " " + ("%d" % self.axis) + " nr"
         answer = self.send(command)
         # in ECHO=1 no answer []
 
@@ -322,7 +322,7 @@ class Pollux(object):
 
         # first look for the lower limit (and set that position to zero)
 
-        command = self.axis + " ncal"
+        command = ("%d" % self.axis) + " ncal"
         answer = self.send(command)
         while (self.is_moving()): 
             pass
@@ -331,7 +331,7 @@ class Pollux(object):
 
         # then look for the upper limit 
 
-        command = self.axis + " nrm"
+        command = ("%d" % self.axis) + " nrm"
         answer = self.send(command)
         while (self.is_moving()): 
             pass
@@ -342,7 +342,7 @@ class Pollux(object):
 
     # ---------- Set zero at the current position ------------ 
 
-    def set_zero(self, position=0):
+    def set_zero(self, position = 0):
         """
         Define the current position of the motor to be 'position'. 
         From then on, all positions reported for that motor will
@@ -351,7 +351,7 @@ class Pollux(object):
         @param position: new value for the current position.
         """
        
-        command = "%d " + self.axis + " setnpos" % position
+        command = ("%f" % float(position)) + " " + ("%d" % self.axis) + " setnpos" 
         answer = self.send(command)
 
     # ---------- Home : find_limits and set zeros ------------ 
@@ -363,7 +363,7 @@ class Pollux(object):
 
         Please use this procedure instead of find_limits().
         """
-        limits = self.find_limits(up = True, down = True)
+        limits = self.find_limits()
         # use the middle point as zero
         middle = (limits['up'] + limits['down'])/2.0
         self.move_absolute(middle, wait = True, check = False)
@@ -371,7 +371,7 @@ class Pollux(object):
 
         for k in ['up', 'down']:
             if self.__limits.has_key(k):
-                self.__limits[k] -= offset # subtract the offset
+                self.__limits[k] -= middle # subtract the offset
 
 
     # ---------- Return limits ------------------------------- 
@@ -379,15 +379,15 @@ class Pollux(object):
     def get_limits(self):
         return self.__limits
 
-    def check_limits(self, position):
-        if self.__limits.has_key('up'):
-            if position > self.__limits['up']:
-                return False
+    # def check_limits(self, position):
+    #     if self.__limits.has_key('up'):
+    #         if position > self.__limits['up']:
+    #             return False
 
-        if self.__limits.has_key('down'):
-            if position < self.__limits['down']:
-                return False
+    #     if self.__limits.has_key('down'):
+    #         if position < self.__limits['down']:
+    #             return False
 
-        return True
+    #     return True
 
 # ===================================================================

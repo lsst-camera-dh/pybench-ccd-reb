@@ -33,13 +33,15 @@ class Camera(object):
 
     def __init__(self):
         self.device = None
-        self.exposure = 333 # * 1.0e-4 s
+        self.default_expo_int = 333 # * 1.0e-4 s
 
     def open(self):
         """
         Find if a DML41AU02.AS USB camera is connected and set it up.
         """
         devices = unicap.enumerate_devices()
+        print devices
+
         if len(devices) == 0:
             # No device managed by Unicap connected
             raise IOError("No Unicap managed device connected.")
@@ -62,11 +64,11 @@ class Camera(object):
         self.device.set_format(self.fmt)
 
         # set the exposure time mode
-        auto_exposure_mode = dev.get_property({'identifier': 'Exposure, Auto'})
-        dev.set_property({'identifier': 'Exposure, Auto', 'value': 1})
+        auto_exposure_mode = self.device.get_property({'identifier': 'Exposure, Auto'})
+        self.device.set_property({'identifier': 'Exposure, Auto', 'value': 1})
 
-        # exposure = int(dev.get_property({'identifier': 'Exposure (Absolute)'}))
-        dev.set_property({'identifier': 'Exposure (Absolute)', 'value': exposure})
+        # exposure = int(self.device.get_property({'identifier': 'Exposure (Absolute)'}))
+        self.device.set_property({'identifier': 'Exposure (Absolute)', 'value': self.default_expo_int})
 
 
     def capture(self, exposure = 1.0e-2):
@@ -78,20 +80,20 @@ class Camera(object):
 
         # TODO : check if the value is allowed
 
-        auto_exposure_mode = dev.get_property({'identifier': 'Exposure, Auto'})
-        dev.set_property({'identifier': 'Exposure, Auto', 'value': 1})
+        auto_exposure_mode = self.device.get_property({'identifier': 'Exposure, Auto'})
+        self.device.set_property({'identifier': 'Exposure, Auto', 'value': 1})
 
-        # exposure = int(dev.get_property({'identifier': 'Exposure (Absolute)'}))
-        dev.set_property({'identifier': 'Exposure (Absolute)', 'value': expo_int})
+        # exposure = int(self.device.get_property({'identifier': 'Exposure (Absolute)'}))
+        self.device.set_property({'identifier': 'Exposure (Absolute)', 'value': expo_int})
 
         # Start capturing video
-        dev.start_capture()
+        self.device.start_capture()
 
         # wait for the exposure to be finished (with some overhead time)
-        time.sleep(1.2 * expo_int)
+        time.sleep(1.2 * exposure)
 
         # Capture an image
-        imgbuf = dev.wait_buffer()
+        imgbuf = self.device.wait_buffer()
 
         print >>sys.stderr, \
             ( 'Captured an image. Colorspace: ' + str( imgbuf.format['fourcc'] ) \
@@ -105,12 +107,12 @@ class Camera(object):
                                 imgbuf.format['size'], 
                                 imgbuf.tostring() )
 
-        dev.stop_capture()
+        self.device.stop_capture()
 
         return img
 
 
-    def capture_and_save(self, exposure = 1.0e-2, filename, filetype):
+    def capture_and_save(self, exposure, filename, filetype):
         """
         Take one shot with exposure <exposure> (in seconds).
         Save the resulting image to file <filename>.

@@ -102,7 +102,7 @@ for arg in args:
         usage()
         sys.exit(4)
 
-        value = float(value)
+    value = float(value)
         
     commands.append(dict({ 'axis': axis,
                            'relative': relative,
