@@ -2,7 +2,7 @@
 #
 # ==================================================================
 #
-# SkyDice
+# LSST
 #
 # High level control of the XYZ used on the LSST testbench
 #
@@ -41,6 +41,8 @@ class XYZ(object):
         self.x_axis = None
         self.y_axis = None
         self.z_axis = None
+
+        self.debug = debug
 
     # ---------- Open the various devices --------------------
 

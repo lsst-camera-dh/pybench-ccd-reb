@@ -2,6 +2,8 @@
 
 # ==================================================================
 #
+# LSST
+#
 # Pollux Motors control commands
 #
 # Authors: Laurent Le Guillou, Remy Le Breton

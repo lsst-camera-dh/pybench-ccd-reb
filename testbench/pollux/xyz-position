@@ -4,7 +4,8 @@ import sys, os, os.path
 import getopt
 import time
 
-import lsst.testbench.pollux as ltp
+# import lsst.testbench.pollux as ltp
+import lsst.testbench.pollux.xyz as ltpxyz
 
 # --------- Parse command line arguments ------------------
 
@@ -29,9 +30,9 @@ except getopt.GetoptError:
 # print args
 
 verbose = False
-x_port = ltp.XYZ.default_x_port
-y_port = ltp.XYZ.default_y_port
-z_port = ltp.XYZ.default_z_port
+x_port = ltpxyz.XYZ.default_x_port
+y_port = ltpxyz.XYZ.default_y_port
+z_port = ltpxyz.XYZ.default_z_port
 
 for option, arg in opts:
     if option in ("-h", "--help"):
@@ -57,10 +58,10 @@ for option, arg in opts:
 
 # ----- Init testbench motors, send request, then close ---
 
-xyz = ltp.XYZ(x_port = x_port,
-              y_port = y_port,
-              z_port = z_port,
-              debug = verbose)
+xyz = ltpxyz.XYZ(x_port = x_port,
+                 y_port = y_port,
+                 z_port = z_port,
+                 debug = verbose)
 xyz.open()
 xyz.setup()
 

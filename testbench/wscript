@@ -8,7 +8,7 @@ build = 'build'
 submodules = ['pollux', 
               'keithley',
               'rpc',
-              'digisense',
+              # 'digisense',
               'laser',
               'powersupply', 
               'sp_dk240',
@@ -31,7 +31,7 @@ def build(bld):
         source = ['__init__.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench')
 
-    bld.add_subdirs(submodules)
+    bld.recurse(submodules)
 
 
     

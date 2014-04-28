@@ -16,6 +16,6 @@ def configure(conf):
     
 def build(bld):
     # bld.add_subdirs(['lib', 'src'])
-    bld.add_subdirs(['lib'])
+    bld.recurse(['lib'])
 
     
