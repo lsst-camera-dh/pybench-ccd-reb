@@ -22,9 +22,9 @@ class XYZ(object):
     """
     High level class representing the XYZ motorized support.
     """
-    default_x_port = "/dev/ttyUSB2"
-    default_y_port = "/dev/ttyUSB3"
-    default_z_port = "/dev/ttyUSB4"
+    default_x_port = "/dev/ttyUSB0"
+    default_y_port = "/dev/ttyUSB1"
+    default_z_port = "/dev/ttyUSB2"
 
     # ---------- Constructor ---------------------------------
 

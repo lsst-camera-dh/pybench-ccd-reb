@@ -51,7 +51,7 @@ class Camera(object):
         # To implement
 
         # Open it
-        self.device = unicap.Device( unicap.enumerate_devices()[0] ) # to change
+        self.device = unicap.Device( unicap.enumerate_devices()[1] ) # to change
 
         # Set it up
 
@@ -117,6 +117,8 @@ class Camera(object):
         Take one shot with exposure <exposure> (in seconds).
         Save the resulting image to file <filename>.
         """
+
+        img = self.capture(exposure)
 
         if filetype == "FITS":
             data = np.array(img)
