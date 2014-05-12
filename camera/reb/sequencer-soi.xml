@@ -421,6 +421,31 @@
                     <constant ref="RST">1</constant>
                 </constants>
             </function>
+            <function id="EndOfImage">
+                <fullname>Signals end of frame to be recorded</fullname>
+                <clocklist>
+                    <clock ref="EOI"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>1600 ns</duration>
+                        <value>0</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>100 ns</duration>
+                        <value>1</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                    <constant ref="RG"> 1 </constant>
+                    <constant ref="R1"> 1 </constant>
+                    <constant ref="R2"> 1 </constant>
+                    <constant ref="CL"> 1 </constant>
+                    <constant ref="RST"> 1 </constant>
+                </constants>
+            </function>
         </functions>
     </sequencer-config>
     <sequencer-routines>
@@ -493,9 +518,10 @@
                 <call ref="StartOfImage"/>
                 <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
+                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="FullPseudoAcquisition">
-                <fullname>Replicates FullAcquisition starting acquisition</fullname>
+                <fullname>Replicates FullAcquisition without acquiring</fullname>
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
@@ -504,6 +530,12 @@
                 </call>
                 <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
+            </subroutine>
+            <subroutine id="AcquireBias">
+                <fullname>One acquisition without exposition</fullname>
+                <call ref="StartOfImage"/>
+                <call ref="ReadFrame"/>
+                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="WindowAcquisition">
                 <fullname>One acquisition of a window</fullname>
@@ -516,6 +548,7 @@
                 <call ref="StartOfImage"/>
                 <call ref="CloseShutter"/>
                 <call ref="ReadWindow"/>
+                <call ref="EndOfImage"/>
             </subroutine>
         </subroutines>
         <mains>
@@ -531,14 +564,14 @@
             </main>
             <main id="Bias">
                 <fullname>Bias without clearing first</fullname>
-                <call ref="ReadFrame"/>
+                <call ref="AcquireBias"/>
             </main>
             <main id="ClearBias">
                 <fullname>Bias after clearing</fullname>
                 <call ref="ClearCCD">
                     <repeat>10</repeat>
                 </call>
-                <call ref="ReadFrame"/>
+                <call ref="AcquireBias"/>
             </main>
             <main id="PseudoAcquisition">
                 <fullname>Simulates acquisition without storing image</fullname>
