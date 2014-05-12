@@ -1,31 +1,37 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-testbench'
-VERSION = '0.0.1'
+APPNAME = 'lsst.testbench'
+VERSION = '0.0.3'
 top = '.'
 build = 'build'
 
-submodules = ['keithley', 
-              'lakeshore', 
-              'powersupply',
-              'laser']
+submodules = ['pollux', 
+              'keithley',
+              'rpc',
+              # 'digisense',
+              'laser',
+              'powersupply', 
+              'sp_dk240',
+              'utils']
 
-def options(ctx):
-    ctx.load('python')        
-    ctx.load('compiler_c')
+def options(opt):
+    opt.load('python')        
+    opt.load('compiler_c')
+    # opt.sub_options(submodules)
 
-def configure(ctx):
-    ctx.load('python')
-    ctx.load('compiler_c')
-    ctx.check_python_headers()
+def configure(conf):
+    conf.load('python')
+    conf.load('compiler_c')
+    conf.check_python_headers()
+    # conf.sub_config(submodules)
     
-def build(ctx):
-    ctx(features = 'py', 
+def build(bld):
+    bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench')
 
-    ctx.recurse(submodules)
+    bld.recurse(submodules)
 
 
     

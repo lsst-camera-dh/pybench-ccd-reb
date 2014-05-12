@@ -512,19 +512,19 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-    def load_function(self, function_id, function):
+    def send_function(self, function_id, function):
         """
         Send the function <function> into the FPGA memory 
         at the #function_id slot.
         """
-        self.fpga.load_function(function_id, function)
+        self.fpga.send_function(function_id, function)
         self.functions[function_id] = function # to keep memory
 
-    def load_functions(self, functions):
+    def send_functions(self, functions):
         """
         Load all functions from dict <functions> into the FPGA memory.
         """
-        self.fpga.load_functions(functions)
+        self.fpga.send_functions(functions)
         self.functions.update(functions)
 
     def dump_function(self, function_id):
@@ -617,25 +617,42 @@ read_line_fake:
         self.select_subroutine(subname = subname, repeat = repeat)
         self.run_program()
 
-    def count_subroutine(self, subname, bit, transition = 'on'):
-        """
-        Counts how many time bit <bit> is switched on/off 
-        (depending of <transition> value) when subroutine 
-        <subname> is called.
-        Useful to compute the image size.
+    # --------------------------------------------------------------------
 
-        TO BE WRITTEN (not so simple)
-
+    def send_sequencer(self, seq, clear = True):
         """
-        pass
+        Load the functions and the program at once.
+        """
+        self.fpga.send_sequencer(seq, clear = clear)
+
+    def dump_sequencer(self):
+        """
+        Dump the sequencer program and the 16 functions from the FPGA memory.
+        """
+        return self.fpga.dump_sequencer()
 
     # --------------------------------------------------------------------
 
-    def set_image_size(self, size):
-        """
-        Set image size (in ADC count).
-        """
-        self.fpga.set_image_size(size)
+    # def count_subroutine(self, subname, bit, transition = 'on'):
+    #     """
+    #     Counts how many time bit <bit> is switched on/off 
+    #     (depending of <transition> value) when subroutine 
+    #     <subname> is called.
+    #     Useful to compute the image size.
+
+    #     TO BE WRITTEN (not so simple)
+
+    #     """
+    #     pass
+
+    # --------------------------------------------------------------------
+
+    # Not useful anymore
+    # def set_image_size(self, size):
+    #     """
+    #     Set image size (in ADC count).
+    #     """
+    #     self.fpga.set_image_size(size)
 
     # --------------------------------------------------------------------
 
