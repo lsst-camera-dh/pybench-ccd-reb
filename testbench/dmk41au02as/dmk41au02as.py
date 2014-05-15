@@ -42,16 +42,22 @@ class Camera(object):
         devices = unicap.enumerate_devices()
         print devices
 
-        if len(devices) == 0:
+        nb_cam = len(devices)
+
+        if nb_cam == 0:
             # No device managed by Unicap connected
             raise IOError("No Unicap managed device connected.")
 
         # Looking for the camera in the device list
-        
+
+        for i in range(0, nb_cam):
+            if 'DMx' in devices[i]['identifier']:
+                dmk = devices[i]
+
         # To implement
 
         # Open it
-        self.device = unicap.Device( unicap.enumerate_devices()[1] ) # to change
+        self.device = unicap.Device(dmk) # to change
 
         # Set it up
 
