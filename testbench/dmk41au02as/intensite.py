@@ -24,8 +24,16 @@ mov.open()
 cam = d.Camera()
 cam.open()
 
-trou = "pose"
+trou = "20micron"
+pose = "pose_de_"
 
-for i in range(0,2*borne):
-    mov.move(dy=pas)
-    cam.capture_and_save(exposure = 1, filename = str(i) + "_" + trou , filetype = "FITS")
+pas = 0.1
+maxtemps = 1
+borne = int(maxtemps/0.1)
+temps = pas
+
+for i in range(0,borne):
+    
+    cam.capture_and_save(exposure = temps, filename = "intensite/" + pose + str(temps)+ "s" + "_" + trou , filetype = "FITS")
+    #time.sleep(temps)
+    temps = temps + pas
