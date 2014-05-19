@@ -7,6 +7,7 @@ import Image
 import numpy as np
 import pyfits as py
 import glob as gl
+import scipy as sp
 
 fichiers = gl.glob("./intensite/*fits")
 fichiers = sorted(fichiers)
