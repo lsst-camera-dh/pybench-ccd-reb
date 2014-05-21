@@ -50,7 +50,7 @@ def fitgaussian(data):
     p, success = optimize.leastsq(errorfunction, params)
     return p
 
-fichiers = gl.glob("./intensite/*fits")
+fichiers = gl.glob("./focus/*fits")
 fichiers = sorted(fichiers)
 
 data = []
@@ -63,9 +63,9 @@ rows = np.shape(data[0])[1]
 
 cuts = []
 
-down = 19
-up = 21
-div = 40
+down = 15
+up = 17
+div = 30
 
 x_min_cut = down*rows/div
 y_min_cut = down*lines/div
@@ -76,8 +76,14 @@ y_max_cut = up*lines/div
 indice = 0.1
 compteur = 0
 
+#for j in data:
+ #   cuts.append(j[y_min_cut:y_max_cut,x_min_cut:x_max_cut])
+  #  indice = indice + 0.1
+   # compteur = compteur + 1
+
 for j in data:
     cuts.append(j[y_min_cut:y_max_cut,x_min_cut:x_max_cut])
+    py.writeto("./cuts/" + "cut_of_" + str(indice) + "s.fits", cuts[compteur], clobber = True)
     indice = indice + 0.1
     compteur = compteur + 1
 
