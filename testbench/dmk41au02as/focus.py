@@ -24,8 +24,8 @@ mov.open()
 cam = d.Camera()
 cam.open()
 
-pas = 0.001 #En mm
-interval = 0.005
+pas = 0.1 #En mm
+interval = 1
 borne = int(interval/pas)
 
 mov.move(dy=-interval)
@@ -33,5 +33,5 @@ mov.move(dy=-interval)
 trou = "20micron"
 
 for i in range(0,2*borne):
-    mov.move(dy=pas)
+    mov.move(dy=-pas)
     cam.capture_and_save(exposure = 1, filename = str(i) + "_" + trou , filetype = "FITS")

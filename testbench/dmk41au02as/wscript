@@ -1,0 +1,31 @@
+# -*- mode: python; -*- 
+
+APPNAME = 'lsst.testbench.dmk41au02as'
+VERSION = '0.0.3'
+top = '.'
+build = 'build'
+
+def options(opt):
+    opt.load('python')        
+    opt.load('compiler_c')
+
+def configure(conf):
+    conf.load('python')
+    conf.load('compiler_c')
+    conf.check_python_headers()
+    
+def build(bld):
+    
+    bld(features = 'py', 
+        # source = bld.path.ant_glob('*.py'), 
+        source = ['__init__.py', 'dmk41au02as.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/dmk41au02as')
+
+    # bld.install_as('${PREFIX}/bin/xyz-position', 
+    #                'xyz-position', 
+    #                chmod=0755)
+    # bld.install_as('${PREFIX}/bin/xyz-move', 
+    #                'xyz-move', 
+    #                chmod=0755)
+
+    
