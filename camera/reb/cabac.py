@@ -188,15 +188,15 @@ class CABAC(object):
 
     # ----------------------------------------------------------
 
-    def print_to_header(self, position = ''):#string 'T' or 'B' or nothing
+    def get_header(self, position = ''):#string 'T' or 'B' or nothing
 	"""
-        Writes current CABAC settings to the right format to include in FITS header file
+        Writes current CABAC settings to a dictionary to include in FITS header file
         """
-        headerformat = "{}_"+ position +"= {:.2f}\n"
-        headerstringV = ''.join([headerformat.format("V_OD0", self.OD0 * self.ODconv), headerformat.format("V_OD1", self.OD1 * self.ODconv), headerformat.format("V_GD", self.GD * self.GDconv), headerformat.format("V_RD", self.RD * self.RDconv), headerformat.format("V_OG", self.OG * self.OGconv)])
+        headerkeyformat = "{}_"+ position
 
-        headerformat = "{}_"+ position +"= {:d}\n"
-        headerstringI = ''.join([headerformat.format("I_P", self.I_parallel), headerformat.format("I_S", self.I_serial), headerformat.format("I_RG", self.I_RG)])
+        headersV = { headerkeyformat.format("V_OD0"): self.OD0 * self.ODconv, headerkeyformat.format("V_OD1"): self.OD1 * self.ODconv, headerkeyformat.format("V_GD"): self.GD * self.GDconv, headerkeyformat.format("V_RD"): self.RD * self.RDconv, headerkeyformat.format("V_OG"): self.OG * self.OGconv }
 
-        return ''.join([headerstringV, headerstringI])
+        headersI = {headerkeyformat.format("I_P"): self.I_parallel, headerkeyformat.format("I_S"): self.I_serial, headerkeyformat.format("I_RG"): self.I_RG}
+
+        return headersV.update(headersI)
 
