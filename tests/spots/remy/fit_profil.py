@@ -83,28 +83,35 @@ compteur = 0
 
 for j in data:
     cuts.append(j[y_min_cut:y_max_cut,x_min_cut:x_max_cut])
-    py.writeto("./cuts/" + "cut_of_" + str(indice) + "s.fits", cuts[compteur], clobber = True)
-    indice = indice + 0.1
-    compteur = compteur + 1
+    #py.writeto("./cuts/" + "cut_of_" + str(indice) + "s.fits", cuts[compteur], clobber = True)
+    #indice = indice + 0.1
+    #compteur = compteur + 1
 
 
-donnee = cuts[0]
+params = []
+fit = []
 
-matshow(cuts[0], cmap=cm.gist_earth_r)
+for i in cuts:
+    matshow(i, cmap=cm.gist_earth_r)
+    plt.xlim(30,50)
+    plt.ylim(30,40)
 
-params = fitgaussian(donnee)
-fit = gaussian(*params)
+    param_i = fitgaussian(i)
+    params.append(param_i)
 
-contour(fit(*indices(donnee.shape)), cmap=cm.copper)
-ax = gca()
-(height, x, y, width_x, width_y) = params
+    fit_i = gaussian(*param_i)
+    fit.append(fit_i)
 
-text(0.95, 0.05, """
-   x : %.1f
-   y : %.1f
-   width_x : %.1f
-   width_y : %.1f""" %(x, y, width_x, width_y),
-     fontsize=16, horizontalalignment='right',
-     verticalalignment='bottom', transform=ax.transAxes)
+    contour(fit_i(*indices(i.shape)), cmap=cm.copper)
+    ax = gca()
+    (height, x, y, width_x, width_y) = param_i
 
-show()
+    text(0.95, 0.05, """
+       x : %.1f
+       y : %.1f
+       width_x : %.1f
+       width_y : %.1f""" %(x, y, width_x, width_y),
+         fontsize=16, horizontalalignment='right',
+         verticalalignment='bottom', transform=ax.transAxes)
+
+    show()
