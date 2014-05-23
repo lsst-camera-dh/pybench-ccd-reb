@@ -34,4 +34,4 @@ trou = "20micron"
 
 for i in range(0,2*borne):
     mov.move(dy=pas)
-    cam.capture_and_save(exposure = 0.1, filename = "./focus/" + str(i) + "_" + trou , filetype = "FITS")
+    cam.capture_and_save(exposure = 0.1, filename = "./focus/" + str(time.time()) + "_" + trou , filetype = "FITS")
