@@ -1,3 +1,6 @@
+#Pour le focus, analyse les images prises par focus.py, et fit le spot en deux dimensions avec deux gaussiennes
+# Par Remy Le Breton
+
 from pylab import *
 from numpy import *
 from scipy import optimize

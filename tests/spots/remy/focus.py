@@ -1,4 +1,4 @@
-#Pour le focus
+#Pour le focus : prend des images le long de l'axe optique, et fit le spot en gaussien
 #Par Remy Le Breton
 
 import sys

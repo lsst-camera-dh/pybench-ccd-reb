@@ -1,3 +1,6 @@
+# Analyse les images prises par vke_beta et affiche le flux en fonction du deplacement
+# Par remy Le Breton
+
 import matplotlib.pyplot as plt
 import pylab as py
 import numpy as np
@@ -42,7 +45,7 @@ for j in data:
 
 
 max_i = np.where(cuts[0]==np.max(cuts[0]))
-max_i = [max_i[0][0], max_i[1][0]]
+max_i = [max_i[0][0], max_i[1][0] + 1]
 
 flux = []
 
@@ -50,4 +53,7 @@ for c in cuts:
     flux.append(c[max_i[0]][max_i[1]])
 
 plt.scatter(range(0, len(flux)), flux)
+plt.xlabel("Displacement")
+plt.ylabel("Flux in the studied pixel")
+plt.title("VKE method")
 plt.show()
