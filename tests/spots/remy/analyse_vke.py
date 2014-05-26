@@ -45,7 +45,7 @@ for j in data:
 
 
 max_i = np.where(cuts[0]==np.max(cuts[0]))
-max_i = [max_i[0][0], max_i[1][0] + 2]
+max_i = [max_i[0][0], max_i[1][0] + 2] #Pixel voision du pixel central
 
 flux = []
 
@@ -58,6 +58,6 @@ pas = fichiers[1][pas_deb:pas_fin + 2]
 
 plt.scatter(range(0, len(flux)), flux)
 plt.xlabel("Displacement")
-plt.ylabel("Flux in the studied pixel")
-plt.title("VKE method " + " with a step of " + pas)
+plt.ylabel("Flux")
+plt.title("Step of " + pas)
 plt.show()

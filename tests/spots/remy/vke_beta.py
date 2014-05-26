@@ -24,7 +24,7 @@ mov.open()
 cam = d.Camera()
 cam.open()
 
-pas = 0.0005 #En mm
+pas = 0.0002 #En mm
 interval = 0.02
 borne = int(interval/pas)
 deplacement = 0
@@ -32,11 +32,11 @@ deplacement = 0
 trou = "20micron"
 
 for i in range(0,borne):
-    cam.capture_and_save(exposure = 0.1, filename = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou , filetype = "FITS")
+    cam.capture_and_save(exposure = 0.05, filename = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou , filetype = "FITS")
     mov.move(dx=pas)
     deplacement = deplacement + pas
 
 for i in range(0,borne):
-    cam.capture_and_save(exposure = 0.1, filename = "./vke_beta/retour_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou , filetype = "FITS")
+    cam.capture_and_save(exposure = 0.05, filename = "./vke_beta/retour_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou , filetype = "FITS")
     mov.move(dx=-pas)
     deplacement = deplacement - pas
