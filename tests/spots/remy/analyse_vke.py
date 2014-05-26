@@ -52,8 +52,12 @@ flux = []
 for c in cuts:
     flux.append(c[max_i[0]][max_i[1]])
 
+pas_deb = fichiers[1].find("0.")
+pas_fin = fichiers[1].find("mm")
+pas = fichiers[1][pas_deb:pas_fin + 2]
+
 plt.scatter(range(0, len(flux)), flux)
 plt.xlabel("Displacement")
 plt.ylabel("Flux in the studied pixel")
-plt.title("VKE method")
+plt.title("VKE method " + " with a step of " + pas)
 plt.show()
