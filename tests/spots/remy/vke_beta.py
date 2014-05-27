@@ -21,6 +21,11 @@ mov.z_port = '/dev/ttyUSB2'
 
 mov.open()
 
+#
+# Faire un home, retourner a la position par defaut (près du focus), 
+# puis faire le focus (enregistrer les valeurs dans un fichiers puis les lire)
+#
+
 cam = d.Camera()
 cam.open()
 
@@ -31,12 +36,35 @@ deplacement = 0
 
 trou = "20micron"
 
+print("Attention voulez vous supprimer le contenu de ./vke_beta (y/n) ? : ")
+suppr = input()
+
+if suppr == 'y':
+    commande = "rm -f ./vke_beta/*.fits"
+    os.system(commande)
+
 for i in range(0,borne):
-    cam.capture_and_save(exposure = 0.05, filename = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou , filetype = "FITS")
+
+    XPOS = mov.x_axis.get_position()
+    
+    name = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou 
+    cam.capture_and_save(exposure = 0.05, filename = name, filetype = "FITS")
     mov.move(dx=pas)
     deplacement = deplacement + pas
 
+    update = py.open(name)
+    update[0].header.update('xpos', XPOS)
+    update.close()
+
 for i in range(0,borne):
-    cam.capture_and_save(exposure = 0.05, filename = "./vke_beta/retour_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou , filetype = "FITS")
+
+    XPOS = mov.x_axis.get_position()
+    
     mov.move(dx=-pas)
     deplacement = deplacement - pas
+    name = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou
+    cam.capture_and_save(exposure = 0.05, filename = name , filetype = "FITS")
+    
+    update = py.open(name)
+    update[0].header.update('xpos', XPOS)
+    update.close()
