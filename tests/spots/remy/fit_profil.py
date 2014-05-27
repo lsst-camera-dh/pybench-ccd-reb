@@ -20,7 +20,7 @@ def moments(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution by calculating its
     moments """
-    data = data + 0.000000000000000001
+    data = data + 0.0000000000000001
     total = data.sum()
     X, Y = indices(data.shape)
     x = (X*data).sum()/total
@@ -29,14 +29,14 @@ def moments(data):
     col_sum = col.sum()
 
     if col_sum == 0:
-        col_sum = 0.000000001
+        col_sum = 0.00000000000000001
 
     width_x = sqrt(abs((arange(col.size)-y)**2*col).sum()/col_sum)
     row = data[int(x), :]
     row_sum = row.sum()
 
     if row_sum == 0:
-        row_sum = 0.000000001
+        row_sum = 0.00000000000000001
 
     width_y = sqrt(abs((arange(row.size)-x)**2*row).sum()/row_sum)
     height = data.max()
