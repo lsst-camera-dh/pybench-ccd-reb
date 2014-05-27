@@ -8,7 +8,7 @@ import sys
 import os, os.path
 import time
 
-import unicap
+
 import Image
 import pyfits as py
 import glob as gl
@@ -53,7 +53,7 @@ def fitgaussian(data):
     p, success = optimize.leastsq(errorfunction, params)
     return p
 
-fichiers = gl.glob("./focus/*fits")
+fichiers = gl.glob("./*fits")
 fichiers = sorted(fichiers)
 
 data = []
