@@ -21,6 +21,11 @@ mov.z_port = '/dev/ttyUSB2'
 
 mov.open()
 
+#
+# Faire un home, retourner a la position par defaut (près du focus), 
+# puis faire le focus (enregistrer les valeurs dans un fichiers puis les lire)
+#
+
 cam = d.Camera()
 cam.open()
 
@@ -31,9 +36,12 @@ deplacement = 0
 
 trou = "20micron"
 
-#
-# Supprimer le contenu de ./vke_beta
-#
+print("Attention : voulez vous supprimer le contenu de ./vke_beta (y/n) ? : ")
+suppr = input()
+
+if suppr == 'y':
+    commande = "rm -f ./vke_beta/*.fits"
+    os.system(commande)
 
 for i in range(0,borne):
 
