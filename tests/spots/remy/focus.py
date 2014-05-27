@@ -1,11 +1,8 @@
 #Pour le focus : prend des images le long de l'axe optique, et fit le spot en gaussien
 #
 #Raffinement du focus : 
-#on test sur les pixels adjascents le ratio entre le flux du pixel central 
-#et le leur. Si il est trop important, on se deplace dans la direction 
-#opposee d'une fraction de pixel. On le fait pour plusieurs valeur de 
-#ratio : 80%, 50%... jusqu'a une limite statisfaisante (10 % ?).
-#
+#On teste sur les pixels adjacents [SUD,OUEST,EST,NORD] le ratio OUEST/EST et SUD/NORD.
+#On veut que les deux soient proches de 1. Quand les deux sont proches de 1, le spot est centré.
 #
 #Par Remy Le Breton
 
