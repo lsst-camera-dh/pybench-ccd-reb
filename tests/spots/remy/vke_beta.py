@@ -36,7 +36,7 @@ deplacement = 0
 
 trou = "20micron"
 
-print("Attention : voulez vous supprimer le contenu de ./vke_beta (y/n) ? : ")
+print("Attention voulez vous supprimer le contenu de ./vke_beta (y/n) ? : ")
 suppr = input()
 
 if suppr == 'y':
