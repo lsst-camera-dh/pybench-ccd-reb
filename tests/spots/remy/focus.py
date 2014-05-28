@@ -121,6 +121,8 @@ trou = "20micron"
 for i in range(0,2*borne):
 
     XPOS = mov.x_axis.get_position()
+    YPOS = mov.y_axis.get_position()
+    ZPOS = mov.z_axis.get_position()
 
     mov.move(dy=pas)
     name = "./focus/" + str(time.time()) + "_" + trou 
@@ -128,15 +130,24 @@ for i in range(0,2*borne):
 
     update = py.open(name)
     update[0].header.update('xpos', XPOS)
+    update[0].header.update('ypos', YPOS)
+    update[0].header.update('zpos', ZPOS)
     update.close()
 
 fichiers = gl.glob("./focus/*.fits")
 fichiers = sorted(fichiers)
 
-donnees = []
+
+
+images = []
 
 for i in fichiers:
-    donnees.append((py.open(i))[0].data)
+    images.append((py.open(i))[0])
+
+donnees = []
+
+for d in images:
+    donnees.append(d.data)
 
 params = []
 fit = []
@@ -166,11 +177,17 @@ for i in cuts:
 
     show()
 
-#
-#
-# Selectioner l'image ou le spot est le plus petit, et ce mettre a cette position
-#
-#
+wx = np.array(params[:2][0])
+wy = np.array(params[:3][0])
+
+w_sum = abs(wx) + abs(wy)
+
+NB_FOCUS = np.where(w_sum==np.min(w_sum))[0][0]
+
+POS_FOCUS = images[NB_FOCUS].header['YPOS']
+
+mov.move(y=POS_FOCUS)
+
 
 #--Raffinement-du-focus-------------------------
 
@@ -186,8 +203,9 @@ pixels_flux = PF(cuts, max_i)
 pixel_central_flux = PCF(cuts, max_i)
 
 pas_raff = 0.0005
+precision = 1.1 #Precision a laquelle on veut que les flux soient egaux
 
-while((pixels_flux[1]/pixels_flux[2] > 1.1) or (pixels_flux[2]/pixels_flux[1] > 1.1)):
+while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux[1] > precision)):
     if pixels_flux[1] > pixels_flux[2]:
         mov.move(dx=pas_raff)
     else:
@@ -199,7 +217,7 @@ while((pixels_flux[1]/pixels_flux[2] > 1.1) or (pixels_flux[2]/pixels_flux[1] > 
     pixel_central_flux = PCF(temp_cuts, max_i)
 
 
-while((pixels_flux[0]/pixels_flux[3] > 1.1) or (pixels_flux[3]/pixels_flux[0] > 1.1)):
+while((pixels_flux[0]/pixels_flux[3] > precision) or (pixels_flux[3]/pixels_flux[0] > precision)):
     if pixels_flux[0] > pixels_flux[3]:
         mov.move(dz=pas_raff)
     else:
