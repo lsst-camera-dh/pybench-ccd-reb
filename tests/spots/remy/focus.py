@@ -137,8 +137,6 @@ for i in range(0,2*borne):
 fichiers = gl.glob("./focus/*.fits")
 fichiers = sorted(fichiers)
 
-
-
 images = []
 
 for i in fichiers:
