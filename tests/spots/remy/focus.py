@@ -2,7 +2,7 @@
 #
 #Raffinement du focus : 
 #On teste sur les pixels adjacents [SUD,OUEST,EST,NORD] le ratio OUEST/EST et SUD/NORD.
-#On veut que les deux soient proches de 1. Quand les deux sont proches de 1, le spot est centré.
+#On veut que les deux soient proches de 1. Quand les deux sont proches de 1, le spot est centre.
 #
 #Par Remy Le Breton
 
@@ -13,19 +13,15 @@ import time
 import unicap
 import Image
 import numpy as np
-import pyfits
+import pyfits as py
 import scipy.optimize as opt
 import pylab as pb
 from fonctions import *
 
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
+
 #--------------------------------------------------------
-
-
-
-#-----------------------------------------------------------------
-
 
 mov = xyz.XYZ()
 
@@ -38,7 +34,7 @@ mov.open()
 cam = d.Camera()
 cam.open()
 
-#-----Revient a une position par defaut, apres avoir fait une home
+#-----Revient a une position par defaut, apres avoir fait un home
 
 mov.home()
 
@@ -53,7 +49,7 @@ mov.move(x=xpos,y=ypos,z=zpos)
 #------------------------------------------------
 
 
-FOCUS(interval = 0.005, pas = 0.001)
+FOCUS_GAUSS(mov = mov, cam = cam, interval = 0.005, pas = 0.001)
 
 fichiers = gl.glob("./focus/*.fits")
 fichiers = sorted(fichiers)
@@ -82,7 +78,7 @@ for i in cuts:
     fit_i = gaussian(*param_i)
     fit.append(fit_i)
 
-    contour(fit_i(*indices(i.shape)), cmap=cm.copper)
+    contour(fit_i(*np.indices(i.shape)), cmap=cm.copper)
     ax = gca()
     (height, x, y, width_x, width_y) = param_i
 
@@ -157,10 +153,10 @@ VKE()
 #
 #
 
-print("Changer les positions par defaut du focus (y/n) ? : ")
-def = input()
+print("Changer les positions par defaut du focus (yes = 1/no = 0) ? : ")
+suppr = input()
 
-if suppr == 'y':
+if suppr == 1:
     commande = "rm -f ./default_pos.data"
     os.system(commande)
 
@@ -168,6 +164,6 @@ if suppr == 'y':
     bar = open("default_pos.data", "w")
     bar.write('# XPOS, YPOS, ZPOS')
     bar.write('\n')
-    bar.write(str(mov.x_axis.get_position() + " " + str(mov.y_axis.get_position() + " " + str(mov.z_axis.get_position())
+    bar.write(str(mov.x_axis.get_position()) + " " + str(mov.y_axis.get_position()) + " " + str(mov.z_axis.get_position()))
     bar.close()
 
