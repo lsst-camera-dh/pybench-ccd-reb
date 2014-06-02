@@ -21,11 +21,6 @@ mov.z_port = '/dev/ttyUSB2'
 
 mov.open()
 
-#
-# Faire un home, retourner a la position par defaut (près du focus), 
-# puis faire le focus (enregistrer les valeurs dans un fichiers puis les lire)
-#
-
 cam = d.Camera()
 cam.open()
 
@@ -45,26 +40,25 @@ if suppr == 'y':
 
 for i in range(0,borne):
 
-    XPOS = mov.x_axis.get_position()
+    ZPOS = mov.z_axis.get_position()
     
-    name = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou 
+    name = "./vke_beta/aller_z_" + str(time.time()) + "_" + str(ZPOS) + "_" + trou 
     cam.capture_and_save(exposure = 0.05, filename = name, filetype = "FITS")
-    mov.move(dx=pas)
+    mov.move(dz=pas)
     deplacement = deplacement + pas
 
     update = py.open(name)
-    update[0].header.update('xpos', XPOS)
+    update[0].header.update('zpos', ZPOS)
     update.close()
 
 for i in range(0,borne):
 
-    XPOS = mov.x_axis.get_position()
+    ZPOS = mov.z_axis.get_position()
     
-    mov.move(dx=-pas)
-    deplacement = deplacement - pas
-    name = "./vke_beta/aller_x_" + str(time.time()) + "_" + str(deplacement) + "mm_" + trou
+    mov.move(dz=-pas)
+    name = "./vke_beta/aller_z_" + str(time.time()) + "_" + str(ZPOS) + "_" + trou
     cam.capture_and_save(exposure = 0.05, filename = name , filetype = "FITS")
     
     update = py.open(name)
-    update[0].header.update('xpos', XPOS)
+    update[0].header.update('zpos', ZPOS)
     update.close()

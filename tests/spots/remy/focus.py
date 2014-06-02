@@ -16,6 +16,7 @@ import numpy as np
 import pyfits
 import scipy.optimize as opt
 import pylab as pb
+from fonctions import *
 
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
@@ -53,6 +54,7 @@ def fitgaussian(data):
     params = moments(data)
     errorfunction = lambda p: ravel(gaussian(*p)(*np.indices(data.shape)) - data)
     p, success = opt.optimize.leastsq(errorfunction, params)
+    
     return p
 
 def CUTS(data): #On coupe l'image pour ne garder que la region central
@@ -89,6 +91,40 @@ def RATIO(pixels_flux, nb_flux, pixel_central_flux):
     
     return ratio
 
+def FOCUS(interval=0.005, pas=0.001, trou = "20micron"):
+    ''' Fait le focus pour un interval, un pas et un trou donne.
+    @param interval: autour d'un point d'origine, distance avant et apres ce point sur laquelle travailler
+    @param pas: pas de prise d'image, doit etre inferieur a interval
+    @param trou: trou de travail
+    
+    '''
+    borne = int(interval/pas)
+
+    print("Attention : voulez vous supprimer le contenu de ./focus (y/n) ? : ")
+    suppr = input()
+
+    if suppr == 'y':
+        commande = "rm -f ./focus/*.fits"
+        os.system(commande)
+
+    mov.move(dy=-interval)
+    
+    for i in range(0,2*borne):
+
+        XPOS = mov.x_axis.get_position()
+        YPOS = mov.y_axis.get_position()
+        ZPOS = mov.z_axis.get_position()
+
+        mov.move(dy=pas)
+        name = "./focus/" + str(time.time()) + "_" + trou 
+        cam.capture_and_save(exposure = 0.1, filename = name, filetype = "FITS")
+
+        update = py.open(name)
+        update[0].header.update('xpos', XPOS)
+        update[0].header.update('ypos', YPOS)
+        update[0].header.update('zpos', ZPOS)
+        update.close()
+
 #-----------------------------------------------------------------
 
 
@@ -103,6 +139,22 @@ mov.open()
 cam = d.Camera()
 cam.open()
 
+#-----Revient a une position par defaut, apres avoir fait une home
+
+mov.home()
+
+default = np.loadtxt("default_pos.data", comments = '#')
+
+xpos = default[0]
+ypos = default[1]
+zpos = default[2]
+
+mov.move(x=xpos,y=ypos,z=zpos)
+
+#------------------------------------------------
+
+
+FOCUS(0.005,0.001,"z")
 pas = 0.001 #En mm
 interval = 0.005
 borne = int(interval/pas)
@@ -215,13 +267,36 @@ while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux
     pixel_central_flux = PCF(temp_cuts, max_i)
 
 
-while((pixels_flux[0]/pixels_flux[3] > precision) or (pixels_flux[3]/pixels_flux[0] > precision)):
-    if pixels_flux[0] > pixels_flux[3]:
-        mov.move(dz=pas_raff)
-    else:
-        mov.move(dz=-pas_raff)
+# while((pixels_flux[0]/pixels_flux[3] > precision) or (pixels_flux[3]/pixels_flux[0] > precision)):
+#     if pixels_flux[0] > pixels_flux[3]:
+#         mov.move(dz=pas_raff)
+#     else:
+#         mov.move(dz=-pas_raff)
     
-    temp_data = cam.capture(exposure = expo)
-    temp_cuts = CUTS(temp_data)
-    pixels_flux = PF(temp_cuts, max_i)
-    pixel_central_flux = PCF(temp_cuts, max_i)
+#     temp_data = cam.capture(exposure = expo)
+#     temp_cuts = CUTS(temp_data)
+#     pixels_flux = PF(temp_cuts, max_i)
+#     pixel_central_flux = PCF(temp_cuts, max_i)
+
+
+#
+#
+# Faire scan vertical, estimer taille pixel, se placer au centre (en egalisant le flux sur deux pixel verticaux)
+# se deplacer un peu, minimiser flux sur pixel superier, et ensuite cente
+#
+#
+
+print("Changer les positions par defaut du focus (y/n) ? : ")
+def = input()
+
+if suppr == 'y':
+    commande = "rm -f ./default_pos.data"
+    os.system(commande)
+
+
+    bar = open("default_pos.data", "w")
+    bar.write('# XPOS, YPOS, ZPOS')
+    bar.write('\n')
+    bar.write(str(mov.x_axis.get_position() + " " + str(mov.y_axis.get_position() + " " + str(mov.z_axis.get_position())
+    bar.close()
+

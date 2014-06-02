@@ -48,10 +48,10 @@ for j in data:
 
 
 max_i = np.where(cuts[0]==np.max(cuts[0]))
-max_i = [max_i[0][0], max_i[1][0] + 1] #Pixel voision du pixel central
+max_i = [max_i[0][0] + 1, max_i[1][0]] #Pixel voision du pixel central
 
 max_i2 = np.where(cuts[0]==np.max(cuts[0]))
-max_i2 = [max_i2[0][0], max_i2[1][0] + 2]
+max_i2 = [max_i2[0][0] + 2, max_i2[1][0]]
 
 flux = []
 flux2 = []
