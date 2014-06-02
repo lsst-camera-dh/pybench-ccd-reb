@@ -12,6 +12,7 @@ submodules = ['pollux',
               'laser',
               'powersupply', 
               'sp_dk240',
+              'dmk41au02as',
               'utils']
 
 def options(opt):

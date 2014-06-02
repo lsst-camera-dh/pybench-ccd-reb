@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
 # --------------------------------------------------------------------------
-# SnDICE2 server
-# To test the communication with the CFHT TCS / MegaCam DAQ system
+# LSST REB server (LPNHE testbench)
+# 
 # --------------------------------------------------------------------------
 
 import sys
@@ -38,18 +38,16 @@ SERVER_PORT = int(os.getenv("DICE_SERVER_PORT", DEFAULT_PORT))
 
 # --------------------------------------------------------------------------
 
-class DiceServer(SimpleXMLRPCServer):
+class REBServer(SimpleXMLRPCServer):
     def serve_forever(self):
 	self.quit = 0
 	while not self.quit:
 	    self.handle_request()
 
 # --------------------------------------------------------------------------
-import dice.control.motor as dcm         # mcapi.py 
-# import dice.control.led as dcl           # led specs # ici, ca ne sert pas. 
-import dice.control.led as specs    
-# import dice.control.utils as dcu         # Q: just bytes.py ?
+import lsst.camera.reb as reb 
 
+# --------------------------------------------------------------------------
 
 def dice_led_on_off(led, current, on):
     """
@@ -401,7 +399,8 @@ def daemonize(options, args):
     # We stay with the same umask
     # os.umask(0) 
 
-    # do second fork and kill session leader to ensure one will never get attach to a TTY.
+    # do second fork and kill session leader to ensure one will never 
+    # get attach to a TTY.
     try: 
         pid = os.fork() 
         if pid > 0:
@@ -423,30 +422,30 @@ def main(options, args):
                         level=logging.DEBUG, format='%(asctime)s: %(message)s')
 
     # Now that logging is set up decouple from parent environnement
-    redirect_stream(sys.stdin, None)
+    redirect_stream(sys.stdin,  None)
     redirect_stream(sys.stdout, None)
     redirect_stream(sys.stderr, None)    
 
-    # General Control Functions 
-    server.register_function(SnDICE2.status,              "status")
-    server.register_function(SnDICE2.init,                "init")
+    # REB FPGA subaddresses R/W
+    server.register_function(R.read,                "read")
+    server.register_function(R.write,               "write")
 
     # LEDHEAD motions 
-    server.register_function(SnDICE2.home,                "home")
-    server.register_function(SnDICE2.move_absolute,       "move_absolute")
-    server.register_function(SnDICE2.move_relative,       "move_relative")
-    server.register_function(SnDICE2.at_target,           "at_target")
-    server.register_function(SnDICE2.position,            "position")
-    server.register_function(SnDICE2.park,                "park")
-    server.register_function(SnDICE2.motor_status,        "motor_status")
-    server.register_function(SnDICE2.motor_init,          "motor_init")
+    server.register_function(R.home,                "home")
+    server.register_function(R.move_absolute,       "move_absolute")
+    server.register_function(R.move_relative,       "move_relative")
+    server.register_function(R.at_target,           "at_target")
+    server.register_function(R.position,            "position")
+    server.register_function(R.park,                "park")
+    server.register_function(R.motor_status,        "motor_status")
+    server.register_function(R.motor_init,          "motor_init")
     
     # LEDHEAD motions 
-    server.register_function(SnDICE2.led_on,              "led_on")
-    server.register_function(SnDICE2.led_off,             "led_off")
-    server.register_function(SnDICE2.planet_on,           "planet_on")
-    server.register_function(SnDICE2.planet_off,          "planet_off")
-    server.register_function(SnDICE2.sample_and_dump,     "sample_and_dump")
+    server.register_function(R.led_on,              "led_on")
+    server.register_function(R.led_off,             "led_off")
+    server.register_function(R.planet_on,           "planet_on")
+    server.register_function(R.planet_off,          "planet_off")
+    server.register_function(R.sample_and_dump,     "sample_and_dump")
 
     # misc 
     server.register_function(server_quit,         "quit")
@@ -464,7 +463,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage="""
 %prog [-l log-file] [-d] 
 
-Start the dice2 control server. 
+Start the REB control server. 
 """)
     parser.add_option('-d', '--daemon', default=False, action='store_true',
                       help='Run as a background daemon')
@@ -477,17 +476,19 @@ Start the dice2 control server.
 
     (options, args) = parser.parse_args()
 
-    # ------------- Initialize Head ---------------
-    SnDICE2 = LEDHead()
-    # ------------- LEDHEAD Server ----------------
+    # ------------- Initialize REB ----------------
+    R = reb.REB()
+
+    # ------------- REB Server --------------------
     # HOSTNAME = DEFAULT_HOSTNAME
     # PORT = DEFAULT_PORT
     SERVER_HOSTNAME = options.hostname
     SERVER_PORT = options.port
     
-    server = DiceServer((SERVER_HOSTNAME, SERVER_PORT))
+    server = REBServer((SERVER_HOSTNAME, SERVER_PORT))
     # server = SimpleXMLRPCServer(("dicehead", 8001))
-    print "dice2: Listening on port %s:%d. Waiting for commands." % (SERVER_HOSTNAME, SERVER_PORT)
+    print ( "dice2: Listening on port %s:%d. Waiting for commands." % 
+            (SERVER_HOSTNAME, SERVER_PORT) )
     
     if options.daemon:
         daemonize(options, args)
