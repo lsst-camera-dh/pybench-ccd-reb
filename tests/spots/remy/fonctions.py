@@ -69,11 +69,13 @@ def RATIO(pixels_flux, nb_flux, pixel_central_flux):
     
     return ratio
 
-def FOCUS(interval=0.005, pas=0.001, trou = "20micron"):
+def FOCUS(interval=0.005, pas=0.001, expo = 0.05, trou = "20micron"):
     ''' Fait le focus pour un interval, un pas et un trou donne.
+    Attention : moteurs et camera doivent etre initialises
     @param interval: autour d'un point d'origine, distance avant et apres ce point sur laquelle travailler
     @param pas: pas de prise d'image, doit etre inferieur a interval
     @param trou: trou de travail
+    @param expo: temps d'exposition desire
     
     '''
     borne = int(interval/pas)
@@ -95,10 +97,77 @@ def FOCUS(interval=0.005, pas=0.001, trou = "20micron"):
 
         mov.move(dy=pas)
         name = "./focus/" + str(time.time()) + "_" + trou 
-        cam.capture_and_save(exposure = 0.1, filename = name, filetype = "FITS")
+        cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
 
         update = py.open(name)
         update[0].header.update('xpos', XPOS)
         update[0].header.update('ypos', YPOS)
         update[0].header.update('zpos', ZPOS)
         update.close()
+
+def VKE(interval = 0.02, pas = 0.0002, sens = "z", expo = 0.05 trou = "20micron"):
+    '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
+    @param interval: distance sur laquelle faire l'aller et le retour en mm
+    @param pas: division de l'interval de travail, doit etre inferieur a interval en mm
+    @param sens: horizontal (x) ou vertical (z)
+    @param trou: trou de travail
+    @param expo: temps d'exposition desire en seconde
+    '''
+    borne = int(interval/pas)
+
+    print("Attention : voulez vous supprimer le contenu de ./vke_beta (y/n) ? : ")
+    suppr = input()
+
+    if suppr == 'y':
+        commande = "rm -f ./vke_beta/*.fits"
+        os.system(commande)
+
+    if sens == "z":
+        for i in range(0,borne):
+
+            ZPOS = mov.z_axis.get_position()
+
+            name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou 
+            cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+            mov.move(dz=pas)
+
+            update = py.open(name)
+            update[0].header.update('zpos', ZPOS)
+            update.close()
+
+        for i in range(0,borne):
+
+            ZPOS = mov.z_axis.get_position()
+
+            mov.move(dz=-pas)
+            name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou
+            cam.capture_and_save(exposure = expo, filename = name , filetype = "FITS")
+
+            update = py.open(name)
+            update[0].header.update('zpos', ZPOS)
+            update.close()
+
+    elif sens == "x":
+        for i in range(0,borne):
+
+            XPOS = mov.x_axis.get_position()
+
+            name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou 
+            cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+            mov.move(dx=pas)
+
+            update = py.open(name)
+            update[0].header.update('xpos', XPOS)
+            update.close()
+
+        for i in range(0,borne):
+
+            XPOS = mov.x_axis.get_position()
+
+            mov.move(dx=-pas)
+            name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou
+            cam.capture_and_save(exposure = expo, filename = name , filetype = "FITS")
+
+            update = py.open(name)
+            update[0].header.update('xpos', XPOS)
+            update.close()
