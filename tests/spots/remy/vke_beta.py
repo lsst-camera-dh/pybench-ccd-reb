@@ -42,10 +42,9 @@ for i in range(0,borne):
 
     ZPOS = mov.z_axis.get_position()
     
-    name = "./vke_beta/aller_z_" + str(time.time()) + "_" + str(ZPOS) + "_" + trou 
+    name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou 
     cam.capture_and_save(exposure = 0.05, filename = name, filetype = "FITS")
     mov.move(dz=pas)
-    deplacement = deplacement + pas
 
     update = py.open(name)
     update[0].header.update('zpos', ZPOS)
@@ -56,7 +55,7 @@ for i in range(0,borne):
     ZPOS = mov.z_axis.get_position()
     
     mov.move(dz=-pas)
-    name = "./vke_beta/aller_z_" + str(time.time()) + "_" + str(ZPOS) + "_" + trou
+    name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou
     cam.capture_and_save(exposure = 0.05, filename = name , filetype = "FITS")
     
     update = py.open(name)
