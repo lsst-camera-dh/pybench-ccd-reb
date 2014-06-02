@@ -9,6 +9,7 @@ import numpy as np
 import pyfits as py
 import scipy.optimize as opt
 import pylab as pb
+import glob as gl
 
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
@@ -83,7 +84,7 @@ def RATIO(pixels_flux, nb_flux, pixel_central_flux):
     
     return ratio
 
-def FOCUS_GAUSS(mov, cam, interval=0.005, pas=0.001, expo = 0.05, trou = "20micron"):
+def FOCUS_GAUSS(mov, cam, interval=0.005, pas=0.001, expo = 0.02, trou = "20micron"):
     ''' Fait le focus pour un interval, un pas et un trou donne.
     Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
     @param mov: nom des moteurs
@@ -118,9 +119,10 @@ def FOCUS_GAUSS(mov, cam, interval=0.005, pas=0.001, expo = 0.05, trou = "20micr
         update[0].header.update('xpos', XPOS)
         update[0].header.update('ypos', YPOS)
         update[0].header.update('zpos', ZPOS)
+        update.writeto(name + ".fits", clobber=True)
         update.close()
 
-def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.05, trou = "20micron"):
+def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.02, trou = "20micron"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -144,12 +146,13 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.05, trou =
 
             ZPOS = mov.z_axis.get_position()
 
-            name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou 
+            name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
             mov.move(dz=pas)
 
             update = py.open(name + ".fits")
             update[0].header.update('zpos', ZPOS)
+            update.writeto(name + ".fits", clobber = True)
             update.close()
 
         for i in range(0,borne):
@@ -157,11 +160,12 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.05, trou =
             ZPOS = mov.z_axis.get_position()
 
             mov.move(dz=-pas)
-            name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou
+            name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             cam.capture_and_save(exposure = expo, filename = name , filetype = "FITS")
 
             update = py.open(name + ".fits")
             update[0].header.update('zpos', ZPOS)
+            update.writeto(name + ".fits", clobber = True)
             update.close()
 
     elif sens == "x":
@@ -169,12 +173,13 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.05, trou =
 
             XPOS = mov.x_axis.get_position()
 
-            name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou 
+            name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
             cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
             mov.move(dx=pas)
 
             update = py.open(name + ".fits")
             update[0].header.update('xpos', XPOS)
+            update.writeto(name + ".fits", clobber=True)
             update.close()
 
         for i in range(0,borne):
@@ -182,9 +187,10 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.05, trou =
             XPOS = mov.x_axis.get_position()
 
             mov.move(dx=-pas)
-            name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou
+            name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
             cam.capture_and_save(exposure = expo, filename = name , filetype = "FITS")
 
             update = py.open(name + ".fits")
             update[0].header.update('xpos', XPOS)
+            update.writeto(name + ".fits", clobber=True)
             update.close()

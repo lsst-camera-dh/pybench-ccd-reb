@@ -16,6 +16,7 @@ import numpy as np
 import pyfits as py
 import scipy.optimize as opt
 import pylab as pb
+import glob as gl
 from fonctions import *
 
 import lsst.testbench.pollux.xyz as xyz
@@ -67,8 +68,13 @@ for d in images:
 params = []
 fit = []
 
+cuts = []
+
+for k in donnees:
+    cuts.append(CUTS(k))
+
 for i in cuts:
-    matshow(i, cmap=cm.gist_earth_r)
+    pb.matshow(i, cmap=plt.cm.gist_earth_r)
     plt.xlim(30,50)
     plt.ylim(30,40)
 
@@ -106,7 +112,7 @@ mov.move(y=POS_FOCUS)
 
 #--Raffinement-du-focus-------------------------
 
-expo = O.O5
+expo = O.O2
 
 data = cam.capture(exposure = expo)
 cuts = CUTS(data)
@@ -144,7 +150,7 @@ while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux
 #     pixel_central_flux = PCF(temp_cuts, max_i)
 
 
-VKE()
+VKE(mov=mov, cam=cam)
 
 #
 #
