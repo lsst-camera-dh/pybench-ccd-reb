@@ -189,7 +189,7 @@ class CABAC(object):
     # ----------------------------------------------------------
 
     def get_header(self, position = ''):#string 'T' or 'B' or nothing
-	"""
+        """
         Writes current CABAC settings to a dictionary to include in FITS header file
         """
         headerkeyformat = "{}_"+ position

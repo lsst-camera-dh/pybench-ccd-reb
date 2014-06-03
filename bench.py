@@ -16,8 +16,8 @@ class Bench(object):
 
     def __init__(self):
         self.reb = reb.REB()
-        self.bss = Keithley.Keithley()#device number ?
-        self.bss.connectInstrument()
+        self.bss = Keithley.Keithley()  # device number ?
+        self.bss.connectInstrument() # implementation with remote control ?
        # other instruments ?
 
     def powerup(self):
@@ -105,7 +105,7 @@ class Bench(object):
         time.sleep(1)
 
         #drains to 0
-        sef.reb.set_cabac_config("OD": 0, "GD": 0, "RD": 0})
+        self.reb.set_cabac_config({"OD": 0, "GD": 0, "RD": 0})
 
         print("CCD shutdown complete")
 
@@ -127,13 +127,15 @@ class Bench(object):
 
     def get_headers(self):
         """
-        Fills image headers for current setup.
+        Fills image header dictionaries for current setup.
         """
         #CCD operating conditions header
-        opheader = "CCDoperating.txt"
-        self.reb.get_operating_header(opheader)
-        headerfile = open(opheader, 'a')
+        opheader = self.reb.get_operating_header()
+
         self.bss.getOutputVoltage()
-        self.bss.getCurrent()#gives only current at this time, might upgrade to get measures during exposure
-        headerfile.write("V_BSS= {:.2f}\nI_BSS= {:.2f}\n".format(self.bss.volt, self.bss.current))
+        self.bss.getCurrent()  # gives only current at this time, might upgrade to get measures during exposure
+        opheader["V_BSS"] = "{:.2f}".format(self.bss.volt)
+        opheader["I_BSS"] = "{:.2f}".format(self.bss.current)
+
+        #need to add image format header, instruments header
 
