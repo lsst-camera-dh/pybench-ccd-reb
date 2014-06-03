@@ -25,7 +25,7 @@ position = []
 for i in fichiers:
     temp = py.open(i)
     data.append(temp[0].data)
-    position.append(temp[0].header['XPOS'])
+    position.append(temp[0].header['ZPOS'])
 
 lines = np.shape(data[0])[0]
 rows = np.shape(data[0])[1]
@@ -75,7 +75,7 @@ step = float(fichiers[1][pas_deb:pas_fin])
 
 plt.scatter(position, flux, marker = '+', color = 'b')
 plt.scatter(position, flux2, marker = '+', color = 'r')
-plt.xlabel("Displacement")
+plt.xlabel("Position")
 plt.ylabel("Flux")
 plt.title("Step of " + pas)
 plt.show()
