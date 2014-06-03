@@ -17,6 +17,8 @@ import pyfits as py
 import scipy.optimize as opt
 import pylab as pb
 import glob as gl
+import matplotlib.pyplot as plt
+
 from fonctions import *
 
 import lsst.testbench.pollux.xyz as xyz
@@ -150,7 +152,7 @@ while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux
 #     pixel_central_flux = PCF(temp_cuts, max_i)
 
 
-VKE(mov=mov, cam=cam)
+VKE(mov=mov, cam=cam, pas = 0.0001)
 
 #
 #

@@ -10,6 +10,7 @@ import pyfits as py
 import scipy.optimize as opt
 import pylab as pb
 import glob as gl
+import matplotlib.pyplot as plt
 
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
