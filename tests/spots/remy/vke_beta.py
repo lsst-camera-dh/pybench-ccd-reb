@@ -51,10 +51,9 @@ for i in range(0,borne):
     update.close()
 
 for i in range(0,borne):
-
-    ZPOS = mov.z_axis.get_position()
     
     mov.move(dz=-pas)
+    ZPOS = mov.z_axis.get_position()
     name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou
     cam.capture_and_save(exposure = 0.05, filename = name , filetype = "FITS")
     
