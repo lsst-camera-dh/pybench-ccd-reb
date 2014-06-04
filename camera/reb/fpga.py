@@ -521,6 +521,15 @@ class Sequencer(object):
                   'name': 'SPL', 
                   'fullname': 'ADC sampling signal',
                   'FPGA': 'ADC_trigger' }, 
+            13: { 'channel': 13,
+                  'name': 'SOI',
+                  'fullname': 'Start of Image',
+                  'FPGA': 'SOI' },
+            14: { 'channel': 14,
+                  'name': 'EOI',
+                  'fullname': 'End of Image',
+                  'FPGA': 'EOI' },
+            #
             16: { 'channel': 16, 
                   'name': 'SHU', 
                   'fullname': 'Shutter TTL',
@@ -572,11 +581,11 @@ class Function(object):
         s += "    " + self.fullname + "\n"
 
         # s += ("                                \t " + 
-        #       "               S   SPPPPRRRRCRRR\n")
+        #       "               S ESSPPPPRRRRCRRR\n")
         # s += ("slice\t duration (x10ns)\t\t " + 
-        #       "               H   P4321G321LSDU\n")
+        #       "               H OOP4321G321LSDU\n")
         # s += ("                        \t\t " + 
-        #       "               U   L|||||||||T||\n")
+        #       "               U IIL|||||||||T||\n")
 
         l0 = "                                \t "
         l1 = "slice\t duration (x10ns)\t\t "
@@ -1174,6 +1183,7 @@ class FPGA(object):
 
         for prgmval in prgm:
             if (abs(prgmval - value)>0.2):
-                raise StandardError("CABAC readback different from setting for %s: %f != %f" % (param, prgmval, value) )
+                raise StandardError("CABAC readback different from setting for %s: %f != %f" % 
+                                    (param, prgmval, value) )
 
 
