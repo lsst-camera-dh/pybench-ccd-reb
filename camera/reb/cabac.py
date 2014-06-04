@@ -31,6 +31,12 @@ class CABAC(object):
     RDconv = 0.1414
     OGconv = 0.01895
 
+    conv = {'OD0': ODconv, 
+            'OD1': ODconv, 
+            'GD': GDconv, 
+            'RD': RDconv,
+            'OG': OGconv}
+
     def __init__(self):
         self.OD0 = 0
         self.OD1 = 0
@@ -188,15 +194,24 @@ class CABAC(object):
 
     # ----------------------------------------------------------
 
-    def print_to_header(self, position = ''):#string 'T' or 'B' or nothing
-	"""
-        Writes current CABAC settings to the right format to include in FITS header file
+    def get_header(self, position = ''):#string 'T' or 'B' or nothing
         """
-        headerformat = "{}_"+ position +"= {:.2f}\n"
-        headerstringV = ''.join([headerformat.format("V_OD0", self.OD0 * self.ODconv), headerformat.format("V_OD1", self.OD1 * self.ODconv), headerformat.format("V_GD", self.GD * self.GDconv), headerformat.format("V_RD", self.RD * self.RDconv), headerformat.format("V_OG", self.OG * self.OGconv)])
+        Writes current CABAC settings to a dictionary to include in FITS header file
+        """
 
-        headerformat = "{}_"+ position +"= {:d}\n"
-        headerstringI = ''.join([headerformat.format("I_P", self.I_parallel), headerformat.format("I_S", self.I_serial), headerformat.format("I_RG", self.I_RG)])
+        header = {}
 
-        return ''.join([headerstringV, headerstringI])
+        suffix = ""
+        if position != '':
+            suffix = "_" + position
+
+        for field in ['OD0', 'OD1', 'GD', 'RD', 'OG']:
+            key = "V_" + field + suffix
+            header[key] = self.__dict__[field] * self.conv[field]
+
+        header["I_P" + suffix]  = self.I_parallel
+        header["I_S" + suffix]  = self.I_serial
+        header["I_RG" + suffix] = self.I_RG
+
+        return header
 

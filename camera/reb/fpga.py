@@ -644,7 +644,6 @@ class FPGA(object):
         self.cabac_bottom = cabac.CABAC()
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
 
-
     # def open(self):
     #     "Opening the connection ?"
     #     pass
@@ -1074,16 +1073,16 @@ class FPGA(object):
         """
         No readback available, using values stored in fpga object.
         """
-        headerlines = []
+        fitsheader = {}
         for key in iter(self.dacs):
             if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                headerlines.append("{}= {:.2f}\n".format(key, dacs[key]*self.serial_conv))
+                fitsheader[key]= "{:.2f}".format(dacs[key]*self.serial_conv)
             elif key in ["V_PL", "V_PH"]:
-                headerlines.append("{}= {:.2f}\n".format(key, dacs[key]*self.parallel_conv))
+                fitsheader[key]= "{:.2f}".format(dacs[key]*self.parallel_conv)
             else:
-                headerlines.append("{}= {:d}\n".format(key, dacs[key]))
+                fitsheader[key]= "{:d}".format(dacs[key])
 
-        return ''.join(headerlines)
+        return fitsheader
 
     # ----------------------------------------------------------
 
@@ -1097,7 +1096,7 @@ class FPGA(object):
         if key in currents:
             self.dacs[key] = currents[key] & 0xfff
         else:
-            raise ValueError("Unknown currents key: %s, could not be set" % key)
+            raise ValueError("No key found for current source (%s), could not be set." % key)
             
         self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
                 
@@ -1113,7 +1112,7 @@ class FPGA(object):
         
         key = "I_OS"
     
-        return "{}= {:d}\n".format(key, dacs[key])
+        return {key: dacs[key]}
 
     # ----------------------------------------------------------
 
@@ -1132,7 +1131,8 @@ class FPGA(object):
         self.cabac_top.set_from_registers(top_config)
         self.cabac_bottom.set_from_registers(bottom_config)
 
-        config = ''.join([self.cabac_top.print_to_header("T"),self.cabac_bottom.print_to_header("B")])
+        config = self.cabac_top.get_header("T")
+        config.update(self.cabac_bottom.get_header("B"))
             
         return config
 
@@ -1175,6 +1175,5 @@ class FPGA(object):
         for prgmval in prgm:
             if (abs(prgmval - value)>0.2):
                 raise StandardError("CABAC readback different from setting for %s: %f != %f" % (param, prgmval, value) )
-
 
 

@@ -666,11 +666,15 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-#def set_dacs(self, dacs):
+    def set_dacs(self, dacs):
         """
-        Sets CS gate or clock voltage DACs.
+        Sets CS gate or clock voltage DACs, but not both at the same time (for extra safety).
         """
-    
+
+        if "I_OS" in dacs:
+            self.fpga.set_current_source(dacs)
+        else:
+            self.fpga.set_clock_voltages(dacs)
 
     # --------------------------------------------------------------------
 
@@ -701,14 +705,15 @@ read_line_fake:
 
     # ----------------------------------------------------------
     
-    def get_operating_header(self, headername = "CCDoperating.txt"):
+    def get_operating_header(self):
         """
-        Fills FITS header for CCD operating conditions
+        Creates dictionary of FITS header elements for CCD operating conditions
         """
-        headerfile = open(headername,'w')
-        headerfile.write(self.get_cabac_config())
-        headerfile.write(self.fpga.get_clock_voltage())
-        headerfile.write(self.fpga.get_current_source())
+        fitsheader = self.get_cabac_config()
+        fitsheader.update(self.fpga.get_clock_voltage())
+        fitsheader.update(self.fpga.get_current_source())
+
+        return fitsheader
 
 #need to add power currents and voltages, back substrate value and current (added elsewhere ?)
 
