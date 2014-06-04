@@ -22,7 +22,7 @@ fichiers = sorted(fichiers)
 data = []
 position = []
 
-for i in fichiers:
+for i in fichiers[:-1]:
     temp = py.open(i)
     data.append(temp[0].data)
     position.append(temp[0].header['ZPOS'])

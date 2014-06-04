@@ -20,6 +20,7 @@ import glob as gl
 import matplotlib.pyplot as plt
 
 from fonctions import *
+from math import *
 
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
