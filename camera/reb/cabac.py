@@ -35,7 +35,7 @@ class CABAC(object):
             'OD1': ODconv, 
             'GD': GDconv, 
             'RD': RDconv,
-            'OG', OGconv}
+            'OG': OGconv}
 
     def __init__(self):
         self.OD0 = 0
