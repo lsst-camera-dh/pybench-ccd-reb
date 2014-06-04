@@ -1,5 +1,6 @@
 
 import fpga
+import time
 
 
 class REB(object):
@@ -9,27 +10,27 @@ class REB(object):
 
     # loading the functions
     
-    # bit 0  : ASPIC RAMP UP
-    # bit 1  : ASPIC RAMP DOWN
-    # bit 2  : ASPIC RESET
-    # bit 3  : ASPIC Clamp
+    # bit 0  : RU  (ASPIC ramp-up integration)
+    # bit 1  : RD  (ASPIC ramp-down integration)
+    # bit 2  : RST (ASPIC reset)
+    # bit 3  : CL  (ASPIC clamp)
     
-    # bit 4  : S1
-    # bit 5  : S2
-    # bit 6  : S3
-    # bit 7  : RG
+    # bit 4  : R1  (Serial clock 1)
+    # bit 5  : R2  (Serial clock 2)
+    # bit 6  : R3  (Serial clock 3)
+    # bit 7  : RG  (Serial reset clock)
     
-    # bit 8  : P1
-    # bit 9  : P2
-    # bit 10 : P3
-    # bit 11 : P4
-    # bit 12 : ADC trigger  (convert)
+    # bit 8  : P1  (Parallel clock 1)
+    # bit 9  : P2  (Parallel clock 2)
+    # bit 10 : P3  (Parallel clock 3)
+    # bit 11 : P4  (Parallel clock 4)
+    # bit 12 : SPL (ADC trigger ('sample'))
     
-    # bit 16 : shutter
+    # bit 16 : SHU (Shutter TTL)
     
     # RRRCRRRRPPPPS
-    # UDSL123G1234T
-    
+    # UDSL123G1234P
+    #   T         L
 
     default_functions = { 0 : 
                           # function 0 : default state
@@ -39,8 +40,9 @@ class REB(object):
                                         timelengths = {  0 : 2,  # x10ns
                                                          1 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||
                                         outputs =     {  0 : 0b0000000000000011010111100,
                                                          1 : 0 } ),
                           1 : 
@@ -59,8 +61,9 @@ class REB(object):
                                                          1 : 5000,
                                                          2 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||                                 
                                         outputs =     {  0 : 0b0000000010000011010111100,
                                                          1 : 0b0000000010000011010111100,
                                                          2 : 0 } ),
@@ -98,8 +101,9 @@ class REB(object):
                                                          8 : 1000,
                                                          9 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||                                 
                                         outputs =     {  0 : 0b0000000000000011010111100,
                                                          1 : 0b0000000000000111010111100,
                                                          2 : 0b0000000000000110010111100,
@@ -152,11 +156,12 @@ class REB(object):
                                                          7 : 50,
                                                          8 : 8,
                                                          9 : 12,
-                                                         10 : 8,
-                                                         11 : 0 },
+                                                        10 : 8,
+                                                        11 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||                                 
                                         outputs =     {  0 : 0b0000000000000011010100000,
                                                          1 : 0b0000000000000011011101100,
                                                          2 : 0b0000000000000011001001100,
@@ -167,8 +172,8 @@ class REB(object):
                                                          7 : 0b0000000000000011000010010,
                                                          8 : 0b0000000000000011000110000,
                                                          9 : 0b0000000000000011000100000,
-                                                         10 : 0b0000000000001011000100000,
-                                                         11 : 0 } ),
+                                                        10 : 0b0000000000001011000100000,
+                                                        11 : 0 } ),
                           4 :
                               # function 4 : pixel transfer, 2 us
                           # function with that replicates acquisition timings without ADC trigger
@@ -207,11 +212,12 @@ class REB(object):
                                                          7 : 50,
                                                          8 : 8,
                                                          9 : 12,
-                                                         10 : 8,
-                                                         11 : 0 },
+                                                        10 : 8,
+                                                        11 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||                                 
                                         outputs =     {  0 : 0b0000000000000011010100000,
                                                          1 : 0b0000000000000011011101100,
                                                          2 : 0b0000000000000011001001100,
@@ -222,8 +228,8 @@ class REB(object):
                                                          7 : 0b0000000000000011000010010,
                                                          8 : 0b0000000000000011000110000,
                                                          9 : 0b0000000000000011000100000,
-                                                         10 : 0b0000000000000011000100000,
-                                                         11 : 0 } ),
+                                                        10 : 0b0000000000000011000100000,
+                                                        11 : 0 } ),
                           
                           5 :
                               # function 5 : fast clear line transfer (as fast as can be with current REB)
@@ -247,8 +253,9 @@ class REB(object):
                                                          4 : 1000,
                                                          5 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||                                 
                                         outputs =     {  0 : 0b0000000000000011010111100,
                                                          1 : 0b0000000000000110010111100,
                                                          2 : 0b0000000000000100110111100,
@@ -284,8 +291,9 @@ class REB(object):
                                                          6 : 18,
                                                          7 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||                                 
                                         outputs =     {  0 : 0b0000000000000011010101100,
                                                          1 : 0b0000000000000011011101100,
                                                          2 : 0b0000000000000011001001100,
@@ -323,8 +331,9 @@ class REB(object):
                                                          6 : 18,
                                                          7 : 0 },
                                         #                    
-                                        #                      ........S...SPPPPRSSSCRRR
-                                        #                      ........H...T4321G321LSDU
+                                        #                      ........S...SPPPPRRRRCRRR
+                                        #                      ........H...P4321G321LSDU
+                                        #                      ........U...L|||||||||T||
                                         outputs =     {  0 : 0b0000000010000011010101100,
                                                          1 : 0b0000000010000011011101100,
                                                          2 : 0b0000000010000011001001100,
@@ -396,11 +405,12 @@ read_line_fake:
              RTS 
 """
 
-    def __init__(self, reb_id = 2, ctrl_host = None):
+    def __init__(self, reb_id = 2, ctrl_host = None, strip_id = 0):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
         self.fpga = fpga.FPGA(ctrl_host = self.ctrl_host, 
                               reb_id = self.reb_id)
+    	self.strip_id = strip_id
 
         self.program = None
         self.functions = {}
@@ -502,19 +512,19 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-    def load_function(self, function_id, function):
+    def send_function(self, function_id, function):
         """
         Send the function <function> into the FPGA memory 
         at the #function_id slot.
         """
-        self.fpga.load_function(function_id, function)
+        self.fpga.send_function(function_id, function)
         self.functions[function_id] = function # to keep memory
 
-    def load_functions(self, functions):
+    def send_functions(self, functions):
         """
         Load all functions from dict <functions> into the FPGA memory.
         """
-        self.fpga.load_functions(functions)
+        self.fpga.send_functions(functions)
         self.functions.update(functions)
 
     def dump_function(self, function_id):
@@ -607,25 +617,42 @@ read_line_fake:
         self.select_subroutine(subname = subname, repeat = repeat)
         self.run_program()
 
-    def count_subroutine(self, subname, bit, transition = 'on'):
-        """
-        Counts how many time bit <bit> is switched on/off 
-        (depending of <transition> value) when subroutine 
-        <subname> is called.
-        Useful to compute the image size.
+    # --------------------------------------------------------------------
 
-        TO BE WRITTEN (not so simple)
-
+    def send_sequencer(self, seq, clear = True):
         """
-        pass
+        Load the functions and the program at once.
+        """
+        self.fpga.send_sequencer(seq, clear = clear)
+
+    def dump_sequencer(self):
+        """
+        Dump the sequencer program and the 16 functions from the FPGA memory.
+        """
+        return self.fpga.dump_sequencer()
 
     # --------------------------------------------------------------------
 
-    def set_image_size(self, size):
-        """
-        Set image size (in ADC count).
-        """
-        self.fpga.set_image_size(size)
+    # def count_subroutine(self, subname, bit, transition = 'on'):
+    #     """
+    #     Counts how many time bit <bit> is switched on/off 
+    #     (depending of <transition> value) when subroutine 
+    #     <subname> is called.
+    #     Useful to compute the image size.
+
+    #     TO BE WRITTEN (not so simple)
+
+    #     """
+    #     pass
+
+    # --------------------------------------------------------------------
+
+    # Not useful anymore
+    # def set_image_size(self, size):
+    #     """
+    #     Set image size (in ADC count).
+    #     """
+    #     self.fpga.set_image_size(size)
 
     # --------------------------------------------------------------------
 
@@ -639,16 +666,56 @@ read_line_fake:
 
     # --------------------------------------------------------------------
 
-    def get_cabac_config(self, s): # strip 's'
+    def set_dacs(self, dacs):
         """
-        read CABAC configuration for strip <s>.
+        Sets CS gate or clock voltage DACs, but not both at the same time (for extra safety).
         """
-        return self.fpga.get_cabac_config(s)
+
+        if "I_OS" in dacs:
+            self.fpga.set_current_source(dacs)
+        else:
+            self.fpga.set_clock_voltages(dacs)
+
+    # --------------------------------------------------------------------
+
+    def get_cabac_config(self): 
+        """
+        read CABAC configuration.
+        """
+        return self.fpga.get_cabac_config(self.strip_id)
     
     # --------------------------------------------------------------------
 
-    # def set_cabac_config(self, s, ...): # strip 's'
+    def set_cabac_config(self, params):
+        """
+        Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
+        """
     
+        for param in iter(params):
+            self.fpga.set_cabac_value(param, params[param])
+
+        self.fpga.set_cabac_config(self.strip_id)
+        
+        time.sleep(0.5)
+        
+        self.fpga.get_cabac_config(self.strip_id)
+
+        for param in iter(params):
+            self.fpga.check_cabac_value(param, params[param])
+
+    # ----------------------------------------------------------
+    
+    def get_operating_header(self):
+        """
+        Creates dictionary of FITS header elements for CCD operating conditions
+        """
+        fitsheader = self.get_cabac_config()
+        fitsheader.update(self.fpga.get_clock_voltage())
+        fitsheader.update(self.fpga.get_current_source())
+
+        return fitsheader
+
+#need to add power currents and voltages, back substrate value and current (added elsewhere ?)
 
 
 # """

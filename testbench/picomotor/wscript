@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'dice.control.rpc'
+APPNAME = 'lsst.testbench.picomotor'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -15,7 +15,10 @@ def configure(conf):
     conf.check_python_headers()
     
 def build(bld):
-    # bld.add_subdirs(['lib', 'src'])
-    bld.recurse(['lib'])
+    
+    bld(features = 'py', 
+        # source = bld.path.ant_glob('*.py'), 
+        source = ['__init__.py', 'picomotor.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/picomotor')
 
     

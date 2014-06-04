@@ -1,4 +1,7 @@
 #! /usr/bin/env python
+#
+# Author: Laurent Le Guillou
+#
 
 import sys
 import os, os.path
@@ -10,73 +13,128 @@ import numpy as np
 import pyfits
 
 
-filename = "test"
-exposure = 333 # expressed in 1e-4 second
+class Camera(object):
+    """
+    A minimal class to interact with a DML41AU02.AS USB camera.
+
+    Example of use:
+
+      cam = Camera()
+      cam.open()
+      img = cam.capture(exposure = 2.0e-1) 
+      cam.close()
+      data = np.array(img)
+      fits = pyfits.PrimaryHDU()
+      fits.data = data
+      fits.writeto("test.fits", clobber=True)
 
 
-if len(sys.argv) > 1:
-    filename = sys.argv[1]
+    """
 
-if len(sys.argv) > 2:
-    exposure = int(sys.argv[2])
+    def __init__(self):
+        self.device = None
+        self.default_expo_int = 333 # * 1.0e-4 s
 
-# Create a device object with the first video capture device found
-dev = unicap.Device( unicap.enumerate_devices()[0] )
+    def open(self):
+        """
+        Find if a DML41AU02.AS USB camera is connected and set it up.
+        """
+        devices = unicap.enumerate_devices()
+        print devices
 
-# Get a list of supported video formats
-fmts = dev.enumerate_formats()
+        nb_cam = len(devices)
 
-# Set the first video format in the list at maximum resolution
-fmt = fmts[0]
-fmt['size'] = fmt['max_size']
-dev.set_format( fmt )
+        if nb_cam == 0:
+            # No device managed by Unicap connected
+            raise IOError("No Unicap managed device connected.")
 
-# Get a list of supported device properties
-# The properties in this list are set to their default values
-props = dev.enumerate_properties()
+        # Looking for the camera in the device list
 
-# Get the current state of the first property
-# prop = dev.get_property( props[0] )
+        for i in range(0, nb_cam):
+            if 'DMx' in devices[i]['identifier']:
+                dmk = devices[i]
 
-# Set the property ( in this example, we do not change the actual value )
-# dev.set_property( prop )
+        # To implement
 
-auto_exposure_mode = dev.get_property({'identifier': 'Exposure, Auto'})
-dev.set_property({'identifier': 'Exposure, Auto', 'value': 1})
+        # Open it
+        self.device = unicap.Device(dmk) # to change
 
-# exposure = int(dev.get_property({'identifier': 'Exposure (Absolute)'}))
-dev.set_property({'identifier': 'Exposure (Absolute)', 'value': exposure})
+        # Set it up
 
+        # Get a list of supported video formats
+        self.fmts = self.device.enumerate_formats()
 
-# Start capturing video
-dev.start_capture()
+        # Set the first video format in the list at maximum resolution
+        self.fmt = self.fmts[0]
+        self.fmt['size'] = self.fmt['max_size']
+        self.device.set_format(self.fmt)
 
-time.sleep(2 * exposure * 1.e-4)
+        # set the exposure time mode
+        auto_exposure_mode = self.device.get_property({'identifier': 'Exposure, Auto'})
+        self.device.set_property({'identifier': 'Exposure, Auto', 'value': 1})
 
-# Capture an image
-imgbuf = dev.wait_buffer()
-
-print 'Captured an image. Colorspace: ' + str( imgbuf.format['fourcc'] ) + ', Size: ' + str( imgbuf.format['size'] )
-
-# Convert the image to RGB3
-# rgbbuf = imgbuf.convert( 'RGB3' )
-# rgbbuf = buf.convert( 'RGB3' )
-
-img = Image.fromstring( 'L', 
-                        imgbuf.format['size'], 
-                        imgbuf.tostring() )
-
-img.save("%s.tiff" % filename, "TIFF")
-
-data = np.array(img)
-
-print data.min(), data.max()
-
-fits = pyfits.PrimaryHDU()
-fits.data = data
-fits.writeto("%s.fits" % filename, clobber=True)
-
-# Stop capturing video
-dev.stop_capture()
+        # exposure = int(self.device.get_property({'identifier': 'Exposure (Absolute)'}))
+        self.device.set_property({'identifier': 'Exposure (Absolute)', 'value': self.default_expo_int})
 
 
+    def capture(self, exposure = 1.0e-2):
+        """
+        Take one shot with exposure <exposure> (in seconds).
+        Return a PIL image object.
+        """
+        expo_int = int(exposure / 1e-4)
+
+        # TODO : check if the value is allowed
+
+        auto_exposure_mode = self.device.get_property({'identifier': 'Exposure, Auto'})
+        self.device.set_property({'identifier': 'Exposure, Auto', 'value': 1})
+
+        # exposure = int(self.device.get_property({'identifier': 'Exposure (Absolute)'}))
+        self.device.set_property({'identifier': 'Exposure (Absolute)', 'value': expo_int})
+
+        # Start capturing video
+        self.device.start_capture()
+
+        # wait for the exposure to be finished (with some overhead time)
+        time.sleep(1.2 * exposure)
+
+        # Capture an image
+        imgbuf = self.device.wait_buffer()
+
+        print >>sys.stderr, \
+            ( 'Captured an image. Colorspace: ' + str( imgbuf.format['fourcc'] ) \
+                  + ', Size: ' + str( imgbuf.format['size'] ) )
+
+        # Convert the image to RGB3
+        # rgbbuf = imgbuf.convert( 'RGB3' )
+        # rgbbuf = buf.convert( 'RGB3' )
+
+        img = Image.fromstring( 'L', 
+                                imgbuf.format['size'], 
+                                imgbuf.tostring() )
+
+        self.device.stop_capture()
+
+        return img
+
+
+    def capture_and_save(self, exposure, filename, filetype):
+        """
+        Take one shot with exposure <exposure> (in seconds).
+        Save the resulting image to file <filename>.
+        """
+
+        img = self.capture(exposure)
+
+        if filetype == "FITS":
+            data = np.array(img)
+            # print data.min(), data.max()
+            fits = pyfits.PrimaryHDU()
+            fits.data = data
+            fits.writeto("%s.fits" % filename, clobber=True)
+        else:
+            img.save("%s.%s" % (filename, filetype.lower()), filetype)
+
+
+    def close(self):
+        pass
