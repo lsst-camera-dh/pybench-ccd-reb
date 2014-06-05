@@ -16,47 +16,6 @@ from math import *
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
 
-def gaussian(height, center_x, center_y, width_x, width_y):
-    """Returns a gaussian function with the given parameters"""
-    width_x = float(width_x)
-    width_y = float(width_y)
-    return lambda x,y: height*exp(-(((center_x-x)/width_x)**2+((center_y-y)/width_y)**2)/2)
-
-def moments(data):
-    """Returns (height, x, y, width_x, width_y)
-    the gaussian parameters of a 2D distribution by calculating its
-    moments """
-    data = data + 0.0000000000000001
-    total = data.sum()
-    X, Y = np.indices(data.shape)
-    x = (X*data).sum()/total
-    y = (Y*data).sum()/total
-    col = data[:, int(y)]
-    col_sum = col.sum()
-
-    if col_sum == 0:
-        col_sum = 0.00000000000000001
-
-    width_x = sqrt(abs((np.arange(col.size)-y)**2*col).sum()/col_sum)
-    row = data[int(x), :]
-    row_sum = row.sum()
-
-    if row_sum == 0:
-        row_sum = 0.00000000000000001
-
-    width_y = sqrt(abs((np.arange(row.size)-x)**2*row).sum()/row_sum)
-    height = data.max()
-    return height, x, y, width_x, width_y
-
-def fitgaussian(data):
-    """Returns (height, x, y, width_x, width_y)
-    the gaussian parameters of a 2D distribution found by a fit"""
-    params = moments(data)
-    errorfunction = lambda p: np.ravel(gaussian(*p)(*np.indices(data.shape)) - data)
-    p, success = opt.leastsq(errorfunction, params)
-    
-    return p
-
 def CUT(data, hauteur = 25, largeur = 25):
     ''' Coupe l'image pour ne garder qu'une region autour du maximum
     @param data: tableau de donnees a analyser
@@ -87,7 +46,7 @@ def RATIO(pixels_flux, nb_flux, pixel_central_flux):
     
     return ratio
 
-def FOCUS_GAUSS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "20micron"):
+def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "20micron", cut = "no"):
     ''' Fait le focus pour un interval, un pas et un trou donne.
     Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
     @param mov: nom des moteurs
@@ -114,18 +73,22 @@ def FOCUS_GAUSS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "20mic
         YPOS = mov.y_axis.get_position()
         ZPOS = mov.z_axis.get_position()
 
+        h = py.Header()
+        
         mov.move(dy=pas)
         name = "./focus/" + str(time.time()) + "_" + trou 
-        cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+        img = cam.capture(exposure = expo)
 
-        update = py.open(name + ".fits")
-        update[0].header.update('xpos', XPOS)
-        update[0].header.update('ypos', YPOS)
-        update[0].header.update('zpos', ZPOS)
-        update.writeto(name + ".fits", clobber=True)
-        update.close()
+        if cut == "yes":
+            img = CUT(img)
 
-def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou = "20micron"):
+        h.update('xpos', XPOS)
+        h.update('ypos', YPOS)
+        h.update('zpos', ZPOS)
+        img.writeto(name + ".fits", header = h, clobber=True)
+
+
+def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou = "20micron", cut = "no"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -147,56 +110,87 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou 
     if sens == "z":
         for i in range(0,borne):
 
+            h = py.Header()
+
+            XPOS = mov.x_axis.get_position()
+            YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
 
             name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
-            cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+            img = cam.capture(exposure = expo)
             mov.move(dz=pas)
 
-            update = py.open(name + ".fits")
-            update[0].header.update('zpos', ZPOS)
-            update.writeto(name + ".fits", clobber = True)
-            update.close()
-
+            if cut == "yes":
+                img = CUT(img)
+            
+            h.update('xpos', XPOS)
+            h.update('ypos', YPOS)
+            h.update('zpos', ZPOS)
+            img.writeto(name + ".fits", header = h, clobber=True)
+        
         for i in range(0,borne):
-
+ 
+            h = py.Header()
+            
+            XPOS = mov.x_axis.get_position()
+            YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
-
+            
             mov.move(dz=-pas)
+            
             name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
-            cam.capture_and_save(exposure = expo, filename = name , filetype = "FITS")
+            img = cam.capture(exposure = expo)
 
-            update = py.open(name + ".fits")
-            update[0].header.update('zpos', ZPOS)
-            update.writeto(name + ".fits", clobber = True)
-            update.close()
-
+            if cut == "yes":
+                img = CUT(img)
+            
+            h.update('xpos', XPOS)
+            h.update('ypos', YPOS)
+            h.update('zpos', ZPOS)
+            img.writeto(name + ".fits", header = h, clobber=True)
+    
     elif sens == "x":
         for i in range(0,borne):
-
+ 
+            h = py.Header()
+            
             XPOS = mov.x_axis.get_position()
-
+            YPOS = mov.y_axis.get_position()
+            ZPOS = mov.z_axis.get_position()
+            
             name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
-            cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+            img = cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+            
             mov.move(dx=pas)
-
-            update = py.open(name + ".fits")
-            update[0].header.update('xpos', XPOS)
-            update.writeto(name + ".fits", clobber=True)
-            update.close()
-
+            
+            if cut == "yes":
+                img = CUT(img)
+            
+            h.update('xpos', XPOS)
+            h.update('ypos', YPOS)
+            h.update('zpos', ZPOS)
+            img.writeto(name + ".fits", header = h, clobber=True)
+        
         for i in range(0,borne):
-
+            
+            h = py.Header()
+            
             XPOS = mov.x_axis.get_position()
-
+            YPOS = mov.y_axis.get_position()
+            ZPOS = mov.z_axis.get_position()
+            
             mov.move(dx=-pas)
+            
             name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
-            cam.capture_and_save(exposure = expo, filename = name , filetype = "FITS")
-
-            update = py.open(name + ".fits")
-            update[0].header.update('xpos', XPOS)
-            update.writeto(name + ".fits", clobber=True)
-            update.close()
+            img = cam.capture(exposure = expo)
+            
+            if cut == "yes":
+                img = CUT(img)
+            
+            h.update('xpos', XPOS)
+            h.update('ypos', YPOS)
+            h.update('zpos', ZPOS)
+            img.writeto(name + ".fits", header = h, clobber=True)
 
 def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_20micron", pose = "_0.005s", ext = ".res"):
     '''

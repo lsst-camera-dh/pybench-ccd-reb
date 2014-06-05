@@ -52,8 +52,7 @@ mov.move(x=xpos,y=ypos,z=zpos)
 
 #------------------------------------------------
 
-
-FOCUS_GAUSS(mov = mov, cam = cam, interval = 0.005, pas = 0.001)
+FOCUS(mov = mov, cam = cam, interval = 0.05, pas = 0.001)
 
 fichiers = gl.glob("./focus/*.fits")
 fichiers = sorted(fichiers)
@@ -74,32 +73,7 @@ fit = []
 cuts = []
 
 for k in donnees:
-    cuts.append(CUTS(k))
-
-for i in cuts:
-    pb.matshow(i, cmap=plt.cm.gist_earth_r)
-    plt.xlim(30,50)
-    plt.ylim(30,40)
-
-    param_i = fitgaussian(i)
-    params.append(param_i)
-
-    fit_i = gaussian(*param_i)
-    fit.append(fit_i)
-
-    contour(fit_i(*np.indices(i.shape)), cmap=cm.copper)
-    ax = gca()
-    (height, x, y, width_x, width_y) = param_i
-
-    text(0.95, 0.05, """
-       x : %.1f
-       y : %.1f
-       width_x : %.1f
-       width_y : %.1f""" %(x, y, width_x, width_y),
-         fontsize=16, horizontalalignment='right',
-         verticalalignment='bottom', transform=ax.transAxes)
-
-    show()
+    cuts.append(CUT(k))
 
 wx = np.array(params[:2][0])
 wy = np.array(params[:3][0])
@@ -118,7 +92,7 @@ mov.move(y=POS_FOCUS)
 expo = O.O2
 
 data = cam.capture(exposure = expo)
-cuts = CUTS(data)
+cuts = CUT(data)
 
 temp_max = np.where(cuts==np.max(cuts))
 max_i = [temp_max[0][0], temp_max[1][0]]
