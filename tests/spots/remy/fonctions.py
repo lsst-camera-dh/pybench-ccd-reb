@@ -57,20 +57,10 @@ def fitgaussian(data):
     
     return p
 
-def CUTS(data): #On coupe l'image pour ne garder que la region central
+def CUTS(data, hauteur = 200, largeur = 200): #On coupe l'image pour ne garder que la region autour du point max
 
-    lines = np.shape(data)[0]
-    rows = np.shape(data)[1]
-
-    down = 15
-    up = 17
-    div = 30
-
-    x_min_cut = down*rows/div
-    y_min_cut = down*lines/div
-
-    x_max_cut = up*rows/div
-    y_max_cut = up*lines/div
+    temp_max = np.where(data==np.max(data))
+    max_i = [temp_max[0][0], temp_max[1][0]]
 
     cuts = data[y_min_cut:y_max_cut,x_min_cut:x_max_cut]
 
