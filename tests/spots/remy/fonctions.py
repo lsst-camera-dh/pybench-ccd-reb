@@ -46,7 +46,7 @@ def RATIO(pixels_flux, nb_flux, pixel_central_flux):
     
     return ratio
 
-def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "20micron", cut = "no"):
+def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "5micron", cut = "no"):
     ''' Fait le focus pour un interval, un pas et un trou donne.
     Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
     @param mov: nom des moteurs
@@ -82,13 +82,14 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "20micron", 
         if cut == "yes":
             img = CUT(img)
 
+        img = np.array(img)
         h.update('xpos', XPOS)
         h.update('ypos', YPOS)
         h.update('zpos', ZPOS)
-        img.writeto(name + ".fits", header = h, clobber=True)
+        py.writeto(name + ".fits", img, header = h, clobber=True)
 
 
-def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou = "20micron", cut = "no"):
+def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou = "5micron", cut = "no"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -122,11 +123,12 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou 
 
             if cut == "yes":
                 img = CUT(img)
-            
+
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
-            img.writeto(name + ".fits", header = h, clobber=True)
+            py.writeto(name + ".fits", img, header = h, clobber=True)
         
         for i in range(0,borne):
  
@@ -144,10 +146,11 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou 
             if cut == "yes":
                 img = CUT(img)
             
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
-            img.writeto(name + ".fits", header = h, clobber=True)
+            py.writeto(name + ".fits", img, header = h, clobber=True)
     
     elif sens == "x":
         for i in range(0,borne):
@@ -166,10 +169,11 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou 
             if cut == "yes":
                 img = CUT(img)
             
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
-            img.writeto(name + ".fits", header = h, clobber=True)
+            py.writeto(name + ".fits", img, header = h, clobber=True)
         
         for i in range(0,borne):
             
@@ -187,12 +191,13 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou 
             if cut == "yes":
                 img = CUT(img)
             
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
-            img.writeto(name + ".fits", header = h, clobber=True)
+            py.writeto(name + ".fits", img, header = h, clobber=True)
 
-def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_20micron", pose = "_0.005s", ext = ".res"):
+def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_5micron", pose = "_0.005s", ext = ".res"):
     '''
     @param position:
     @param flux:
