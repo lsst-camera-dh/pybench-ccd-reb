@@ -49,13 +49,13 @@ def CUT(data, hauteur = 25, largeur = 25):
 
     return cuts
 
-def PF(cuts, max_i): # Obtient le flux dans les pixels voisin sous la forme [SUD,OUEST,EST,NORD]
-    pixels_flux = [cuts[max_i[0] - 1][max_i[1]], cuts[max_i[0]][max_i[1] -1], cuts[max_i[0]][max_i[1] + 1], cuts[max_i[0] + 1][max_i[1]]]
+def PF(data, max_i): # Obtient le flux dans les pixels voisin sous la forme [SUD,OUEST,EST,NORD]
+    pixels_flux = [data[max_i[0] - 1][max_i[1]], data[max_i[0]][max_i[1] -1], data[max_i[0]][max_i[1] + 1], data[max_i[0] + 1][max_i[1]]]
 
     return pixels_flux
 
-def PCF(cuts, max_i):
-    pcf = cuts[max_i[0]][max_i[1]]
+def PCF(data, max_i):
+    pcf = data[max_i[0]][max_i[1]]
     
     return pcf
 
@@ -106,6 +106,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.1, trou = "5micron", cut
         h.update('zpos', ZPOS)
         py.writeto(name + ".fits", img, header = h, clobber=True)
 
+    mov.move(dy=-interval)
 
 def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.1, trou = "5micron", cut = "no"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
@@ -268,9 +269,9 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1,
     
     while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux[1] > precision)):
         if pixels_flux[1] > pixels_flux[2]:
-            mov.move(dx=pas_raff)
+            mov.move(dx=pas_raff) #Verifier le sens
         else:
-            mov.move(dx=-pas_raff)
+            mov.move(dx=-pas_raff) #Verifier le sens
             
         temp_data = cam.capture(exposure = expo)
         pixels_flux = PF(temp_data, max_i)
@@ -288,11 +289,11 @@ def FOCUS_EQ_VERT(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut 
     pixels_flux = PF(data, max_i)
     pixel_central_flux = PCF(data, max_i)
     
-    while((pixels_flux[0]/pixels_flux[3] > precision) or (pixels_flux[3]/pixels_flux[0] > precision)):
-        if pixels_flux[0] > pixels_flux[3]:
-            mov.move(dz=pas_raff)
+    while((pixel_central_flux/pixels_flux[3] > precision) or (pixels_flux[3]/pixel_central_flux > precision)):
+        if pixel_central_flux > pixels_flux[3]:
+            mov.move(dz=pas_raff) #Verifier le sens
         else:
-            mov.move(dz=-pas_raff)
+            mov.move(dz=-pas_raff) #Verifier le sens
    
             temp_data = cam.capture(exposure = expo)
             pixels_flux = PF(temp_data, max_i)
@@ -311,3 +312,29 @@ def CHANGE_DEFAULT_POS(mov):
         pos.write('\n')
         pos.write(str(mov.x_axis.get_position()) + " " + str(mov.y_axis.get_position()) + " " + str(mov.z_axis.get_position()))
         pos.close()
+
+def INIT_IMAGES(directory = "./focus/", filetype = "*.fits"):
+    fichiers = gl.glob(directory + filetype)
+    fichiers = sorted(fichiers)
+
+    images = []
+    for f in fichiers:
+        images.append((py.open(i))[0])
+
+    donnees = []
+    for i in images:
+        donnees.append(d.data)
+
+    maxima = []
+    for d in donnees:
+        maxima.append(d.max())
+    maxima = np.array(float(maxima))
+
+    sums = []
+    for d in donnees:
+        sums.append(d.sum())
+    sums = np.array(float(sums))
+
+    ratios = maxima/sums
+        
+    return images, donnees, maxima, sums, ratios

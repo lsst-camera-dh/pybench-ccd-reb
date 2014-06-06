@@ -33,31 +33,12 @@ cam.open()
 mov.home()
 MOVE_TO_DEFAULT()
 
-#------------------------------------------------
-
+#-----Premiere etape du focus: minimisation de la taille du spot
 FOCUS(mov = mov, cam = cam, interval = 0.05, pas = 0.001)
 
-fichiers = gl.glob("./focus/*.fits")
-fichiers = sorted(fichiers)
+images, data, maxima, sums, ratios = INIT_IMAGES()
 
-images = []
-
-for i in fichiers:
-    images.append((py.open(i))[0])
-
-donnees = []
-
-for d in images:
-    donnees.append(d.data)
-
-
-
-wx = np.array(params[:2][0])
-wy = np.array(params[:3][0])
-
-w_sum = abs(wx) + abs(wy)
-
-NB_FOCUS = np.where(w_sum==np.min(w_sum))[0][0]
+NB_FOCUS = np.where(ratios==np.max(ratios))[0][0]
 
 POS_FOCUS = images[NB_FOCUS].header['YPOS']
 
@@ -69,6 +50,9 @@ mov.move(y=POS_FOCUS)
 VKE(mov=mov, cam=cam, pas = 0.0001)
 
 FOCUS_EQ_EST_OUEST(mov, cam)
+FOCUS_EQ_VERT(mov, cam)
+
+mov.move(dz=-0.001) #Verifier le sens
 
 CHANGE_DEFAULT_POS(mov)
 
