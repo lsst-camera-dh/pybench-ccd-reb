@@ -59,8 +59,8 @@ def PCF(data, max_i):
     
     return pcf
 
-def RATIO(pixels_flux, nb_flux, pixel_central_flux):
-    ratio = float(pixels_flux[3])/pixel_central_flux
+def RATIO(pixel_central_flux, pixels_flux, nb_flux):
+    ratio = float(pixels_flux[nb_flux])/pixel_central_flux
     
     return ratio
 
@@ -327,14 +327,20 @@ def INIT_IMAGES(directory = "./focus/", filetype = "*.fits"):
 
     maxima = []
     for d in donnees:
-        maxima.append(d.max())
-    maxima = np.array(float(maxima))
+        maxima.append(float(d.max()))
 
     sums = []
     for d in donnees:
-        sums.append(d.sum())
-    sums = np.array(float(sums))
+        sums.append(float(d.sum()))
 
     ratios = maxima/sums
+
+    FLUX = []
+    for d in donnees:
+        FLUX.append([PCF(d, max_i), PF(d, max_i)])
+
+    ratios_pix_sup_raff = []
+    for F in flux:
+        ratios_pix_sup_raff.append(RATIO(F[0], RATIO[1], 3)
         
-    return images, donnees, maxima, sums, ratios
+    return images, donnees, maxima, sums, ratios, ratios_pix_sup_raff
