@@ -16,6 +16,24 @@ from math import *
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
 
+def INIT_MOV():
+    mov = xyz.XYZ()
+
+    mov.x_port = '/dev/ttyUSB0'
+    mov.y_port = '/dev/ttyUSB1'
+    mov.z_port = '/dev/ttyUSB2'
+
+    return mov
+
+def MOVE_TO_DEFAULT(mov):
+    default = np.loadtxt("default_pos.data", comments = '#')
+
+    xpos = default[0]
+    ypos = default[1]
+    zpos = default[2]
+
+    mov.move(x=xpos,y=ypos,z=zpos)
+
 def CUT(data, hauteur = 25, largeur = 25):
     ''' Coupe l'image pour ne garder qu'une region autour du maximum
     @param data: tableau de donnees a analyser
@@ -46,7 +64,7 @@ def RATIO(pixels_flux, nb_flux, pixel_central_flux):
     
     return ratio
 
-def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "5micron", cut = "no"):
+def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.1, trou = "5micron", cut = "no"):
     ''' Fait le focus pour un interval, un pas et un trou donne.
     Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
     @param mov: nom des moteurs
@@ -89,7 +107,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.005, trou = "5micron", c
         py.writeto(name + ".fits", img, header = h, clobber=True)
 
 
-def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou = "5micron", cut = "no"):
+def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.1, trou = "5micron", cut = "no"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -197,7 +215,7 @@ def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.005, trou 
             h.update('zpos', ZPOS)
             py.writeto(name + ".fits", img, header = h, clobber=True)
 
-def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_5micron", pose = "_0.005s", ext = ".res"):
+def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_5micron", pose = "_0.1s", ext = ".res"):
     '''
     @param position:
     @param flux:
@@ -235,3 +253,61 @@ def READ_RESULTS(fichier):
     plt.xlabel("Position")
     plt.ylabel("Flux")
     plt.show()
+
+def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+    data = cam.capture(exposure = expo)
+
+    if cut == "yes":
+        data = CUT(data)
+
+    temp_max = np.where(data==np.max(data))
+    max_i = [temp_max[0][0], temp_max[1][0]]
+
+    pixels_flux = PF(data, max_i)
+    pixel_central_flux = PCF(data, max_i)
+    
+    while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux[1] > precision)):
+        if pixels_flux[1] > pixels_flux[2]:
+            mov.move(dx=pas_raff)
+        else:
+            mov.move(dx=-pas_raff)
+            
+        temp_data = cam.capture(exposure = expo)
+        pixels_flux = PF(temp_data, max_i)
+        pixel_central_flux = PCF(temp_data, max_i)
+
+def FOCUS_EQ_VERT(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+    data = cam.capture(exposure = expo)
+
+    if cut == "yes":
+        data = CUT(data)
+
+    temp_max = np.where(data==np.max(data))
+    max_i = [temp_max[0][0], temp_max[1][0]]
+
+    pixels_flux = PF(data, max_i)
+    pixel_central_flux = PCF(data, max_i)
+    
+    while((pixels_flux[0]/pixels_flux[3] > precision) or (pixels_flux[3]/pixels_flux[0] > precision)):
+        if pixels_flux[0] > pixels_flux[3]:
+            mov.move(dz=pas_raff)
+        else:
+            mov.move(dz=-pas_raff)
+   
+            temp_data = cam.capture(exposure = expo)
+            pixels_flux = PF(temp_data, max_i)
+            pixel_central_flux = PCF(temp_data, max_i)
+
+def CHANGE_DEFAULT_POS(mov):
+    print("Changer les positions par defaut du focus (yes = 1/no = 0) ? : ")
+    suppr = input()
+
+    if suppr == 1:
+        commande = "rm -f ./default_pos.data"
+        os.system(commande)
+        
+        pos = open("default_pos.data", "w")
+        pos.write('# XPOS, YPOS, ZPOS')
+        pos.write('\n')
+        pos.write(str(mov.x_axis.get_position()) + " " + str(mov.y_axis.get_position()) + " " + str(mov.z_axis.get_position()))
+        pos.close()
