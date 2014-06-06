@@ -1,9 +1,4 @@
-#Pour le focus : prend des images le long de l'axe optique, et fit le spot en gaussien
-#
-#Raffinement du focus : 
-#On teste sur les pixels adjacents [SUD,OUEST,EST,NORD] le ratio OUEST/EST et SUD/NORD.
-#On veut que les deux soient proches de 1. Quand les deux sont proches de 1, le spot est centre.
-#
+#Procedure de focalisation en plusieurs etapes
 #Par Remy Le Breton
 
 import sys
@@ -25,14 +20,9 @@ from math import *
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
 
-#--------------------------------------------------------
+#----Initialisation moteurs et camera----------------------------
 
-mov = xyz.XYZ()
-
-mov.x_port = '/dev/ttyUSB0'
-mov.y_port = '/dev/ttyUSB1'
-mov.z_port = '/dev/ttyUSB2'
-
+mov = INIT_MOV()
 mov.open()
 
 cam = d.Camera()
@@ -41,47 +31,13 @@ cam.open()
 #-----Revient a une position par defaut, apres avoir fait un home
 
 mov.home()
+MOVE_TO_DEFAULT()
 
-default = np.loadtxt("default_pos.data", comments = '#')
-
-xpos = default[0]
-ypos = default[1]
-zpos = default[2]
-
-mov.move(x=xpos,y=ypos,z=zpos)
-
-#------------------------------------------------
-
+#-----Premiere etape du focus: minimisation de la taille du spot
 FOCUS(mov = mov, cam = cam, interval = 0.05, pas = 0.001)
+images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES()
 
-fichiers = gl.glob("./focus/*.fits")
-fichiers = sorted(fichiers)
-
-images = []
-
-for i in fichiers:
-    images.append((py.open(i))[0])
-
-donnees = []
-
-for d in images:
-    donnees.append(d.data)
-
-params = []
-fit = []
-
-cuts = []
-
-for k in donnees:
-    cuts.append(CUT(k))
-
-wx = np.array(params[:2][0])
-wy = np.array(params[:3][0])
-
-w_sum = abs(wx) + abs(wy)
-
-NB_FOCUS = np.where(w_sum==np.min(w_sum))[0][0]
-
+NB_FOCUS = np.where(ratios==np.max(ratios))[0][0]
 POS_FOCUS = images[NB_FOCUS].header['YPOS']
 
 mov.move(y=POS_FOCUS)
@@ -89,64 +45,21 @@ mov.move(y=POS_FOCUS)
 
 #--Raffinement-du-focus-------------------------
 
-expo = O.O2
+FOCUS_EQ_EST_OUEST(mov, cam)
+FOCUS_EQ_VERTICAL(mov, cam)
 
-data = cam.capture(exposure = expo)
-cuts = CUT(data)
+mov.move(dz=-0.001) #Verifier le sens
 
-temp_max = np.where(cuts==np.max(cuts))
-max_i = [temp_max[0][0], temp_max[1][0]]
+#On minimise le flux dans le pixel au dessus de celui max, et on retourne a la position
 
-pixels_flux = PF(cuts, max_i)
-pixel_central_flux = PCF(cuts, max_i)
+FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001)
+images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES()
 
-pas_raff = 0.0005
-precision = 1.1 #Precision a laquelle on veut que les flux soient egaux
-
-while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux[1] > precision)):
-    if pixels_flux[1] > pixels_flux[2]:
-        mov.move(dx=pas_raff)
-    else:
-        mov.move(dx=-pas_raff)
-
-    temp_data = cam.capture(exposure = expo)
-    temp_cuts = CUTS(temp_data)
-    pixels_flux = PF(temp_cuts, max_i)
-    pixel_central_flux = PCF(temp_cuts, max_i)
-
-
-# while((pixels_flux[0]/pixels_flux[3] > precision) or (pixels_flux[3]/pixels_flux[0] > precision)):
-#     if pixels_flux[0] > pixels_flux[3]:
-#         mov.move(dz=pas_raff)
-#     else:
-#         mov.move(dz=-pas_raff)
-    
-#     temp_data = cam.capture(exposure = expo)
-#     temp_cuts = CUTS(temp_data)
-#     pixels_flux = PF(temp_cuts, max_i)
-#     pixel_central_flux = PCF(temp_cuts, max_i)
-
+NB_FOCUS = np.where(ratios_pix_sup_raff==np.min(ratios_pix_sup_raff))[0][0]
+POS_FOCUS = images_raff[NB_FOCUS].header['YPOS']
 
 VKE(mov=mov, cam=cam, pas = 0.0001)
 
-#
-#
-# Faire scan vertical, estimer taille pixel, se placer au centre (en egalisant le flux sur deux pixel verticaux)
-# se deplacer un peu, minimiser flux sur pixel superier, et ensuite cente
-#
-#
+CHANGE_DEFAULT_POS(mov)
 
-print("Changer les positions par defaut du focus (yes = 1/no = 0) ? : ")
-suppr = input()
-
-if suppr == 1:
-    commande = "rm -f ./default_pos.data"
-    os.system(commande)
-
-
-    bar = open("default_pos.data", "w")
-    bar.write('# XPOS, YPOS, ZPOS')
-    bar.write('\n')
-    bar.write(str(mov.x_axis.get_position()) + " " + str(mov.y_axis.get_position()) + " " + str(mov.z_axis.get_position()))
-    bar.close()
 

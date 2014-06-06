@@ -8,6 +8,8 @@ import reb
 import fpga
 import time
 import Keithley
+import xmlrpclib
+
 
 class Bench(object):
     """
@@ -16,9 +18,10 @@ class Bench(object):
 
     def __init__(self):
         self.reb = reb.REB()
-        self.bss = Keithley.Keithley()  # device number ?
-        self.bss.connectInstrument() # implementation with remote control ?
-       # other instruments ?
+        self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
+        self.bss.connect()
+        # implementation with remote control
+        # other instruments ?
 
     def powerup(self):
         """
@@ -69,7 +72,7 @@ class Bench(object):
 
         #starts Keithley backsubstrate voltage
         self.config_bss(40)
-        self.bss.voltageSourceOperate(1)
+        self.bss.setVoltageOperate(1)
 
     def shutdown(self):
         """
@@ -77,11 +80,11 @@ class Bench(object):
         """
         
         #Back-substrate first
-        self.bss.voltageSourceOperate(0)
-        s = ""
-        while s != "done":
-            s = raw_input("Input 'done' when the Keithley back-substrate is OFF --> ")
-            s = lower(s)
+        self.bss.setVoltageOperate(0)
+        time.sleep(1)
+
+        while abs(volt) > 0.1:
+            volt = self.bss.getVoltage()
 
         #current source
         self.reb.set_dacs({"I_OS":0})
