@@ -10,29 +10,6 @@ reb_id = 2
 
 R = reb.REB(reb_id = reb_id)
 
-# loading the functions
-
-# bit 0  : ASPIC RAMP UP
-# bit 1  : ASPIC RAMP DOWN
-# bit 2  : ASPIC RESET
-# bit 3  : ASPIC Clamp
-
-# bit 4  : S1
-# bit 5  : S2
-# bit 6  : S3
-# bit 7  : RG
-
-# bit 8  : P1
-# bit 9  : P2
-# bit 10 : P3
-# bit 11 : P4
-# bit 12 : ADC trigger  (convert)
-
-# bit 16 : shutter
-
-# RRRCRRRRPPPPS
-# UDSL123G1234T
-
 # function 0 : default state
 # rriClient 2 write 0x100000 0x6bc
 
@@ -40,11 +17,12 @@ func = {}
 
 func[0] = \
     fpga.Function(name = "default state",
-                  timelengths = {  0 : 2,  # x10ns
+                  timelengths = {  0 : 100,  # x10ns
                                    1 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000000000011010111100,
                                    1 : 0 } )
 
@@ -65,8 +43,9 @@ func[1] = \
                                    1 : 5000,
                                    2 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000010000011010111100,
                                    1 : 0b0000000010000011010111100,
                                    2 : 0 } )
@@ -109,8 +88,9 @@ func[2] = \
                                    8 : 1000,
                                    9 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000000000011010111100,
                                    1 : 0b0000000000000111010111100,
                                    2 : 0b0000000000000110010111100,
@@ -168,8 +148,9 @@ func[3] = \
                                   10 : 8,
                                   11 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000000000011010100000,
                                    1 : 0b0000000000000011011101100,
                                    2 : 0b0000000000000011001001100,
@@ -226,8 +207,9 @@ func[4] = \
                                   10 : 8,
                                   11 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000000000011010100000,
                                    1 : 0b0000000000000011011101100,
                                    2 : 0b0000000000000011001001100,
@@ -264,8 +246,9 @@ func[5] = \
                                    4 : 1000,
                                    5 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000000000011010111100,
                                    1 : 0b0000000000000110010111100,
                                    2 : 0b0000000000000100110111100,
@@ -301,8 +284,9 @@ func[6] = \
                                    6 : 18,
                                    7 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000000000011010101100,
                                    1 : 0b0000000000000011011101100,
                                    2 : 0b0000000000000011001001100,
@@ -341,8 +325,9 @@ func[7] = \
                                    6 : 18,
                                    7 : 0 },
                   #                    
-                  #                      ........S.ESSPPPPRSSSCRRR
-                  #                      ........H.IIT4321G321LSDU
+                  #                      ........S.ESSPPPPRRRRCRRR
+                  #                      ........H.OOP4321G321LSDU
+                  #                      ........U.IIL|||||||||T||
                   outputs =     {  0 : 0b0000000010000011010101100,
                                    1 : 0b0000000010000011011101100,
                                    2 : 0b0000000010000011001001100,
