@@ -46,7 +46,7 @@ mov.move(y=POS_FOCUS)
 #--Raffinement-du-focus-------------------------
 
 FOCUS_EQ_EST_OUEST(mov, cam)
-FOCUS_EQ_VERT(mov, cam)
+FOCUS_EQ_VERTICAL(mov, cam)
 
 mov.move(dz=-0.001) #Verifier le sens
 

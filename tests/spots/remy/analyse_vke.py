@@ -28,10 +28,10 @@ for i in fichiers[:-1]:
     position.append(temp[0].header['ZPOS'])
 
 max_i = np.where(data[0]==np.max(data[0]))
-max_i = [max_i[0][0] - 1, max_i[1][0]] #Pixel voision du pixel central
+max_i = [max_i[0][0] - 3, max_i[1][0]] #Pixel voision du pixel central
 
 max_i2 = np.where(data[0]==np.max(data[0]))
-max_i2 = [max_i2[0][0] - 2, max_i2[1][0]]
+max_i2 = [max_i2[0][0] - 4, max_i2[1][0]]
 
 flux = []
 flux2 = []

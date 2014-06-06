@@ -108,7 +108,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.1, trou = "5micron", cut
 
     mov.move(dy=-interval)
 
-def VKE(mov, cam, interval = 0.02, pas = 0.0002, sens = "z", expo = 0.1, trou = "5micron", cut = "no"):
+def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = 0.1, trou = "5micron", cut = "no"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -277,7 +277,7 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1,
         pixels_flux = PF(temp_data, max_i)
         pixel_central_flux = PCF(temp_data, max_i)
 
-def FOCUS_EQ_VERT(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+def FOCUS_EQ_VERTICAL(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
     data = cam.capture(exposure = expo)
 
     if cut == "yes":
