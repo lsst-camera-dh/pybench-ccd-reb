@@ -4,10 +4,9 @@
 #
 # Testing a Python class to replace CCD bench scripts
 
-import reb
-import fpga
+import lsst.camera.reb as reb
+import lsst.camera.fpga as fpga
 import time
-import Keithley
 import xmlrpclib
 
 
@@ -15,13 +14,22 @@ class Bench(object):
     """
     Internal representation of the full bench
     """
+    opheader = {}
+    testheader = {}
+    primeheader = {}
+    sequencerheader = {}
+    slitsize = 30
 
     def __init__(self):
         self.reb = reb.REB()
         self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
         self.bss.connect()
         # implementation with remote control
-        # other instruments ?
+        # other instruments: create object here, does not connect
+        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:")
+        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")
+        self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")
+        self.laser = xmlrpclib.ServerProxy("http://lpnlsst:")
 
     def powerup(self):
         """
@@ -59,8 +67,8 @@ class Bench(object):
         time.sleep(1)
 
         #puts current on CS gate
-        dacCS["I_OS"] = 0xfff
-        self.reb.set_dacs(dacCS)
+        dacOS = {"I_OS":  0xfff}
+        self.reb.set_dacs(dacOS)
 
         #rewrite default state of sequencer (to avoid reloading functions)
         self.reb.load_function(0, fpga.Function(name = "default state",
@@ -81,10 +89,9 @@ class Bench(object):
         
         #Back-substrate first
         self.bss.setVoltageOperate(0)
-        time.sleep(1)
 
-        while abs(volt) > 0.1:
-            volt = self.bss.getVoltage()
+        while abs(self.bss.getVoltage()) > 0.1:
+             time.sleep(1)
 
         #current source
         self.reb.set_dacs({"I_OS":0})
@@ -128,17 +135,90 @@ class Bench(object):
         self.bss.zeroCorrect()
         self.bss.selectCurrent(2e-5)
 
+    def set_slit_size(self, slitsize):
+        """
+        Sets both slit sizes on the monochromator and waits until complete
+        :param slitsize:
+        :return:
+        """
+        self.slitsize = slitsize
+        self.triax.setInSlit(self.slitsize)
+            while self.triax.status() == 0:
+                time.sleep(1.0)
+            self.triax.setOutSlit(self.slitsize)
+            while self.triax.status() == 0:
+                time.sleep(1.0)
+
+
+    def move_to_wavelength(self, wavelength, SelectGrating = False):
+        """
+        Moves the monochromator to the selected wavelength and waits until it is done.
+        Calculates automatically which grating to use if authorized to change.
+        """
+        if SelectGrating:
+            if wavelength < 800:
+                grating = 0
+                lines = 1198
+            elif wavelength <1400:
+                grating = 1
+                lines = 599
+            else:
+                grating = 2
+                lines = 599  # TODO: check values
+            self.triax.setGrating(grating)  # TODO: check this is the right method
+            self.testheader["MONOPOS"] = grating
+            self.testheader["MONOGRAT"] = lines
+
+        self.triax.setWavelength(wavelength)
+        while self.triax.status() == 0:
+            time.sleep(1.0)
+
+
+
+    def select_source(self, sourcetype, wavelength = 500):
+        """
+        Connects and starts whichever light source is going to be used
+        """
+        if sourcetype == "Fe55":
+            pass  # will be motorized at some point
+        elif sourcetype == "laser":
+            self.laser.connect()
+            # TODO: selects output based on wavelength
+        elif sourcetype == "qth":
+            self.qth.connect()
+            # TODO: start lamp here
+        elif sourcetype == "xehg":
+            self.xehg.connect()
+            # TODO: start lamp here
+        else:
+            raise IOError("Unknown type of source")
+        self.testheader["SRCTYPE"] = sourcetype.upper()
+        #self.testheader["SCRMODL"]  # source model
+        #self.testheader["SRCPWR"]  # source power in Watts
+
+        if sourcetype in ["qth", "xehg"]:
+            self.triax.connect()
+            self.move_to_wavelength(wavelength, True)
+            self.set_slit_size(self.slitsize)
+        self.testheader["MONOTYPE"] = "Triax180"
+
+
     def get_headers(self):
         """
         Fills image header dictionaries for current setup.
         """
         #CCD operating conditions header
-        opheader = self.reb.get_operating_header()
+        self.opheader = self.reb.get_operating_header()
 
         self.bss.getOutputVoltage()
         self.bss.getCurrent()  # gives only current at this time, might upgrade to get measures during exposure
-        opheader["V_BSS"] = "{:.2f}".format(self.bss.volt)
-        opheader["I_BSS"] = "{:.2f}".format(self.bss.current)
+        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.volt)
+        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.current)
 
-        #need to add image format header, instruments header
-
+        #need to add image format header, instruments header, optional sequencer header
+        try:
+            wavelength = self.triax.getWavelength()
+        except:
+            wavelength = 0.0
+        self.primeheader["MONOWL"] = wavelength
+        self.testheader["MONOWL"] = wavelength

@@ -292,7 +292,7 @@
                     <constant ref="RST"> 1 </constant>
                 </constants>
             </function>
-            <function id="FlushLine">
+            <function id="FastTransferLine">
                 <fullname>Single line fast transfer</fullname>
                 <clocklist>
                     <clock ref="P1"/>
@@ -484,14 +484,14 @@
             </subroutine>
             <subroutine id="ClearCCD">
                 <fullname>Clear CCD once</fullname>
-                <call ref="IdleLine">
+                <call ref="FlushLine">
                     <repeat>ReadLines</repeat>
                 </call>
             </subroutine>
-            <subroutine id="IdleLine">
+            <subroutine id="FlushLine">
                 <fullname>Transfer line and flush it</fullname>
                 <call ref="TransferLine"/>
-                <call ref="FlushRegister">
+                <call ref="FlushSerial">
                     <repeat>ReadColumns</repeat>
                 </call>
             </subroutine>
@@ -503,7 +503,7 @@
             </subroutine>
             <subroutine id="CloseShutter">
                 <fullname>Gives time for shutter to close</fullname>
-                <call ref="FlushRegister">
+                <call ref="FlushSerial">
                     <repeat>50000</repeat>
                 </call>
             </subroutine>
