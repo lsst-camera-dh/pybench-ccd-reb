@@ -384,7 +384,7 @@ class XMLParser(object):
         self.prg.subroutines_names = allsubsnames # to keep the order
         self.prg.instructions = supermain # main program instruction list
 
-        return self.prg, self.functions
+        return self.prg, self.functions_desc
 
 
     def parse_file(self, xmlfile):
