@@ -7,8 +7,8 @@
 
 from lxml import etree
 
+import bidi
 from fpga import *
-
 
 class XMLParser(object):
 
@@ -111,10 +111,10 @@ class XMLParser(object):
 
             self.channels_desc[name] = dict(c_dict)
 
-        self.channels = BidiMap( [v['channel'] 
-                                  for v in self.channels_desc.values()],
-                                 [v['name']    
-                                  for v in self.channels_desc.values()] )
+        self.channels = bidi.BidiMap( [v['channel'] 
+                                       for v in self.channels_desc.values()],
+                                      [v['name']    
+                                       for v in self.channels_desc.values()] )
     
 
     def parse_functions(self, functions_node):
@@ -384,7 +384,10 @@ class XMLParser(object):
         self.prg.subroutines_names = allsubsnames # to keep the order
         self.prg.instructions = supermain # main program instruction list
 
-        return self.prg, self.functions_desc
+        return ( self.prg, 
+                 self.functions_desc, 
+                 self.parameters_desc, 
+                 self.channels_desc )
 
 
     def parse_file(self, xmlfile):
@@ -396,6 +399,50 @@ class XMLParser(object):
         To implement. DTD/schema available???
         """
         return True
+
+
+
+# @classmethod
+# def fromxmlfile(cls, xmlfile):
+def fromxmlfile(xmlfile):
+    """
+    Create and return a Sequencer instance from a XML file.
+    Raise an exception if the syntax is wrong.
+    """
+
+
+    channels = {}
+    channels_desc = {}
+    functions = {}
+    functions_desc = {}
+    
+    parser = XMLParser()
+    ( prg, 
+      functions_desc, 
+      parameters_desc, 
+      channels_desc ) = parser.parse_file(xmlfile)
+    
+    program = prg.compile()
+    
+    channels = bidi.BidiMap( [v['channel'] 
+                              for v in channels_desc.values()],
+                             [v['name']    
+                              for v in channels_desc.values()] )
+    
+    for k,v in functions_desc.iteritems():
+        functions[v['idfunc']] = v['function']
+        
+        
+    seq = Sequencer(channels = channels, 
+                    channels_desc = channels_desc, 
+                    functions = functions, 
+                    functions_desc = functions_desc, 
+                    program = program)
+
+    return seq
+
+
+Sequencer.fromxmlfile = staticmethod(fromxmlfile)
 
 
 # tree = etree.parse('sequencer-soi.xml')

@@ -9,7 +9,9 @@ import sys
 import os, os.path
 import re
 import subprocess
+
 import cabac
+import bidi
 
 ## -----------------------------------------------------------------------
 
@@ -426,42 +428,15 @@ class Program_UnAssembled(object):
         return prg
 
 
-    @classmethod
-    def fromxmlstring(cls, s):
-        """
-        Create a new UnAssembledProgram from a XML string.
-        """
-        pass
+    # @classmethod
+    # def fromxmlstring(cls, s):
+    #     """
+    #     Create a new UnAssembledProgram from a XML string.
+    #     """
+    #     pass
 
 
 Prg_NA = Program_UnAssembled
-
-## -----------------------------------------------------------------------
-
-class BidiMap(object):
-    """
-    Bidirectional channel map
-    (very crude)
-    """
-    def __init__(self, channels, names):
-        self.dictionary  = dict(zip(channels, names))
-        self.reverse = {v: k for k, v in self.dictionary.iteritems()}
-        self.dictionary.update(self.reverse)
-    #
-    def __getitem__(self, k):
-        return self.dictionary[k]
-
-    def has_key(self, k):
-        return self.dictionary.has_key(k)
-
-    def get(self, k, d=None):
-        if self.has_key(k):
-            return self[k]
-        return d
-
-    def __repr__(self):
-        return repr(self.dictionary)
-
 
 ## -----------------------------------------------------------------------
 
@@ -537,21 +512,25 @@ class Sequencer(object):
             }
 
 
-    default_channels = BidiMap( [v['channel'] 
-                                 for v in default_channels_desc.values()],
-                                [v['name']    
-                                 for v in default_channels_desc.values()] )
+    default_channels = bidi.BidiMap( [v['channel'] 
+                                      for v in default_channels_desc.values()],
+                                     [v['name']    
+                                      for v in default_channels_desc.values()] )
 
     def __init__(self, 
                  channels = default_channels, 
+                 channels_desc = default_channels_desc, 
                  functions = {}, 
+                 functions_desc = {}, 
                  program = Program()):
         #
         self.channels = channels
+        self.channels_desc = channels_desc
         self.functions = functions   # max 16 functions (#0 is special)
+        self.functions_desc = functions_desc 
         self.program = program       # empty program
 
-    def function(self, func):
+    def get_function(self, func):
         if func in range(16):
             func_id = func
 
@@ -559,7 +538,6 @@ class Sequencer(object):
             return None
 
         return self.functions[func_id]
-
 
 ## -----------------------------------------------------------------------
 
@@ -665,7 +643,7 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def read(self, address, n = 1, check = True):
+    def read(self, address, n = 1, check = True, fake = False):
         """
         Read a FPGA register and return its value.
         if n > 1, returns a list of values.
@@ -679,6 +657,11 @@ class FPGA(object):
             remote_command = command
         else:
             remote_command = "ssh %s %s" % (self.ctrl_host, command)
+
+        if fake:
+            print >>sys.stderr, remote_command
+            return dict(zip(range(address, address+n), n * [0]))
+
             
         proc = subprocess.Popen(remote_command, shell=True,
                                 stdout = subprocess.PIPE,
@@ -715,7 +698,7 @@ class FPGA(object):
         return result
                 
         
-    def write(self, address, value, check = True):
+    def write(self, address, value, check = True, fake = False):
         """
         Write a given value into a FPGA register. 
         TODO : implement 'check'
@@ -725,6 +708,10 @@ class FPGA(object):
 
         command = ( "rriClient %d write 0x%0x 0x%0x" % 
                     (self.reb_id, address, value) )
+
+        if fake:
+            print >>sys.stderr, remote_command
+            return
 
         if self.ctrl_host == None:
             remote_command = command

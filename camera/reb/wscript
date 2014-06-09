@@ -20,6 +20,7 @@ def build(ctx):
     ctx(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py',
+                  'bidi.py',
                   'reb.py','fpga.py','xml.py','cabac.py',
                   'testfpga.py'], 
         install_path = '${PYTHONDIR}/lsst/camera/reb')
