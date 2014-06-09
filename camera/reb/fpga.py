@@ -560,6 +560,7 @@ class Sequencer(object):
 
         return self.functions[func_id]
 
+
 ## -----------------------------------------------------------------------
 
 class Function(object):
