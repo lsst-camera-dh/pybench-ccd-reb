@@ -312,7 +312,7 @@ class Subroutine(object):
 
     def __init__(self):
         self.name = None
-        self.instructions = [] # main program instruction list
+        self.instructions = [] # subroutine instruction list
 
 class Program_UnAssembled(object):
     
@@ -438,7 +438,7 @@ Prg_NA = Program_UnAssembled
 
 ## -----------------------------------------------------------------------
 
-class ChannelMap(object):
+class BidiMap(object):
     """
     Bidirectional channel map
     (very crude)
@@ -537,8 +537,10 @@ class Sequencer(object):
             }
 
 
-    default_channels = ChannelMap( [v['channel'] for v in default_channels_desc.values()],
-                                   [v['name']    for v in default_channels_desc.values()] )
+    default_channels = BidiMap( [v['channel'] 
+                                 for v in default_channels_desc.values()],
+                                [v['name']    
+                                 for v in default_channels_desc.values()] )
 
     def __init__(self, 
                  channels = default_channels, 
@@ -1055,7 +1057,8 @@ class FPGA(object):
     
     def set_clock_voltages(self, voltages):
         """
-        Sets voltages as defined in the input dictionary, keeps others as previously.
+        Sets voltages as defined in the input dictionary, 
+        keeps others as previously defined.
         """
         
         #values to be set in the register for each output
@@ -1105,7 +1108,8 @@ class FPGA(object):
         if key in currents:
             self.dacs[key] = currents[key] & 0xfff
         else:
-            raise ValueError("No key found for current source (%s), could not be set." % key)
+            raise ValueError(
+                "No key found for current source (%s), could not be set." % key)
             
         self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
                 
@@ -1127,7 +1131,8 @@ class FPGA(object):
 
     def get_cabac_config(self, s): # strip 's'
         """
-        read CABAC configuration for strip <s>,writes to CABAC objects and to header string.
+        read CABAC configuration for strip <s>,
+        store it in the CABAC objects and the header string.
         """
         if s not in [0,1,2]:
             raise ValueError("Invalid REB strip (%d)" % s)
@@ -1177,13 +1182,17 @@ class FPGA(object):
 
     def check_cabac_value(self, param, value):
         """
-        Gets the current value of the CABAC objects for the given parameter and checks that it is correct.
+        Gets the current value of the CABAC objects 
+        for the given parameter and checks that it is correct.
         """
-        prgm = self.cabac_top.get_cabac_fromstring(param) + self.cabac_bottom.get_cabac_fromstring(param)
+        prgm = ( self.cabac_top.get_cabac_fromstring(param) + 
+                 self.cabac_bottom.get_cabac_fromstring(param) )
 
         for prgmval in prgm:
             if (abs(prgmval - value)>0.2):
-                raise StandardError("CABAC readback different from setting for %s: %f != %f" % 
-                                    (param, prgmval, value) )
+                raise StandardError(
+                    "CABAC readback different from setting for %s: %f != %f" % 
+                    (param, prgmval, value) )
 
 
+    # ----------------------------------------------------------
