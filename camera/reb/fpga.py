@@ -881,6 +881,7 @@ class FPGA(object):
         """
         Load the functions and the program at once.
         """
+        # self.send_program(seq.program, clear = clear)
         self.send_program(seq.program, clear = clear)
         self.send_functions(seq.functions)
 

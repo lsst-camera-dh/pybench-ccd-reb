@@ -627,6 +627,7 @@ read_line_fake:
         Load the functions and the program at once.
         """
         self.fpga.send_sequencer(seq, clear = clear)
+        self.program = seq.program # to keep track of the subroutines addrs
 
     def dump_sequencer(self):
         """
