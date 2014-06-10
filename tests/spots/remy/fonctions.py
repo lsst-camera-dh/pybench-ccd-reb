@@ -357,7 +357,7 @@ def analyse_vke(direc = "./vke_beta/*fits", pix1 = 3, pix2 = 4, axe = "z"):
     y_pos = []
     z_pos = []
 
-    for i in fichiers[:-1]:
+    for i in fichiers:
         temp = py.open(i)
         data.append(temp[0].data)
         x_pos.append(temp[0].header['XPOS'])
