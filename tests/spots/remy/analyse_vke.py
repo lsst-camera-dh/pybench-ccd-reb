@@ -53,8 +53,13 @@ pas_fin = fichiers[1].find("mm")
 #xs = list(xs) + list(xs[::-1] + 0.2)
 
 
-plt.scatter(position, flux, marker = '+', color = 'b')
-plt.scatter(position, flux2, marker = '+', color = 'r')
+#plt.scatter(position, flux, marker = '+', color = 'b')
+#plt.scatter(position, flux2, marker = '+', color = 'r')
+
+plt.scatter(pos[:len(flux)/2], flux[:len(flux)/2], marker = '+', color = 'b')
+plt.scatter(pos[:len(flux)/2], flux2[:len(flux)/2], marker = '+', color = 'r')
+plt.scatter(pos[len(flux)/2:], flux[len(flux)/2:], marker = 'o', color = 'b')
+plt.scatter(pos[len(flux)/2:], flux2[len(flux)/2:], marker = 'o', color = 'r')
 plt.xlabel("Position")
 plt.ylabel("Flux")
 plt.title("Step of ")# + pas)

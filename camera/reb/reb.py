@@ -627,6 +627,7 @@ read_line_fake:
         Load the functions and the program at once.
         """
         self.fpga.send_sequencer(seq, clear = clear)
+        self.program = seq.program # to keep track of the subroutines addrs
 
     def dump_sequencer(self):
         """
@@ -720,55 +721,3 @@ read_line_fake:
 
 #need to add power currents and voltages, back substrate value and current (added elsewhere ?)
 
-
-# """
-# 0x000:     JSR     0x010          repeat(1)
-# 0x001:     END 
-
-# 0x010:     JSR     0x020          repeat(2)
-# 0x011:     CALL    func(1)        repeat(10000)
-# 0x012:     CALL    func(6)        repeat(2048)
-# 0x013:     JSR     0x100          repeat(2020)
-# 0x014:     RTS 
-
-# 0x020:     JSR     0x110          repeat(2020)
-# 0x021:     RTS 
-
-# 0x030:     JSR     0x020          repeat(10)
-# 0x031:     RTS 
-
-# 0x040:     JSR     0x020          repeat(2)
-# 0x041:     CALL    func(6)        repeat(550)
-# 0x042:     JSR     0x100          repeat(2020)
-# 0x043:     RTS 
-
-# 0x050:     JSR     0x020          repeat(2)
-# 0x051:     CALL    func(1)        repeat(10000)
-# 0x052:     CALL    func(6)        repeat(1100)
-# 0x053:     JSR     0x120          repeat(2020)
-# 0x054:     RTS 
-
-# 0x060:     CALL    func(6)        repeat(550)
-# 0x061:     JSR     0x100          repeat(2020)
-# 0x062:     RTS 
-
-# 0x070:     JSR     0x020          repeat(2)
-# 0x071:     JSR     0x075          repeat(20000)
-# 0x072:     CALL    func(6)        repeat(1100)
-# 0x073:     JSR     0x100          repeat(2020)
-# 0x074:     RTS 
-# 0x075:     CALL    func(7)        repeat(50)
-# 0x076:     RTS 
-
-# 0x100:     CALL    func(2)        repeat(1)
-# 0x101:     CALL    func(3)        repeat(550)
-# 0x102:     RTS 
-
-# 0x110:     CALL    func(5)        repeat(1)
-# 0x111:     CALL    func(6)        repeat(550)
-# 0x112:     RTS 
-
-# 0x120:     CALL    func(2)        repeat(1)
-# 0x121:     CALL    func(4)        repeat(550)
-# 0x122:     RTS 
-# """

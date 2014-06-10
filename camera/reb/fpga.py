@@ -9,7 +9,9 @@ import sys
 import os, os.path
 import re
 import subprocess
+
 import cabac
+import bidi
 
 ## -----------------------------------------------------------------------
 
@@ -312,7 +314,7 @@ class Subroutine(object):
 
     def __init__(self):
         self.name = None
-        self.instructions = [] # main program instruction list
+        self.instructions = [] # subroutine instruction list
 
 class Program_UnAssembled(object):
     
@@ -426,42 +428,15 @@ class Program_UnAssembled(object):
         return prg
 
 
-    @classmethod
-    def fromxmlstring(cls, s):
-        """
-        Create a new UnAssembledProgram from a XML string.
-        """
-        pass
+    # @classmethod
+    # def fromxmlstring(cls, s):
+    #     """
+    #     Create a new UnAssembledProgram from a XML string.
+    #     """
+    #     pass
 
 
 Prg_NA = Program_UnAssembled
-
-## -----------------------------------------------------------------------
-
-class ChannelMap(object):
-    """
-    Bidirectional channel map
-    (very crude)
-    """
-    def __init__(self, channels, names):
-        self.dictionary  = dict(zip(channels, names))
-        self.reverse = {v: k for k, v in self.dictionary.iteritems()}
-        self.dictionary.update(self.reverse)
-    #
-    def __getitem__(self, k):
-        return self.dictionary[k]
-
-    def has_key(self, k):
-        return self.dictionary.has_key(k)
-
-    def get(self, k, d=None):
-        if self.has_key(k):
-            return self[k]
-        return d
-
-    def __repr__(self):
-        return repr(self.dictionary)
-
 
 ## -----------------------------------------------------------------------
 
@@ -537,19 +512,25 @@ class Sequencer(object):
             }
 
 
-    default_channels = ChannelMap( [v['channel'] for v in default_channels_desc.values()],
-                                   [v['name']    for v in default_channels_desc.values()] )
+    default_channels = bidi.BidiMap( [v['channel'] 
+                                      for v in default_channels_desc.values()],
+                                     [v['name']    
+                                      for v in default_channels_desc.values()] )
 
     def __init__(self, 
                  channels = default_channels, 
+                 channels_desc = default_channels_desc, 
                  functions = {}, 
+                 functions_desc = {}, 
                  program = Program()):
         #
         self.channels = channels
+        self.channels_desc = channels_desc
         self.functions = functions   # max 16 functions (#0 is special)
+        self.functions_desc = functions_desc 
         self.program = program       # empty program
 
-    def function(self, func):
+    def get_function(self, func):
         if func in range(16):
             func_id = func
 
@@ -662,7 +643,7 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def read(self, address, n = 1, check = True):
+    def read(self, address, n = 1, check = True, fake = False):
         """
         Read a FPGA register and return its value.
         if n > 1, returns a list of values.
@@ -676,6 +657,11 @@ class FPGA(object):
             remote_command = command
         else:
             remote_command = "ssh %s %s" % (self.ctrl_host, command)
+
+        if fake:
+            print >>sys.stderr, remote_command
+            return dict(zip(range(address, address+n), n * [0]))
+
             
         proc = subprocess.Popen(remote_command, shell=True,
                                 stdout = subprocess.PIPE,
@@ -712,7 +698,7 @@ class FPGA(object):
         return result
                 
         
-    def write(self, address, value, check = True):
+    def write(self, address, value, check = True, fake = False):
         """
         Write a given value into a FPGA register. 
         TODO : implement 'check'
@@ -722,6 +708,10 @@ class FPGA(object):
 
         command = ( "rriClient %d write 0x%0x 0x%0x" % 
                     (self.reb_id, address, value) )
+
+        if fake:
+            print >>sys.stderr, remote_command
+            return
 
         if self.ctrl_host == None:
             remote_command = command
@@ -891,6 +881,7 @@ class FPGA(object):
         """
         Load the functions and the program at once.
         """
+        # self.send_program(seq.program, clear = clear)
         self.send_program(seq.program, clear = clear)
         self.send_functions(seq.functions)
 
@@ -1055,7 +1046,8 @@ class FPGA(object):
     
     def set_clock_voltages(self, voltages):
         """
-        Sets voltages as defined in the input dictionary, keeps others as previously.
+        Sets voltages as defined in the input dictionary, 
+        keeps others as previously defined.
         """
         
         #values to be set in the register for each output
@@ -1105,7 +1097,8 @@ class FPGA(object):
         if key in currents:
             self.dacs[key] = currents[key] & 0xfff
         else:
-            raise ValueError("No key found for current source (%s), could not be set." % key)
+            raise ValueError(
+                "No key found for current source (%s), could not be set." % key)
             
         self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
                 
@@ -1127,7 +1120,8 @@ class FPGA(object):
 
     def get_cabac_config(self, s): # strip 's'
         """
-        read CABAC configuration for strip <s>,writes to CABAC objects and to header string.
+        read CABAC configuration for strip <s>,
+        store it in the CABAC objects and the header string.
         """
         if s not in [0,1,2]:
             raise ValueError("Invalid REB strip (%d)" % s)
@@ -1177,13 +1171,17 @@ class FPGA(object):
 
     def check_cabac_value(self, param, value):
         """
-        Gets the current value of the CABAC objects for the given parameter and checks that it is correct.
+        Gets the current value of the CABAC objects 
+        for the given parameter and checks that it is correct.
         """
-        prgm = self.cabac_top.get_cabac_fromstring(param) + self.cabac_bottom.get_cabac_fromstring(param)
+        prgm = ( self.cabac_top.get_cabac_fromstring(param) + 
+                 self.cabac_bottom.get_cabac_fromstring(param) )
 
         for prgmval in prgm:
             if (abs(prgmval - value)>0.2):
-                raise StandardError("CABAC readback different from setting for %s: %f != %f" % 
-                                    (param, prgmval, value) )
+                raise StandardError(
+                    "CABAC readback different from setting for %s: %f != %f" % 
+                    (param, prgmval, value) )
 
 
+    # ----------------------------------------------------------
