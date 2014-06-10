@@ -179,7 +179,7 @@
                         <value>1001</value>
                     </timeslice>
                     <timeslice id="slice6">
-                        <duration>BufferP</duration>
+                        <duration>TimeP</duration>
                         <value>1101</value>
                     </timeslice>
                     <timeslice id="slice7">

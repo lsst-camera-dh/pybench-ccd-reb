@@ -714,10 +714,8 @@ read_line_fake:
         Creates dictionary of FITS header elements for CCD operating conditions
         """
         fitsheader = self.get_cabac_config()
-        fitsheader.update(self.fpga.get_clock_voltage())
+        fitsheader.update(self.fpga.get_clock_voltages())
         fitsheader.update(self.fpga.get_current_source())
 
         return fitsheader
-
-#need to add power currents and voltages, back substrate value and current (added elsewhere ?)
 
