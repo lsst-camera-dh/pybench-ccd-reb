@@ -22,7 +22,7 @@ class Bench(object):
 
     def __init__(self):
         self.reb = reb.REB()
-        self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
+        self.bss = xmlrpclib.ServerProxy("http://lpnlsst.in2p3.fr:8087/")
         self.bss.connect()
         # implementation with remote control
         # other instruments: create object here, does not connect
@@ -79,8 +79,13 @@ class Bench(object):
         time.sleep(1)
 
         #starts Keithley backsubstrate voltage
-        self.config_bss(40)
+        setvolt = 40
+        self.config_bss(setvolt)
         self.bss.setVoltageOperate(1)
+        while abs(self.bss.getVoltage()-setvolt) > 0.1:
+             time.sleep(1)
+        print("Start-up sequence complete")
+
 
     def shutdown(self):
         """
@@ -125,9 +130,9 @@ class Bench(object):
         """
         
         if voltage < 50:
-            range = 50
+            range = 50.0
         else:
-            range = 500
+            range = 500.0
         self.bss.selectOutputVoltageRange(range, 2.5e-5)
         
         self.bss.setOutputVoltage(voltage)
@@ -175,7 +180,7 @@ class Bench(object):
 
 
 
-    def select_source(self, sourcetype, wavelength = 500):
+    def select_source(self, sourcetype, wavelength = 500.0):
         """
         Connects and starts whichever light source is going to be used
         """
@@ -210,10 +215,9 @@ class Bench(object):
         #CCD operating conditions header
         self.opheader = self.reb.get_operating_header()
 
-        self.bss.getOutputVoltage()
-        self.bss.getCurrent()  # gives only current at this time, might upgrade to get measures during exposure
-        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.volt)
-        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.current)
+        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.getOutputVoltage())
+        # gives only current at this time, might upgrade to get measures during exposure
+        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())
 
         #need to add image format header, instruments header, optional sequencer header
         try:
