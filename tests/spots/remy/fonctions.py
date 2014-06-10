@@ -319,19 +319,21 @@ def INIT_IMAGES(directory = "./focus/", filetype = "*.fits"):
 
     images = []
     for f in fichiers:
-        images.append((py.open(i))[0])
+        images.append((py.open(f))[0])
 
     donnees = []
     for i in images:
-        donnees.append(d.data)
+        donnees.append(i.data)
 
     maxima = []
     for d in donnees:
         maxima.append(float(d.max()))
+    maxima = np.array(maxima)
 
     sums = []
     for d in donnees:
         sums.append(float(d.sum()))
+    sums = np.array(sums)
 
     ratios = maxima/sums
 
@@ -341,6 +343,6 @@ def INIT_IMAGES(directory = "./focus/", filetype = "*.fits"):
 
     ratios_pix_sup_raff = []
     for F in flux:
-        ratios_pix_sup_raff.append(RATIO(F[0], RATIO[1], 3)
+        ratios_pix_sup_raff.append(RATIO(F[0], F[1], 3))
         
     return images, donnees, maxima, sums, ratios, ratios_pix_sup_raff

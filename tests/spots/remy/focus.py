@@ -31,10 +31,10 @@ cam.open()
 #-----Revient a une position par defaut, apres avoir fait un home
 
 mov.home()
-MOVE_TO_DEFAULT()
+MOVE_TO_DEFAULT(mov)
 
 #-----Premiere etape du focus: minimisation de la taille du spot
-FOCUS(mov = mov, cam = cam, interval = 0.05, pas = 0.001)
+FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001)
 images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES()
 
 NB_FOCUS = np.where(ratios==np.max(ratios))[0][0]
