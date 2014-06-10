@@ -18,9 +18,14 @@ R.send_sequencer(seq)
 R.start_clock()
 
 # Set the time to Unix time (in 10 ns = 1e-8 s unit)
-R.time = int(time.time() / 1e-8)
+R.time = int(time.time() / 10.0e-9)
+
+# Get the time
+print R.time
+print time.ctime(R.time * 10.e-9)
 
 # starting the imageClient process (requested!)
+# If the CCS is running the imageClient is not needed.
 # subprocess.Popen("imageClient %d" % reb_id) -> path problem
 # subprocess.Popen("imageClient %d" % reb_id, shell=True)
 
