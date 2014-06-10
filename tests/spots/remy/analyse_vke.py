@@ -1,5 +1,5 @@
 # Analyse les images prises par vke_beta et affiche le flux en fonction du deplacement
-# Par remy Le Breton
+# Par Remy Le Breton
 
 import matplotlib.pyplot as plt
 import pylab as py

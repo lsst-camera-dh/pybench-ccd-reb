@@ -31,10 +31,10 @@ cam.open()
 #-----Revient a une position par defaut, apres avoir fait un home
 
 mov.home()
-MOVE_TO_DEFAULT()
+MOVE_TO_DEFAULT(mov)
 
 #-----Premiere etape du focus: minimisation de la taille du spot
-FOCUS(mov = mov, cam = cam, interval = 0.05, pas = 0.001)
+FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001)
 images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES()
 
 NB_FOCUS = np.where(ratios==np.max(ratios))[0][0]
@@ -55,8 +55,10 @@ mov.move(dz=-0.001) #Verifier le sens
 FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001)
 images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES()
 
-NB_FOCUS = np.where(ratios_pix_sup_raff==np.min(ratios_pix_sup_raff))[0][0]
-POS_FOCUS = images_raff[NB_FOCUS].header['YPOS']
+NB_FOCUS_RAFF = np.where(ratios_pix_sup_raff==np.min(ratios_pix_sup_raff))[0][0]
+POS_FOCUS_RAFF = images_raff[NB_FOCUS_RAFF].header['YPOS']
+
+mov.move(y=POS_FOCUS_RAFF)
 
 VKE(mov=mov, cam=cam, pas = 0.0001)
 
