@@ -13,7 +13,7 @@
 import sys
 import os, os.path
 import time
-import serial
+# import serial
 import telnetlib
 
 
@@ -31,30 +31,13 @@ class Picomotor(object):
                  port = None, # either TCP/IP or serial one
                  debug = True):
 
-        self.serial_conn = None
+        # self.serial_conn = None
         self.tcp_conn = None
-        self.tcp = False
+        self.host = host
+        self.port = port
+        if self.port == None:
+            self.port = 23
 
-        if host != None:  # through telnet
-            self.tcp = True
-            self.host = host
-            if port == None:
-                port = 23
-            else:
-                self.port = port
-        else: # serial
-            self.tcp = False
-            self.host = None
-            if port == None:
-                raise ValueError("You should specify either a host address (TCP) or a serial port (RS-232)")
-            self.port = port
-            self.baudrate = 19200
-            self.repr_mode = 0
-            self.parity = serial.PARITY_NONE
-            self.bytesize = serial.EIGHTBITS
-            self.stopbits = serial.STOPBITS_ONE
-
-        # self.timeout = 1.0 # Non-blocking & non waiting mode
         self.timeout = 0.5 # Non-blocking & non waiting mode
 
         self.EOL = '\n'
@@ -70,56 +53,41 @@ class Picomotor(object):
         Check if there's something connected (echotest).
         """
 
-        if self.tcp:
-
-            if self.debug: 
-                print >>sys.stderr,  "Opening host %s:%d ..." % (self.host,
-                                                                 self.port)
+        if self.debug: 
+            print >>sys.stderr,  "Opening host %s:%d ..." % (self.host,
+                                                             self.port)
      
-            self.tcp_conn = telnetlib.Telnet(host = self.host, 
-                                             port = self.port, 
-                                             timeout = self.timeout)
+        # self.tcp_conn = telnetlib.Telnet(host = self.host, 
+        #                                  port = self.port, 
+        #                                  timeout = self.timeout)
+        # DO NOT PROVIDE host / port / etc 
+        # when you create the Telnet instance
+        # -> bug: does not work
+            
+        self.tcp_conn = telnetlib.Telnet()
+        self.tcp_conn.open(host = self.host, port = self.port, 
+                           timeout = self.timeout)
 
+        time.sleep(1)
 
+        self.purge()
 
+        time.sleep(1)
 
-            else:
-
-            if self.debug: 
-                print >>sys.stderr,  "Opening host %s:%d ..." % (self.host,
-                                                                 self.port)
-
-        self.serial_conn = serial.Serial(port = self.port, 
-                                         baudrate = self.baudrate,
-                                         bytesize = self.bytesize, 
-                                         parity = self.parity,
-                                         stopbits = self.stopbits, 
-                                         timeout = self.timeout)
-        
-        if ( (self.serial_conn == None) or
-             not(self.serial_conn.isOpen()) ):
-            raise IOError("Failed to open serial port %s" % self.port)
-        
-        self.serial_conn.flushOutput()
-        
         if not(self.echotest()):
-            raise IOError(("Not echoing on serial port %s") % 
-                          self.port)
+            raise IOError(("Not echoing on TCP/IP %s:%s") % 
+                          (self.host, self.port))
            
         if self.debug: 
-            print >>sys.stderr, ( "Opening port %s done." % 
-                                  self.port )
+            print >>sys.stderr, ( "Opening socket %s:%s done." % 
+                                  (self.host, self.port))
+
         
-        # self.clear()
-
-
     # ---------- Close the controller device ----------------- 
 
     def close(self):
  
-        if ( self.serial_conn and
-             self.serial_conn.isOpen() ):
-            self.serial_conn.close()
+        self.tcp_conn.close()
 
     # ---------- Define write command  ----------------------- 
 
@@ -127,41 +95,30 @@ class Picomotor(object):
         """
         Send a command through the serial port.
         """
-        if not( self.serial_conn and
-                self.serial_conn.isOpen() ):
-            raise IOError("Port %s not yet opened" % self.port)
-
         if self.debug: print >>sys.stderr, \
                 "Sending command [" + command + "]"
-        self.serial_conn.write(command + self.EOL)
+        self.tcp_conn.write(command + self.EOL)
 
     # ---------- Define read command  ----------------------- 
 
-    def read(self, timeout = None):
+    def read(self):
         """
-        Read the answer from the serial port.
+        Read the answer from the tcp/ip socket
         Return it as a string.
-        If <timeout> is specified, the function will wait
-        for data with the specified timeout (instead of the default one). 
         """
         
-        if not( self.serial_conn and
-                self.serial_conn.isOpen() ):
-            raise IOError("Port %s not yet opened" % self.port)
+        if self.debug: 
+            print >>sys.stderr, "Reading tcp/ip socket"
 
-        if self.debug: print >>sys.stderr, \
-                "Reading serial port buffer"
-
-        if timeout != None:
-            self.serial_conn.timeout = timeout
-            if self.debug: print >>sys.stderr, \
-                    "Timeout specified: ", timeout
             
-        answer = self.serial_conn.readlines() # return buffer
+        answer = ""
         
-        # Restoring timeout to default one
-        self.serial_conn.timeout = self.timeout
-        # answer = answer.strip()
+        resp = self.tcp_conn.read_very_eager()
+        while (resp != ''):
+            answer += resp
+            resp = self.tcp_conn.read_very_eager()
+            
+
         if self.debug: print >>sys.stderr, \
                 "Received [" + str(answer) + "]"
 
@@ -173,15 +130,16 @@ class Picomotor(object):
         """
         Purge the serial port / telnet socket to avoid framing errors.
         """
-        self.serial_conn.flushOutput()
-        self.serial_conn.flushInput()
-        self.serial_conn.readlines()
+        self.read()
 
     # ---------- Define read command  ----------------------- 
 
     def echotest(self):
-        self.write("VER")
+        self.write("VER" + self.EOL)
+        time.sleep(0.5)
         answer = self.read()
+
+        print "ANSWER = ", answer
 
         if len(answer) < 1:
             return False
@@ -192,7 +150,7 @@ class Picomotor(object):
 
     def send(self, cmd):
         """
-        Send a command (Venus-2 language) to the motor and
+        Send a command (picomotor language) to the motor and
         return the answer (if any).
 
         @param cmd: the command to send.
@@ -206,8 +164,9 @@ class Picomotor(object):
         # Now send it
         self.write(command)
 
-        # Parsing the answer (to detect errors)
+        time.sleep(0.5)
 
+        # Parsing the answer (to detect errors)
         answer = self.read()
 
         if len(answer) < 1:
@@ -247,6 +206,47 @@ class Picomotor(object):
         # # self.send('1.0 '   + ("%d" % self.axis) + ' setcalvel')
         # # self.send('1.0 '   + ("%d" % self.axis) + ' setnrmvel')
         # self.send('1.0 '   + ("%d" % self.axis) + ' setnrefvel')
+
+    # ---------- Get Error status ---------------------------- 
+
+
+    # ---------- Is the motor moving ? ----------------------- 
+
+
+
+
+    # ---------- Detect the motors --------------------------- 
+
+
+    # ---------- Select channel for a driver ----------------- 
+
+    def select(self, driver, channel):
+        command = "CHL %s=%d" % (driver, channel)
+        answer = self.send(command)
+
+        ## TODO : check errors
+
+    # ---------- Get the selected channels ------------------- 
+
+    def get_selected(self, driver):
+        command = "CHL %s" % driver
+        answer = self.send(command)
+
+        channel = int(answer.strip())
+        return channel
+
+    # ---------- Move the chosen motor ----------------------- 
+
+    def move(self, driver, channel, offset, immediate = True):
+        self.select(driver, channel)
+        
+        command = "REL %s %d" % (driver, offset)
+        if immediate:
+            command += " G"
+
+        self.send(command)
+
+        ## TODO : check errors
 
 
     # ---------- Current motor position ---------------------- 
