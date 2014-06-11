@@ -96,11 +96,11 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.1, trou = "5micron", cut
         mov.move(dy=pas)
         name = "./focus/" + str(time.time()) + "_" + trou 
         img = cam.capture(exposure = expo)
-
+        
+        img = np.array(img)
         if cut == "yes":
             img = CUT(img)
 
-        img = np.array(img)
         h.update('xpos', XPOS)
         h.update('ypos', YPOS)
         h.update('zpos', ZPOS)
@@ -139,11 +139,11 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = 0.1, trou = 
             name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             mov.move(dz=pas)
-
+            
+            img = np.array(img)
             if cut == "yes":
                 img = CUT(img)
 
-            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -162,10 +162,10 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = 0.1, trou = 
             name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
 
+            img = np.array(img)
             if cut == "yes":
                 img = CUT(img)
             
-            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -181,14 +181,14 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = 0.1, trou = 
             ZPOS = mov.z_axis.get_position()
             
             name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
-            img = cam.capture_and_save(exposure = expo, filename = name, filetype = "FITS")
+            img = cam.capture(exposure = expo)
             
             mov.move(dx=pas)
-            
+
+            img = np.array(img)
             if cut == "yes":
                 img = CUT(img)
             
-            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -207,10 +207,10 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = 0.1, trou = 
             name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             
+            img = np.array(img)
             if cut == "yes":
                 img = CUT(img)
             
-            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -257,7 +257,8 @@ def READ_RESULTS(fichier):
 
 def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
     data = cam.capture(exposure = expo)
-
+    
+    data = np.array(data)
     if cut == "yes":
         data = CUT(data)
 
@@ -274,12 +275,18 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1,
             mov.move(dx=-pas_raff) #Verifier le sens
             
         temp_data = cam.capture(exposure = expo)
+        temp_data = np.array(temp_data)
+        if cut == "yes":
+            temp_data = CUT(temp_data)
+
+
         pixels_flux = PF(temp_data, max_i)
         pixel_central_flux = PCF(temp_data, max_i)
 
 def FOCUS_EQ_VERTICAL(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
     data = cam.capture(exposure = expo)
 
+    data = np.array(data)
     if cut == "yes":
         data = CUT(data)
 
@@ -296,6 +303,11 @@ def FOCUS_EQ_VERTICAL(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, 
             mov.move(dz=-pas_raff) #Verifier le sens
    
             temp_data = cam.capture(exposure = expo)
+            temp_data = np.array(temp_data)
+
+            if cut == "yes":
+                temp_data = CUT(temp_data)
+            
             pixels_flux = PF(temp_data, max_i)
             pixel_central_flux = PCF(temp_data, max_i)
 
@@ -319,28 +331,85 @@ def INIT_IMAGES(directory = "./focus/", filetype = "*.fits"):
 
     images = []
     for f in fichiers:
-        images.append((py.open(i))[0])
+        images.append((py.open(f))[0])
 
     donnees = []
     for i in images:
-        donnees.append(d.data)
+        donnees.append(i.data)
 
     maxima = []
     for d in donnees:
         maxima.append(float(d.max()))
+    maxima = np.array(maxima)
 
     sums = []
     for d in donnees:
         sums.append(float(d.sum()))
+    sums = np.array(sums)
 
     ratios = maxima/sums
-
+    
+    temp_max = np.where(donnees[0]==np.max(donnees[0]))
+    max_i = [temp_max[0][0], temp_max[1][0]]
     FLUX = []
     for d in donnees:
         FLUX.append([PCF(d, max_i), PF(d, max_i)])
 
     ratios_pix_sup_raff = []
-    for F in flux:
-        ratios_pix_sup_raff.append(RATIO(F[0], RATIO[1], 3)
+    for F in FLUX:
+        ratios_pix_sup_raff.append(RATIO(F[0], F[1], 3))
         
     return images, donnees, maxima, sums, ratios, ratios_pix_sup_raff
+
+def analyse_vke(direc = "./vke_beta/*fits", pix1 = 3, pix2 = 4, axe = "z"):
+    
+    fichiers = gl.glob(direc)
+    fichiers = sorted(fichiers)
+
+    data = []
+    x_pos = []
+    y_pos = []
+    z_pos = []
+
+    for i in fichiers:
+        temp = py.open(i)
+        data.append(temp[0].data)
+        x_pos.append(temp[0].header['XPOS'])
+        y_pos.append(temp[0].header['YPOS'])
+        z_pos.append(temp[0].header['ZPOS'])
+
+    max_i = np.where(data[0]==np.max(data[0]))
+    max_i = [max_i[0][0] - pix1, max_i[1][0]] #Pixel voision du pixel central
+
+    max_i2 = np.where(data[0]==np.max(data[0]))
+    max_i2 = [max_i2[0][0] - pix2, max_i2[1][0]]
+
+    flux = []
+    flux2 = []
+
+    for d in data:
+        flux.append(d[max_i[0]][max_i[1]])
+        flux2.append(d[max_i2[0]][max_i2[1]])
+
+    pas_deb = fichiers[1].find("0.")
+    pas_fin = fichiers[1].find("mm")
+    pas = fichiers[1][pas_deb:pas_fin + 2]
+
+    #plt.scatter(position, flux, marker = '+', color = 'b')
+    #plt.scatter(position, flux2, marker = '+', color = 'r')
+    
+    if axe == "z":
+        pos = z_pos
+    elif axe == "x":
+        pos = x_pos
+    elif axe == "y":
+        pos = y_pos
+        
+    plt.scatter(pos[:len(flux)/2], flux[:len(flux)/2], marker = '+', color = 'b')
+    plt.scatter(pos[:len(flux)/2], flux2[:len(flux)/2], marker = '+', color = 'r')
+    plt.scatter(pos[len(flux)/2:], flux[len(flux)/2:], marker = 'o', color = 'b')
+    plt.scatter(pos[len(flux)/2:], flux2[len(flux)/2:], marker = 'o', color = 'r')
+    plt.xlabel("Position")
+    plt.ylabel("Flux")
+    plt.title("Step of " + pas)
+    plt.show()
