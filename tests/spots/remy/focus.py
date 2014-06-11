@@ -34,7 +34,7 @@ mov.home()
 MOVE_TO_DEFAULT(mov)
 
 #-----Premiere etape du focus: minimisation de la taille du spot
-FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001)
+FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001, cut = "yes")
 images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES()
 
 NB_FOCUS = np.where(ratios==np.max(ratios))[0][0]
@@ -45,14 +45,14 @@ mov.move(y=POS_FOCUS)
 
 #--Raffinement-du-focus-------------------------
 
-FOCUS_EQ_EST_OUEST(mov, cam)
-FOCUS_EQ_VERTICAL(mov, cam)
+FOCUS_EQ_EST_OUEST(mov, cam, cut = "yes")
+FOCUS_EQ_VERTICAL(mov, cam, cut = "yes")
 
 mov.move(dz=-0.001) #Verifier le sens
 
 #On minimise le flux dans le pixel au dessus de celui max, et on retourne a la position
 
-FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001)
+FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001, cut = "yes")
 images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES()
 
 NB_FOCUS_RAFF = np.where(ratios_pix_sup_raff==np.min(ratios_pix_sup_raff))[0][0]
