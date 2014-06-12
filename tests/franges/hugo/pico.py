@@ -149,6 +149,9 @@ def pico_frange(i,alpha,nom) :
 #--------------------------------------------------------------------------------
 
 i = 35
-alpha = 35
-pico_frange(i,alpha,"test01recherchefrange_35-35")
-
+alpha = 45
+u = 960
+v = 1280
+#pico_frange(i,alpha,"test01recherchefrange_35-35")
+(posx_1,posy_1) = pos_fft(i,alpha,u,v)
+print(posx_1,posy_1)
