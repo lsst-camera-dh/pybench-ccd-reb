@@ -1,4 +1,5 @@
-# Fonctions pour faire le focus et manipuler des images
+# Fonctions pour faire le focus et manipuler des images, prise de donnees et analyses
+
 import sys
 import os, os.path
 import time
