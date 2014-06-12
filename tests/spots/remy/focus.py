@@ -20,7 +20,7 @@ from math import *
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
 
-opt_cut = "no"
+opt_cut = "yes"
 
 #----Initialisation moteurs et camera----------------------------
 
