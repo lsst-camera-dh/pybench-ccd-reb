@@ -25,7 +25,7 @@ def fft_2(L,b,p,g): #b pour echelle log/p suppression moyenne/g convolution
         x = np.array([x])
         y = x.transpose()
         G = np.exp(-(x**2+y**2)/(2*sigma**2))
-        FFTLC = scind.convolve(M, G, mode='constant', cval=0.0)
+        FFTLC = scind.convolve(L, G, mode='constant', cval=0.0)
         return FFTLC
     else : 
         return FFTL
@@ -66,19 +66,19 @@ def obs_ds9(M, nom) :
 #-----------------------------------------------------
 #fonction donnant les donnees d'une image
 def imp(nom) :
-    f = pyfits.open(nom)
+    f = pyfits.open(nom + ".fits")
     f[0].data
     img = f[0].data
     return img
 #------------------------------------------------
-fonction ouverture de la camera : 
-def cam():
-    camera = d.Camera()
-    camera.open()
-    return camera
+#fonction ouverture de la camera : 
+def camera():
+    cam = d.Camera()
+    cam.open()
+    return cam
 #-----------------------------------------------
 #fonction donnant position en x et y des pics dans fft connaissant interfrange et orientation
-#alpha en deg et entre 0 et 90 °
+#alpha en deg et entre 0 et 90 
 def pos_fft(i,alpha,u,v) :
     alpha = np.radians(alpha)
     posx_1 = (u*v)/(i*m.cos(alpha)*(u+v))
@@ -87,56 +87,71 @@ def pos_fft(i,alpha,u,v) :
 #------------------------------------------------
 #fonction ouverture moteur
 def mot_open():
-    mot = pico.picomotor()
+    mot = pico.Picomotor(host="134.158.154.199")
     mot.open()
     return mot
 #------------------------------------------------
 #fonction connaissant i et alpha bouge le moteur a la position de la figure d'interfrange
 def pico_frange(i,alpha,nom) : 
     mot = mot_open()
-    cam = cam()
+    cam = camera()
     u = 960
     v = 1280
     (posx_1,posy_1) = pos_fft(i,alpha,u,v)
-    mot.select(A1,0)
-    mot.send("REL A1 "500*posx_1"g" mot.EOL)
-    mot.select(A1,2)
-    mot.send("REL A2 "500*posy_1"g" mot.EOL)
+    print(posx_1,posy_1)
+    print(int(posx_1),int(posy_1))
+    mot.select("A1",0)
+    mot.send("REL A1 " + str(500*int(posx_1)) + " g" + mot.EOL)
+    mot.select("A1",2)
+    mot.send("REL A2 " + str(500*int(posy_1)) + " g" + mot.EOL)
     cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
     img = imp(nom)
-    fftcimg = fft_2(L,1,1,1)
+    fftcimg = fft_2(img,1,1,1)
     (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
-    if (x1!==posx_1) :
-        mot.select(A1,0)
+    if (x1 != posx_1) :
+        mot.select("A1",0)
         while ( x1<posx_1):
-             mot.send("REL A1 "100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+             #ok = input()
+             #if (ok) :
+                 mot.send("REL A1 100 g"+ mot.EOL)
+                 cam.capture_and_save(exposure = 0.001,filename = nom  +str(x1)+"_"+str(y1),filetype="FITS")
+                 img = imp(nom+str(x1)+"_"+str(y1))
+                 fftcimg = fft_2(img,1,1,1)
+                 (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
         while (x1>posx_1) : 
-             mot.send("REL A1 "-100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
-    if (y1!==posy_1) : 
-        mot.select(A1,2)
+            #ok = input()
+            #if (ok) :
+                mot.send("REL A1 -100 g" + mot.EOL)
+                cam.capture_and_save(exposure = 0.001,filename = nom + str(x1)+"_"+str(y1),filetype="FITS")
+                img = imp(nom+str(x1)+"_"+str(y1))
+                fftcimg = fft_2(img,1,1,1)
+                (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+    if (y1 != posy_1) : 
+        mot.select("A1",2)
         while ( y1<posy_1):
-             mot.send("REL A1 "100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+             #ok = input()
+             #if (ok) :
+                 mot.send("REL A1 100 g" + mot.EOL)
+                 cam.capture_and_save(exposure = 0.001,filename = nom + str(x1)+"_"+str(y1),filetype="FITS")
+                 img = imp(nom+str(x1)+"_"+str(y1))
+                 fftcimg = fft_2(img,1,1,1)
+                 (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
         while (y1>posy_1) : 
-             mot.send("REL A1 "-100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
-
+              #ok = input()
+              #if (ok) :
+                  mot.send("REL A1 -100 g" + mot.EOL)
+                  cam.capture_and_save(exposure = 0.001,filename = nom + str(x1)+"_"+str(y1),filetype="FITS")
+                  img = imp(nom+str(x1)+"_"+str(y1))
+                  fftcimg = fft_2(img,1,1,1)
+                  (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+    
+    cam.capture_and_save(exposure = 0.001,filename = nom ,filetype="FITS")
 #--------------------------------------------------------------------------------
-#i = 35
-#alpha = 35
-#pico_frange(i,alpha,"test01recherchefrange")
 
+i = 35
+alpha = 45
+u = 960
+v = 1280
+#pico_frange(i,alpha,"test01recherchefrange_35-35")
+(posx_1,posy_1) = pos_fft(i,alpha,u,v)
+print(posx_1,posy_1)

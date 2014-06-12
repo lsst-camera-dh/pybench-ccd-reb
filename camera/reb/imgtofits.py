@@ -24,9 +24,9 @@ imgpath = "/home/lsst/test_images/"
 
 def extract_chan(num, in_arr):
     length = h * w
-        out_arr = in_arr[0:length,num]
-        out_arr = out_arr.reshape(h, w)
-        return out_arr
+    out_arr = in_arr[0:length,num]
+    out_arr = out_arr.reshape(h, w)
+    return out_arr
 
 def open_img(fp):
     dt = np.dtype('i4')

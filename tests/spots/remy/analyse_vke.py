@@ -20,12 +20,12 @@ fichiers = gl.glob("./vke_beta/*fits")
 fichiers = sorted(fichiers)
 
 data = []
-position = []
+pos = []
 
 for i in fichiers[:-1]:
     temp = py.open(i)
     data.append(temp[0].data)
-    position.append(temp[0].header['ZPOS'])
+    pos.append(temp[0].header['ZPOS'])
 
 max_i = np.where(data[0]==np.max(data[0]))
 max_i = [max_i[0][0] - 3, max_i[1][0]] #Pixel voision du pixel central
