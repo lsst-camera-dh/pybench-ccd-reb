@@ -33,6 +33,12 @@ def generate_tag(number):
     return tag
 
 
+def dict_to_fitshdu(dictheader, fitshdu):
+    fitsheader = fitshdu.header
+    for keyword in dictheader:
+        fitsheader[keyword] = dictheader[keyword]
+
+
 class Bench(object):
     """
     Internal representation of the full bench
@@ -44,14 +50,20 @@ class Bench(object):
     slitsize = 30
     reb_id = 2
     setvoltbss = 40
-    imgtag = 0
-    imglines = 2020  # need to take these from XML instead
-    imgcols = 550
     nchannels = 16
+    imgtag = 0
+    xmlfile = "sequencer-soi.xml"
+    # The following should come from the XML file instead
+    imglines = 2020
+    imgcols = 550
+    detsize = '[0:4400,0:4040]'
+    exposurereg = 0x300006 # depends on XML loading, tbc
+    testtype = "Test"
 
     def __init__(self):
         self.reb = reb.REB(reb_id=self.reb_id)
-        self.seq = self.reb.Sequencer.fromxmlfile("sequencer-soi.xml")
+        self.seq = self.reb.Sequencer.fromxmlfile(self.xmlfile)
+        self.primeheader = self.xmlfile
         self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
         self.bss.connect()
         # implementation with remote control
@@ -264,15 +276,55 @@ class Bench(object):
         self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())
         # TODO: power supply currents and voltages
 
-        #need to add image format header, instruments header, optional sequencer header
+        #need to add instruments header, optional sequencer header
+        self.primeheader["WIDTH"] = self.imgcols
+        self.primeheader["HEIGHT"] = self.imglines
+        self.primeheader["DETSIZE"] = self.detsize
+        self.primeheader["TESTTYPE"] = self.testtype
         try:
             wavelength = self.triax.getWavelength()
         except:
             wavelength = 0.0
         self.primeheader["MONOWL"] = wavelength
+
         self.testheader["MONOWL"] = wavelength
 
-    def execute_sequence(self, name, waittime=15, number=1):
+    def get_extension_header(self, REBchannel, fitshdu, borders = False):
+        """
+        Builds FITS extension header with position information for each channel
+        :param REBchannel:
+        :return:
+        """
+        extheader = fitshdu.header
+        extheader["NAXIS1"] = self.imgcols
+        extheader["NAXIS2"] = self.imglines
+
+        if borders == False:
+            parstringlow = '1:2002'
+            parstringhigh = '4004:2003'
+            colwidth = 512
+            extheader['DETSIZE'] = '[1:4096,1:4004]'
+            extheader['DATASEC'] = '[11:522,1:2002]'
+        else :
+            parstringlow = '1:2020'
+            parstringhigh = '4040:2021'
+            colwidth = self.imgcols
+            extheader['DETSIZE'] = self.detsize
+            extheader['DATASEC'] = '[1:550,1:2020]'
+
+        if REBchannel<self.nchannels/2:
+            pdet = parstringlow
+            si = colwidth*(REBchannel+1)
+            sf = colwidth*REBchannel+1
+        else :
+            pdet = parstringhigh
+            si = colwidth*(self.nchannels-REBchannel)+1
+            sf = colwidth*(self.nchannels-REBchannel+1)
+
+        extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
+
+
+    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
             :param self:
@@ -284,18 +336,30 @@ class Bench(object):
         # Wait until sequencer is finished with current sequence
         self.wait_end_sequencer()
 
+        # load new exposure time here (better: with XML parameter ?)
+        self.reb.fpga.write(self.exposurereg, int(exposuretime * 1000))
+        self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
+
         if number > 1:
             self.reb.run_subroutine(name, repeat=number)
         else:
             self.reb.run_subroutine(name)
 
-        time.sleep(waittime)
+        time.sleep(exposuretime + waittime)
 
         # check for output image
         #getting tag from FPGA registers
         hextag = self.reb.fpga.get_time()
         imgname = '0x%016x.img' % hextag
         if os.path.isfile(imgname):
+            self.get_headers()
+
+            if name == "Bias":
+                self.primeheader["SHUT_DEL"] = 0
+            else:
+                self.primeheader["SHUT_DEL"] = 100
+            self.primeheader["IMGTYPE"] = name
+            self.primeheader["EXPTIME"] = exposuretime
             self.save_to_fits(imgname)
             self.imgtag = self.imgtag + 1
             hextag = generate_tag(self.imgtag)
@@ -312,36 +376,50 @@ class Bench(object):
         """
         Turns img file from imageClient into FITS file.
         """
+        # Reading raw file to array
         dt = np.dtype('i4')
         buff = np.fromfile(imgname, dtype=dt)
-        #negative numbers still need to be translated
+        # negative numbers still need to be translated
         buffer = np.vectorize(lambda i: i - 0x40000 if i & (1 << 17) else i )(buff)
-        #reshape by channel
+        # reshape by channel
         length = self.imglines * self.imgcols
         buffer = buffer.reshape(length, self.nchannels)
 
-
+        # Creating FITS HDUs
         primaryhdu = pyfits.PrimaryHDU()
-        # stuff here
+        self.primeheader["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        # more keywords ?
+        dict_to_fitshdu(self.primeheader, primaryhdu)
+        # also need info from 'localheader.txt'
+        localheader = pyfits.Header.fromtextfile("/home/lsst/ccd_scripts/headers/localheader.txt")
+        primaryhdu.header.update(localheader)
+
+        # Channels HDUs
         hdulist = pyfits.HDUList([primaryhdu])
         for num in range(self.nchannels):
-            chan = extract_chan(num, out)
-
+            chan = buffer[0:length,num]
+            chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
-
             #creates extension to fits file
-            exthdu = create_image_extension(y, headerpath+"fitsextensionheader.txt", num)
+            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)
+            self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
+        # More header HDUs
+        #hdulist.append()
 
+        # Sequencer dump
+
+        # Writing file
+        # TODO: compression
         datedir = "/home/lsst/test_frames/"+ date.today().strftime('%Y%m%d')
         if not os.path.isdir(datedir):
             #creates directory for that date
             os.mkdir(datedir)
-        fitsname = os.path.join(datedir,os.path.splitext(imgname))+'.fits'
+        fitsname = os.path.join(datedir,os.path.splitext(imgname))+'.fits' # TODO: names with test types
         hdulist.writeto(fitsname, clobber=True)
 
-        print "Written file "+fitsname
+        print("Wrote FITS file "+fitsname)
 
 if __name__ == '__main__':
 
