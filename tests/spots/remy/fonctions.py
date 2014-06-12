@@ -22,9 +22,9 @@ test_expo = 0.5
 def INIT_MOV():
     mov = xyz.XYZ()
 
-    mov.x_port = '/dev/ttyUSB0'
-    mov.y_port = '/dev/ttyUSB1'
-    mov.z_port = '/dev/ttyUSB2'
+    mov.x_port = '/dev/ttyUSB1'
+    mov.y_port = '/dev/ttyUSB2'
+    mov.z_port = '/dev/ttyUSB3'
 
     return mov
 
@@ -37,7 +37,7 @@ def MOVE_TO_DEFAULT(mov):
 
     mov.move(x=xpos,y=ypos,z=zpos)
 
-def CUT(data, hauteur = 25, largeur = 25):
+def CUT(data, hauteur = 10, largeur = 10):
     ''' Coupe l'image pour ne garder qu'une region autour du maximum
     @param data: tableau de donnees a analyser
     @param hauteur: nombre de pixels au dessus et en dessous du point max
