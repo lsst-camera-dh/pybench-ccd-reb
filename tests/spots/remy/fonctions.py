@@ -1,4 +1,5 @@
-# Fonctions pour faire le focus et manipuler des images
+# Fonctions pour faire le focus et manipuler des images, prise de donnees et analyses
+
 import sys
 import os, os.path
 import time
@@ -15,6 +16,8 @@ from math import *
 
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
+
+test_expo = 0.5
 
 def INIT_MOV():
     mov = xyz.XYZ()
@@ -64,7 +67,7 @@ def RATIO(pixel_central_flux, pixels_flux, nb_flux):
     
     return ratio
 
-def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.1, trou = "5micron", cut = "no"):
+def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron", cut = "no"):
     ''' Fait le focus pour un interval, un pas et un trou donne.
     Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
     @param mov: nom des moteurs
@@ -108,7 +111,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = 0.1, trou = "5micron", cut
 
     mov.move(dy=-interval)
 
-def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = 0.1, trou = "5micron", cut = "no"):
+def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, trou = "5micron", cut = "no"):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -255,7 +258,7 @@ def READ_RESULTS(fichier):
     plt.ylabel("Flux")
     plt.show()
 
-def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.1, cut = "no"):
     data = cam.capture(exposure = expo)
     
     data = np.array(data)
@@ -283,7 +286,9 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1,
         pixels_flux = PF(temp_data, max_i)
         pixel_central_flux = PCF(temp_data, max_i)
 
-def FOCUS_EQ_VERTICAL(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+    print "Fin de l'alignement horizontal"
+
+def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.1, cut = "no"):
     data = cam.capture(exposure = expo)
 
     data = np.array(data)
@@ -311,6 +316,8 @@ def FOCUS_EQ_VERTICAL(mov, cam, expo = 0.1, pas_raff = 0.0005, precision = 1.1, 
             pixels_flux = PF(temp_data, max_i)
             pixel_central_flux = PCF(temp_data, max_i)
 
+    print "Fin de l'egalisation verticale"
+
 def CHANGE_DEFAULT_POS(mov):
     print("Changer les positions par defaut du focus (yes = 1/no = 0) ? : ")
     suppr = input()
@@ -325,8 +332,8 @@ def CHANGE_DEFAULT_POS(mov):
         pos.write(str(mov.x_axis.get_position()) + " " + str(mov.y_axis.get_position()) + " " + str(mov.z_axis.get_position()))
         pos.close()
 
-def INIT_IMAGES(directory = "./focus/", filetype = "*.fits"):
-    fichiers = gl.glob(directory + filetype)
+def INIT_IMAGES():
+    fichiers = gl.glob("./focus/*fits")
     fichiers = sorted(fichiers)
 
     images = []
@@ -407,9 +414,16 @@ def analyse_vke(direc = "./vke_beta/*fits", pix1 = 3, pix2 = 4, axe = "z"):
         
     plt.scatter(pos[:len(flux)/2], flux[:len(flux)/2], marker = '+', color = 'b')
     plt.scatter(pos[:len(flux)/2], flux2[:len(flux)/2], marker = '+', color = 'r')
-    plt.scatter(pos[len(flux)/2:], flux[len(flux)/2:], marker = 'o', color = 'b')
-    plt.scatter(pos[len(flux)/2:], flux2[len(flux)/2:], marker = 'o', color = 'r')
+    plt.scatter(pos[len(flux)/2:], flux[len(flux)/2:], marker = '+', color = 'green')
+    plt.scatter(pos[len(flux)/2:], flux2[len(flux)/2:], marker = '+', color = 'violet')
     plt.xlabel("Position")
     plt.ylabel("Flux")
     plt.title("Step of " + pas)
     plt.show()
+
+
+def take(cam, expo= test_expo):
+    cam.capture_and_save(exposure = expo, filename = "take", filetype = "FITS")
+    
+    commande = "ds9 take.fits" 
+    os.system(commande)

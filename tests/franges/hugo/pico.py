@@ -71,14 +71,14 @@ def imp(nom) :
     img = f[0].data
     return img
 #------------------------------------------------
-fonction ouverture de la camera : 
+#fonction ouverture de la camera : 
 def cam():
     camera = d.Camera()
     camera.open()
     return camera
 #-----------------------------------------------
 #fonction donnant position en x et y des pics dans fft connaissant interfrange et orientation
-#alpha en deg et entre 0 et 90 °
+#alpha en deg et entre 0 et 90 
 def pos_fft(i,alpha,u,v) :
     alpha = np.radians(alpha)
     posx_1 = (u*v)/(i*m.cos(alpha)*(u+v))
@@ -87,7 +87,7 @@ def pos_fft(i,alpha,u,v) :
 #------------------------------------------------
 #fonction ouverture moteur
 def mot_open():
-    mot = pico.picomotor()
+    mot = pico.picomotor(host="134.158.154.199")
     mot.open()
     return mot
 #------------------------------------------------
@@ -98,42 +98,50 @@ def pico_frange(i,alpha,nom) :
     u = 960
     v = 1280
     (posx_1,posy_1) = pos_fft(i,alpha,u,v)
-    mot.select(A1,0)
-    mot.send("REL A1 "500*posx_1"g" mot.EOL)
-    mot.select(A1,2)
-    mot.send("REL A2 "500*posy_1"g" mot.EOL)
+    mot.select("A1",0)
+    mot.send("REL A1 " + str(500*posx_1) + " g" + mot.EOL)
+    mot.select("A1",2)
+    mot.send("REL A2 " + str(500*posy_1) + " g" + mot.EOL)
     cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
     img = imp(nom)
     fftcimg = fft_2(L,1,1,1)
     (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
-    if (x1!==posx_1) :
-        mot.select(A1,0)
+    if (x1 != posx_1) :
+        mot.select("A1",0)
         while ( x1<posx_1):
-             mot.send("REL A1 "100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+             ok = input()
+             if (ok) :
+                 mot.send("REL A1 100 g"+ mot.EOL)
+                 cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
+                 img = imp(nom)
+                 fftcimg = fft_2(L,1,1,1)
+                 (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
         while (x1>posx_1) : 
-             mot.send("REL A1 "-100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
-    if (y1!==posy_1) : 
-        mot.select(A1,2)
+            ok = input()
+            if (ok) :
+                mot.send("REL A1 -100 g" + mot.EOL)
+                cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
+                img = imp(nom)
+                fftcimg = fft_2(L,1,1,1)
+                (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+    if (y1 != posy_1) : 
+        mot.select("A1",2)
         while ( y1<posy_1):
-             mot.send("REL A1 "100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+             ok = input()
+             if (ok) :
+                 mot.send("REL A1 100 g" + mot.EOL)
+                 cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
+                 img = imp(nom)
+                 fftcimg = fft_2(L,1,1,1)
+                 (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
         while (y1>posy_1) : 
-             mot.send("REL A1 "-100"g" mot.EOL)
-             cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
-             img = imp(nom)
-             fftcimg = fft_2(L,1,1,1)
-             (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
+              ok = input()
+              if (ok) :
+                  mot.send("REL A1 -100 g" + mot.EOL)
+                  cam.capture_and_save(exposure = 0.001,filename = nom,filetype="FITS")
+                  img = imp(nom)
+                  fftcimg = fft_2(L,1,1,1)
+                  (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
 
 #--------------------------------------------------------------------------------
 #i = 35
