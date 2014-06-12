@@ -385,7 +385,8 @@ class Bench(object):
         length = self.imglines * self.imgcols
         buffer = buffer.reshape(length, self.nchannels)
 
-        # Creating FITS HDUs
+        # Creating FITS HDUs:
+        # Create empty primary HDU and fills header
         primaryhdu = pyfits.PrimaryHDU()
         self.primeheader["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
         # more keywords ?
@@ -393,9 +394,10 @@ class Bench(object):
         # also need info from 'localheader.txt'
         localheader = pyfits.Header.fromtextfile("/home/lsst/ccd_scripts/headers/localheader.txt")
         primaryhdu.header.update(localheader)
-
-        # Channels HDUs
+        # Create HDU list
         hdulist = pyfits.HDUList([primaryhdu])
+
+        # Add extension for channels HDUs
         for num in range(self.nchannels):
             chan = buffer[0:length,num]
             chan = chan.reshape(self.imglines, self.imgcols)
@@ -406,9 +408,15 @@ class Bench(object):
             hdulist.append(exthdu)
 
         # More header HDUs
-        #hdulist.append()
+        exthdu = pyfits.BinTableHDU(name="TEST_COND")
+        dict_to_fitshdu(self.testheader,exthdu)
+        hdulist.append(exthdu)
+        exthdu = pyfits.BinTableHDU(name="CCD_COND")
+        dict_to_fitshdu(self.opheader,exthdu)
+        hdulist.append(exthdu)
 
         # Sequencer dump
+        #exthdu = pyfits.TableHDU(name="SEQ_DUMP")
 
         # Writing file
         # TODO: compression
