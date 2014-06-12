@@ -19,7 +19,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 # --------------------------------------------------------------------------
 DEFAULT_HOSTNAME = "localhost"
-DEFAULT_PORT     = 8001
+DEFAULT_PORT     = 8010
 # --------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -298,6 +298,16 @@ server.register_function(fail,                "fail")
 
 # misc 
 server.register_function(server_quit,         "quit")
+
+# introspection
+
+def listmethods():
+    return ['led_on','led_off']
+
+server.register_function(listmethods,         "__dir__")
+server.register_function(listmethods,         "system.listMethods")
+
+# Launch the server
 server.serve_forever()
 
 # --------------------------------------------------------------------------
