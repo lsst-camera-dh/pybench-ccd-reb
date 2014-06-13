@@ -181,7 +181,12 @@ class XMLParser(object):
                 if unit == 'ns':
                     duration /= 10.0  # TODO: improve this
 
-                timelengths[islice] = int(duration)
+                if islice == 0:
+                    timelengths[islice] = int(duration)-1  # FPGA adds one to duration of first slice
+                elif islice == len(func.xpath('slicelist/timeslice'))-1:
+                    timelengths[islice] = int(duration)-2  # FPGA adds 2 to duration of last slice
+                else:
+                    timelengths[islice] = int(duration)
 
                 output = 0x0000000000000000
 

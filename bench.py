@@ -141,7 +141,7 @@ class Bench(object):
         #starts Keithley backsubstrate voltage
         self.config_bss(self.setvoltbss)
         self.bss.setVoltageOperate(1)
-        while abs(self.bss.getVoltage() - setvolt) > 0.1:
+        while abs(self.bss.getVoltage() - self.setvoltbss) > 0.1:
             time.sleep(1)
 
         print("Start-up sequence complete")
@@ -288,6 +288,7 @@ class Bench(object):
         self.primeheader["MONOWL"] = wavelength
 
         self.testheader["MONOWL"] = wavelength
+        #TODO: temperature
 
     def get_extension_header(self, REBchannel, fitshdu, borders = False):
         """
@@ -416,7 +417,9 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Sequencer dump
-        #exthdu = pyfits.TableHDU(name="SEQ_DUMP")
+        #slicenum = pyfits.Column(name="Slice", format='A2', array=)
+        #exthdu = pyfits.new_table([slicenum, output, duration], tbtype='TableHDU')
+        #hdulist.append(exthdu)
 
         # Writing file
         # TODO: compression

@@ -710,7 +710,7 @@ class FPGA(object):
                     (self.reb_id, address, value) )
 
         if fake:
-            print >>sys.stderr, remote_command
+            print >>sys.stderr, command
             return
 
         if self.ctrl_host == None:
@@ -1077,11 +1077,11 @@ class FPGA(object):
         fitsheader = {}
         for key in iter(self.dacs):
             if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                fitsheader[key]= "{:.2f}".format(dacs[key]*self.serial_conv)
+                fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
             elif key in ["V_PL", "V_PH"]:
-                fitsheader[key]= "{:.2f}".format(dacs[key]*self.parallel_conv)
+                fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
             else:
-                fitsheader[key]= "{:d}".format(dacs[key])
+                fitsheader[key]= "{:d}".format(self.dacs[key])
 
         return fitsheader
 
@@ -1114,7 +1114,7 @@ class FPGA(object):
         
         key = "I_OS"
     
-        return {key: dacs[key]}
+        return {key: self.dacs[key]}
 
     # ----------------------------------------------------------
 
