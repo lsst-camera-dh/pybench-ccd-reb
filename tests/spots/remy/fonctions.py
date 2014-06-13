@@ -104,12 +104,12 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
     
     borne = int(interval/pas)
 
-    if auto = 1:
+    if auto = 0:
         print("Attention : voulez vous supprimer le contenu de ./focus (yes = 1/no = 0) ? : ")
         suppr = input()
 
         if suppr == 1:
-            commande = "rm -f ./focus/*.fits"
+            commande = "rm -f -r ./focus/*"
             os.system(commande)
 
     mov.move(dy=-interval)
@@ -144,7 +144,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
 
     return temps_debut
 
-def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
+def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1, auto = 1):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -167,12 +167,13 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
 
     borne = int(interval/pas)
 
-    print("Attention : voulez vous supprimer le contenu de ./vke_beta (yes = 1/no = 0) ? : ")
-    suppr = input()
+    if auto = 0:
+        print("Attention : voulez vous supprimer le contenu de ./vke_beta (yes = 1/no = 0) ? : ")
+        suppr = input()
 
-    if suppr == 1:
-        commande = "rm -f ./vke_beta/*.fits"
-        os.system(commande)
+        if suppr == 1:
+            commande = "rm -f -r ./vke_beta/*"
+            os.system(commande)
 
     if axe == "z":
         for i in range(0,borne):
