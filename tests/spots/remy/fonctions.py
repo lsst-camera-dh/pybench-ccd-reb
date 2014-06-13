@@ -82,7 +82,7 @@ def RATIO(pixel_central_flux, pixels_flux, nb_flux):
     
     return ratio
 
-def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron", cut = "no"):
+def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron", cut = "no", auto = 1):
     ''' Fait le focus pour un interval, un pas et un trou donne.
     Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
     @param mov: nom des moteurs
@@ -92,14 +92,24 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
     @param trou: trou de travail
     @param expo: temps d'exposition desire
     '''
+
+    temps_debut = str(time.time())
+    doss = "mkdir ./focus/" + temps_debut
+    os.system(doss)
+    
+    date = open("./focus/" + temps_debut + "/" + str(time.time()) + ".start" , mode = "w")
+    date.write(str(time.ctime())) 
+    date.close()
+    
     borne = int(interval/pas)
 
-    print("Attention : voulez vous supprimer le contenu de ./focus (yes = 1/no = 0) ? : ")
-    suppr = input()
+    if auto = 1:
+        print("Attention : voulez vous supprimer le contenu de ./focus (yes = 1/no = 0) ? : ")
+        suppr = input()
 
-    if suppr == 1:
-        commande = "rm -f ./focus/*.fits"
-        os.system(commande)
+        if suppr == 1:
+            commande = "rm -f ./focus/*.fits"
+            os.system(commande)
 
     mov.move(dy=-interval)
     
@@ -112,7 +122,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
         h = py.Header()
         
         mov.move(dy=pas)
-        name = "./focus/" + str(time.time()) + "_" + trou 
+        name = "./focus/" + str(time.time()) + "_" + trou + "_" + str(pas) + "_" + str(interval) + "_" + str(expo)
         img = cam.capture(exposure = expo)
         
         img = np.array(img)
@@ -129,7 +139,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
         h.update('pos_pix_max_col', b)
         py.writeto(name + ".fits", img, header = h, clobber=True)
 
-    mov.move(dy=-interval)
+    mov.move(dy=-interval) 
 
 def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
