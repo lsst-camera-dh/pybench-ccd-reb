@@ -131,7 +131,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
 
     mov.move(dy=-interval)
 
-def VKE(mov, cam, interval = 0.05, pas = 0.0002, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
+def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera

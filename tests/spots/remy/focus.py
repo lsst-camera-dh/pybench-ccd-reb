@@ -20,7 +20,7 @@ from math import *
 import lsst.testbench.pollux.xyz as xyz
 import lsst.testbench.dmk41au02as as d
 
-opt_cut = "yes"
+opt_cut = "no"
 
 #----Initialisation moteurs et camera----------------------------
 
@@ -32,12 +32,19 @@ cam.open()
 
 #-----Revient a une position par defaut, apres avoir fait un home
 
+position_depart = mov.get_position()
+
+print position_depart
+print "\n"
 print "Rechercher les limites et faire un home ? (yes = 1 / no = 0) : "
 make_home = input()
 if make_home = 1:
     mov.home()
 
-MOVE_TO_DEFAULT(mov)
+print "Aller aux coordonnees par default ? (yes = 1 / no = 0) : "
+make_default = input()
+if make_default = 1:
+    MOVE_TO_DEFAULT(mov)
 
 #-----Premiere etape du focus: minimisation de la taille du spot
 FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001, cut = opt_cut)
