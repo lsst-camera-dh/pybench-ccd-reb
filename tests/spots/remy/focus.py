@@ -47,8 +47,8 @@ if make_default = 1:
     MOVE_TO_DEFAULT(mov)
 
 #-----Premiere etape du focus: minimisation de la taille du spot
-FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001, cut = opt_cut)
-images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES()
+foc = FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001, cut = opt_cut)
+images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES(foc)
 
 print mov.get_position()
 
@@ -85,8 +85,8 @@ mov.move(dz=-0.001) #Verifier le sens
 #On minimise le flux dans le pixel au dessus de celui max, et on retourne a la position
 print mov.get_position()
 
-FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001, cut = opt_cut)
-images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES()
+foc_raff = FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001, cut = opt_cut)
+images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES(foc_raff)
 
 print mov.get_position()
 

@@ -94,10 +94,11 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
     '''
 
     temps_debut = str(time.time())
-    doss = "mkdir ./focus/" + temps_debut
+    dossier = "./focus/" + temps_debut
+    doss = "mkdir " + dossier
     os.system(doss)
     
-    date = open("./focus/" + temps_debut + "/" + str(time.time()) + ".start" , mode = "w")
+    date = open(dossier + "/" + str(time.time()) + ".start" , mode = "w")
     date.write(str(time.ctime())) 
     date.close()
     
@@ -122,7 +123,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
         h = py.Header()
         
         mov.move(dy=pas)
-        name = "./focus/" + str(time.time()) + "_" + trou + "_" + str(pas) + "_" + str(interval) + "_" + str(expo)
+        name = dossier + "/" + str(time.time()) + "_" + trou + "_" + str(pas) + "_" + str(interval) + "_" + str(expo)
         img = cam.capture(exposure = expo)
         
         img = np.array(img)
@@ -141,6 +142,8 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
 
     mov.move(dy=-interval) 
 
+    return temps_debut
+
 def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
@@ -152,6 +155,16 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
     @param expo: temps d'exposition desire en seconde
     @param signe: pour le sens de deplacement
     '''
+    
+    temps_debut = str(time.time())
+    dossier = "./vke_beta/" + temps_debut
+    doss = "mkdir " + dossier
+    os.system(doss)
+
+    date = open(dossier + "/" + str(time.time()) + ".start" , mode = "w")
+    date.write(str(time.ctime())) 
+    date.close()
+
     borne = int(interval/pas)
 
     print("Attention : voulez vous supprimer le contenu de ./vke_beta (yes = 1/no = 0) ? : ")
@@ -170,7 +183,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
 
-            name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
+            name = dossier + "/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             mov.move(dz=signe*pas)
 
@@ -189,7 +202,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             
             mov.move(dz=-pas*signe)
             
-            name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
+            name = dossier + "/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             
             h.update('xpos', XPOS)
@@ -206,7 +219,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
             
-            name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
+            name = dossier + "/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             
             mov.move(dx=pas*signe)
@@ -226,13 +239,15 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             
             mov.move(dx=-pas*signe)
             
-            name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
+            name = dossier + "/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
             py.writeto(name + ".fits", img, header = h, clobber=True)
+
+    return temps_debut
 
 def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_5micron", pose = "_0.1s", ext = ".res"):
     '''
@@ -335,8 +350,8 @@ def CHANGE_DEFAULT_POS(mov):
         pos.write(str(mov.x_axis.get_position()) + " " + str(mov.y_axis.get_position()) + " " + str(mov.z_axis.get_position()))
         pos.close()
 
-def INIT_IMAGES():
-    fichiers = gl.glob("./focus/*fits")
+def INIT_IMAGES(temps):
+    fichiers = gl.glob("./focus/" + str(temps) "/*fits")
     fichiers = sorted(fichiers)
 
     images = []
@@ -371,8 +386,9 @@ def INIT_IMAGES():
         
     return images, donnees, maxima, sums, ratios, ratios_pix_sup_raff
 
-def analyse_vke(direc = "./vke_beta/*fits", pix1 = 3, pix2 = 4, axe = "z"):
+def analyse_vke(temps, pix1 = 3, pix2 = 4, axe = "z"):
     
+    direc = "./vke_beta/" + str(temps) + "/*fits"
     fichiers = gl.glob(direc)
     fichiers = sorted(fichiers)
 
@@ -388,11 +404,19 @@ def analyse_vke(direc = "./vke_beta/*fits", pix1 = 3, pix2 = 4, axe = "z"):
         y_pos.append(temp[0].header['YPOS'])
         z_pos.append(temp[0].header['ZPOS'])
 
-    max_i = np.where(data[0]==np.max(data[0]))
-    max_i = [max_i[0][0] - pix1, max_i[1][0]] #Pixel voision du pixel central
+    if axe = "z":
+        max_i = np.where(data[0]==np.max(data[0]))
+        max_i = [max_i[0][0] - pix1, max_i[1][0]] #Pixel voision du pixel central
+        
+        max_i2 = np.where(data[0]==np.max(data[0]))
+        max_i2 = [max_i2[0][0] - pix2, max_i2[1][0]]
 
-    max_i2 = np.where(data[0]==np.max(data[0]))
-    max_i2 = [max_i2[0][0] - pix2, max_i2[1][0]]
+    elif axe = "x":
+        max_i = np.where(data[0]==np.max(data[0]))
+        max_i = [max_i[0][0], max_i[1][0] + pix1] #Pixel voision du pixel central
+        
+        max_i2 = np.where(data[0]==np.max(data[0]))
+        max_i2 = [max_i2[0][0], max_i2[1][0] + pix2]
 
     flux = []
     flux2 = []
@@ -423,6 +447,8 @@ def analyse_vke(direc = "./vke_beta/*fits", pix1 = 3, pix2 = 4, axe = "z"):
     plt.ylabel("Flux")
     plt.title("Step of " + pas)
     plt.show()
+
+    return pos, flux, flux2
 
 
 def take(cam, expo= test_expo):
