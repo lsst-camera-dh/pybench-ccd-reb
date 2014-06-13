@@ -37,7 +37,7 @@ def MOVE_TO_DEFAULT(mov):
 
     mov.move(x=xpos,y=ypos,z=zpos)
 
-def CUT(data, hauteur = 10, largeur = 10):
+def CUT(data, hauteur = 50, largeur = 50):
     ''' Coupe l'image pour ne garder qu'une region autour du maximum
     @param data: tableau de donnees a analyser
     @param hauteur: nombre de pixels au dessus et en dessous du point max
@@ -49,6 +49,21 @@ def CUT(data, hauteur = 10, largeur = 10):
     a, b = [temp_max[0][0], temp_max[1][0]]
     
     cuts = data[a - largeur:a + largeur, b - hauteur:b + hauteur]
+
+    return cuts
+
+def CUTS(data, hauteur = 50, largeur = 50):
+    ''' Coupe plusieurs image autour du centre de la première.                                             
+    @param data: tableau de donnees a analyser                                                                   
+    @param hauteur: nombre de pixels au dessus et en dessous du point max                                        
+    @param largeur: nombre de pixels a gauche et a droite du pixel max                                          
+    '''
+
+    temp_max = np.where(data[0]==np.max(data[0]))
+    a, b = [temp_max[0][0], temp_max[1][0]]
+
+    for d in data:
+        cuts.append(d[a - largeur:a + largeur, b - hauteur:b + hauteur])
 
     return cuts
 
@@ -116,15 +131,16 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
 
     mov.move(dy=-interval)
 
-def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, trou = "5micron", cut = "no"):
+def VKE(mov, cam, interval = 0.05, pas = 0.0002, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
     @param interval: distance sur laquelle faire l'aller et le retour en mm
     @param pas: division de l'interval de travail, doit etre inferieur a interval en mm
-    @param sens: horizontal (x) ou vertical (z)
+    @param axe: horizontal (x) ou vertical (z)
     @param trou: trou de travail
     @param expo: temps d'exposition desire en seconde
+    @param signe: pour le sens de deplacement
     '''
     borne = int(interval/pas)
 
@@ -135,7 +151,7 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, t
         commande = "rm -f ./vke_beta/*.fits"
         os.system(commande)
 
-    if sens == "z":
+    if axe == "z":
         for i in range(0,borne):
 
             h = py.Header()
@@ -146,11 +162,7 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, t
 
             name = "./vke_beta/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
-            mov.move(dz=pas)
-            
-            img = np.array(img)
-            if cut == "yes":
-                img = CUT(img)
+            mov.move(dz=signe*pas)
 
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
@@ -165,21 +177,17 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, t
             YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
             
-            mov.move(dz=-pas)
+            mov.move(dz=-pas*signe)
             
             name = "./vke_beta/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
-
-            img = np.array(img)
-            if cut == "yes":
-                img = CUT(img)
             
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
             py.writeto(name + ".fits", img, header = h, clobber=True)
     
-    elif sens == "x":
+    elif axe == "x":
         for i in range(0,borne):
  
             h = py.Header()
@@ -191,11 +199,7 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, t
             name = "./vke_beta/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
             
-            mov.move(dx=pas)
-
-            img = np.array(img)
-            if cut == "yes":
-                img = CUT(img)
+            mov.move(dx=pas*signe)
             
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
@@ -210,14 +214,10 @@ def VKE(mov, cam, interval = 0.05, pas = 0.0002, sens = "z", expo = test_expo, t
             YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
             
-            mov.move(dx=-pas)
+            mov.move(dx=-pas*signe)
             
             name = "./vke_beta/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
             img = cam.capture(exposure = expo)
-            
-            img = np.array(img)
-            if cut == "yes":
-                img = CUT(img)
             
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
@@ -265,10 +265,6 @@ def READ_RESULTS(fichier):
 
 def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.1, cut = "no"):
     data = cam.capture(exposure = expo)
-    
-    data = np.array(data)
-    if cut == "yes":
-        data = CUT(data)
 
     temp_max = np.where(data==np.max(data))
     max_i = [temp_max[0][0], temp_max[1][0]]
@@ -284,9 +280,6 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision 
             
         temp_data = cam.capture(exposure = expo)
         temp_data = np.array(temp_data)
-        if cut == "yes":
-            temp_data = CUT(temp_data)
-
 
         pixels_flux = PF(temp_data, max_i)
         pixel_central_flux = PCF(temp_data, max_i)
@@ -297,8 +290,6 @@ def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision =
     data = cam.capture(exposure = expo)
 
     data = np.array(data)
-    if cut == "yes":
-        data = CUT(data)
 
     temp_max = np.where(data==np.max(data))
     max_i = [temp_max[0][0], temp_max[1][0]]
@@ -314,9 +305,6 @@ def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision =
    
             temp_data = cam.capture(exposure = expo)
             temp_data = np.array(temp_data)
-
-            if cut == "yes":
-                temp_data = CUT(temp_data)
             
             pixels_flux = PF(temp_data, max_i)
             pixel_central_flux = PCF(temp_data, max_i)
