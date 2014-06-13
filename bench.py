@@ -11,6 +11,7 @@ import subprocess
 import xmlrpclib
 import reb
 import fpga
+import xml
 import numpy as np
 import pyfits
 
@@ -29,7 +30,7 @@ def wait_for_action(action):
 def generate_tag(number):
     today = date.today()
     tagstr = today.strftime('%Y%m%d')+'%05d' % number
-    tag = hex(int(tagstr,16))
+    tag = int(tagstr,16)
     return tag
 
 
@@ -52,27 +53,29 @@ class Bench(object):
     setvoltbss = 40
     nchannels = 16
     imgtag = 0
-    xmlfile = "sequencer-soi.xml"
+    xmlfile = "camera/reb/sequencer-soi.xml"
     # The following should come from the XML file instead
     imglines = 2020
     imgcols = 550
     detsize = '[0:4400,0:4040]'
-    exposurereg = 0x300006 # depends on XML loading, tbc
+    exposureadd = 0x3000d0 # depends on XML loading, tbc
+    exposurereg = 0x16000000 # call to exposure function
     testtype = "Test"
 
     def __init__(self):
         self.reb = reb.REB(reb_id=self.reb_id)
-        self.seq = self.reb.Sequencer.fromxmlfile(self.xmlfile)
-        self.primeheader = self.xmlfile
-        self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
+        self.seq = xml.fromxmlfile(self.xmlfile)
+        self.primeheader["CTRLCFG"] = self.xmlfile
+        self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")# wrong
         self.bss.connect()
-        # implementation with remote control
-        # other instruments: create object here, does not connect
-        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:")
-        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")
-        self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")
-        self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")# TBC
-        self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")
+	self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # OK
+        self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")  # OK
+	self.ttl.connect()
+        # light sources: create objects here, does not try to connect
+        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:")  # TBC
+        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")  # TBC
+        self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")  # OK
+        self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")  # TBC
 
     def REBpowerup(self):
         """
@@ -91,7 +94,7 @@ class Bench(object):
         self.CCDshutdown()
 
         print("REB ready to connect to CCD")
-        subprocess.Popen("imageClient %d" % reb_id, shell=True)
+        #subprocess.Popen("imageClient %d" % self.reb_id, shell=True)  # hijacks the ipython shell
 
     def CCDpowerup(self):
         """
@@ -99,7 +102,7 @@ class Bench(object):
         """
 
         #sets the default sequencer clock states to 0
-        self.reb.load_function(0, fpga.Function(name="default state",
+        self.reb.send_function(0, fpga.Function(name="default state",
                                                 timelengths={0: 2, 1: 0},
                                                 outputs={0: 0, 1: 0}))
 
@@ -132,7 +135,7 @@ class Bench(object):
         self.reb.set_dacs(dacOS)
 
         #rewrite default state of sequencer (to avoid reloading functions)
-        self.reb.load_function(0, fpga.Function(name="default state",
+        self.reb.send_function(0, fpga.Function(name="default state",
                                                 timelengths={0: 2, 1: 0},
                                                 outputs={0: 0x6bc, 1: 0}))
 
@@ -164,7 +167,7 @@ class Bench(object):
         time.sleep(1)
 
         #clock states to 0
-        self.reb.load_function(0, fpga.Function(name="default state",
+        self.reb.send_function(0, fpga.Function(name="default state",
                                                 timelengths={0: 2, 1: 0},
                                                 outputs={0: 0, 1: 0}))
         #currents on CABAC clocks to 0
@@ -183,6 +186,9 @@ class Bench(object):
         self.reb.set_cabac_config({"OD": 0, "GD": 0, "RD": 0})
 
         print("CCD shutdown complete")
+
+    def bench_shutdown(self):
+	self.ttl.closeShutter()
 
     def config_bss(self, voltage=40):
         """
@@ -229,7 +235,7 @@ class Bench(object):
             else:
                 grating = 2
                 lines = 599  # TODO: check values
-            self.triax.setGrating(grating)  # TODO: check this is the right method
+            self.triax.setGrating(grating) 
             self.testheader["MONOPOS"] = grating
             self.testheader["MONOGRAT"] = lines
 
@@ -247,9 +253,13 @@ class Bench(object):
             self.laser.connect()
             # TODO: selects output based on wavelength
         elif sourcetype == "qth":
+            self.ttl.openShutter()
+            self.ttl.selectQTH()
             self.qth.connect()
             # TODO: start lamp here
         elif sourcetype == "xehg":
+            self.ttl.openShutter()
+            self.ttl.selectXeHg()
             self.xehg.connect()
             # TODO: start lamp here
         else:
@@ -263,6 +273,10 @@ class Bench(object):
             self.move_to_wavelength(wavelength, True)
             self.set_slit_size(self.slitsize)
         self.testheader["MONOTYPE"] = "Triax180"
+
+	self.multi.connect()
+	if self.multi.checkConnection() != '6514':
+		print("Incorrect connection to Keithley 6514 multimeter")
 
     def get_headers(self):
         """
@@ -338,7 +352,7 @@ class Bench(object):
         self.wait_end_sequencer()
 
         # load new exposure time here (better: with XML parameter ?)
-        self.reb.fpga.write(self.exposurereg, int(exposuretime * 1000))
+        self.reb.fpga.write(self.exposureadd, self.exposurereg + int(exposuretime * 1000))
         self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
 
         if number > 1:
@@ -427,7 +441,7 @@ class Bench(object):
         if not os.path.isdir(datedir):
             #creates directory for that date
             os.mkdir(datedir)
-        fitsname = os.path.join(datedir,os.path.splitext(imgname))+'.fits' # TODO: names with test types
+        fitsname = os.path.join(datedir,os.path.splitext(imgname)[0])+'.fits' # TODO: names with test types
         hdulist.writeto(fitsname, clobber=True)
 
         print("Wrote FITS file "+fitsname)
