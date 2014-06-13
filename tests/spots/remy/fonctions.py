@@ -22,9 +22,9 @@ test_expo = 0.5
 def INIT_MOV():
     mov = xyz.XYZ()
 
-    mov.x_port = '/dev/ttyUSB1'
-    mov.y_port = '/dev/ttyUSB2'
-    mov.z_port = '/dev/ttyUSB3'
+    mov.x_port = '/dev/ttyUSB9'
+    mov.y_port = '/dev/ttyUSB10'
+    mov.z_port = '/dev/ttyUSB11'
 
     return mov
 

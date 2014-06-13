@@ -44,5 +44,3 @@ for i in range(0,2):
     r.write("\n")
 
     r.close()
-
-# prendre une image
