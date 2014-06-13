@@ -6,10 +6,6 @@ import unicap
 import Image
 import numpy as np
 import pyfits as py
-import scipy.optimize as opt
-import pylab as pb
-import glob as gl
-import matplotlib.pyplot as plt
 
 from fonctions import *
 from math import *
@@ -43,4 +39,4 @@ for i in range(0,2):
     r.write(max_i[1])
     r.write("\n")
 
-    r.close()
+r.close()

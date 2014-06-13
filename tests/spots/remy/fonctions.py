@@ -183,7 +183,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
 
-            name = dossier + "/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
+            name = dossier + "/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             mov.move(dz=signe*pas)
 
@@ -202,7 +202,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             
             mov.move(dz=-pas*signe)
             
-            name = dossier + "/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm"
+            name = dossier + "/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             
             h.update('xpos', XPOS)
@@ -219,7 +219,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             YPOS = mov.y_axis.get_position()
             ZPOS = mov.z_axis.get_position()
             
-            name = dossier + "/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm"
+            name = dossier + "/aller_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou +  "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             
             mov.move(dx=pas*signe)
@@ -239,7 +239,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             
             mov.move(dx=-pas*signe)
             
-            name = dossier + "/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm"
+            name = dossier + "/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             
             h.update('xpos', XPOS)
