@@ -90,8 +90,6 @@ mov.move(y=POS_FOCUS_RAFF)
 
 print mov.get_position()
 
-VKE(mov=mov, cam=cam, pas = 0.0001)
-
 CHANGE_DEFAULT_POS(mov)
 
 

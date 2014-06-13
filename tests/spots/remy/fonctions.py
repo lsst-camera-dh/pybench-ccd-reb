@@ -101,12 +101,17 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
         img = cam.capture(exposure = expo)
         
         img = np.array(img)
+        temp_max = np.where(data==np.max(data))
+        a, b = [temp_max[0][0], temp_max[1][0]]
+        
         if cut == "yes":
             img = CUT(img)
 
         h.update('xpos', XPOS)
         h.update('ypos', YPOS)
         h.update('zpos', ZPOS)
+        h.update('pos_pix_max_row', a)
+        h.update('pos_pix_max_col', b)
         py.writeto(name + ".fits", img, header = h, clobber=True)
 
     mov.move(dy=-interval)
