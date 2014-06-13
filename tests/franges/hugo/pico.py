@@ -144,7 +144,7 @@ def pico_frange(i,alpha,nom) :
                   (maxi,x1,y1,x2,y2) = max_pos(fftcimg)
 
 #--------------------------------------------------------------------------------
-#i = 35
-#alpha = 35
-#pico_frange(i,alpha,"test01recherchefrange")
+i = 35
+alpha = 35
+pico_frange(i,alpha,"test01recherchefrange")
 
