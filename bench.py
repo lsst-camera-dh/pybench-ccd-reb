@@ -39,6 +39,38 @@ def dict_to_fitshdu(dictheader, fitshdu):
     for keyword in dictheader:
         fitsheader[keyword] = dictheader[keyword]
 
+def get_sequencer_hdu(fpga):
+    """
+    Builds table HDU for FITS file containing sequencer dump
+        :param seq:
+        :return:
+        """
+    prog = fpga.dump_program()
+    progaddr = prog.instructions.keys()
+    prognum = 256 + len(progaddr)
+    slicenum = np.ndarray(shape=(prognum,), dtype=np.dtype('a4'))
+    output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
+    duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
+    for ifunc in range(16):
+        for islice in range(16):
+            seq = fpga.dump_function(ifunc)
+            i = ifunc * 16 + islice
+            slicenum[i] = hex(i)[2:]
+            output[i] = bin(seq.outputs[islice])[2:]
+            duration = seq.timelengths[islice]
+    for i, addr in enumerate(sorted(progaddr)):
+        slicenum[i+256] = '30' + hex(addr)[2:]
+        output[i+256] = prog.instructions[addr].__repr__()[:20]
+        duration[i+256] = prog.instructions[addr].repeat
+
+    slicecol = pyfits.Column(name="Address", format='A2', array=slicenum)
+    outputcol = pyfits.Column(name="Output", format='A32', array=output)
+    durationcol = pyfits.Column(name="Time", format='I8', array=duration)
+
+    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+
+    return exthdu
+
 
 class Bench(object):
     """
@@ -47,20 +79,23 @@ class Bench(object):
     opheader = {}
     testheader = {}
     primeheader = {}
-    sequencerheader = {}
     slitsize = 30
     reb_id = 2
     setvoltbss = 40
     nchannels = 16
     imgtag = 0
     xmlfile = "camera/reb/sequencer-soi.xml"
+    rawimgdir = "/home/lsst/test_images"
+    fitstopdir = "/home/lsst/test_frames"
     # The following should come from the XML file instead
     imglines = 2020
     imgcols = 550
     detsize = '[0:4400,0:4040]'
     exposureadd = 0x3000d0 # depends on XML loading, tbc
-    exposurereg = 0x16000000 # call to exposure function
+    exposurereg = 0x16000000 # call pointing to exposure function, same comment
     testtype = "Test"
+    sensorID = "100-00"
+    teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
     def __init__(self):
         self.reb = reb.REB(reb_id=self.reb_id)
@@ -95,6 +130,7 @@ class Bench(object):
 
         print("REB ready to connect to CCD")
         #subprocess.Popen("imageClient %d" % self.reb_id, shell=True)  # hijacks the ipython shell
+        print("Remember to launch imageClient in %s" % self.rawimgdir)
 
     def CCDpowerup(self):
         """
@@ -338,8 +374,7 @@ class Bench(object):
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
-
-    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1):
+    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
             :param self:
@@ -365,7 +400,7 @@ class Bench(object):
         # check for output image
         #getting tag from FPGA registers
         hextag = self.reb.fpga.get_time()
-        imgname = '0x%016x.img' % hextag
+        imgname = os.path.join(self.rawimgdir,'0x%016x.img' % hextag)
         if os.path.isfile(imgname):
             self.get_headers()
 
@@ -375,7 +410,7 @@ class Bench(object):
                 self.primeheader["SHUT_DEL"] = 100
             self.primeheader["IMGTYPE"] = name
             self.primeheader["EXPTIME"] = exposuretime
-            self.save_to_fits(imgname)
+            self.save_to_fits(imgname, fitsname)
             self.imgtag = self.imgtag + 1
             hextag = generate_tag(self.imgtag)
             self.reb.fpga.set_time(hextag)  # setting up tag for next image
@@ -387,7 +422,7 @@ class Bench(object):
         while self.reb.fpga.get_state() & 4:  # sequencer status bit in the register
             time.sleep(1)
 
-    def save_to_fits(self, imgname):
+    def save_to_fits(self, imgname, fitsname = ""):
         """
         Turns img file from imageClient into FITS file.
         """
@@ -403,7 +438,8 @@ class Bench(object):
         # Creating FITS HDUs:
         # Create empty primary HDU and fills header
         primaryhdu = pyfits.PrimaryHDU()
-        self.primeheader["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        imgstr = os.path.splitext(os.path.basename(imgname))[0]
+        self.primeheader["IMAGETAG"] = imgstr
         # more keywords ?
         dict_to_fitshdu(self.primeheader, primaryhdu)
         # also need info from 'localheader.txt'
@@ -431,20 +467,26 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Sequencer dump
-        #slicenum = pyfits.Column(name="Slice", format='A2', array=)
-        #exthdu = pyfits.new_table([slicenum, output, duration], tbtype='TableHDU')
-        #hdulist.append(exthdu)
+        exthdu = get_sequencer_hdu(self.reb.fpga)
+        hdulist.append(exthdu)
 
         # Writing file
         # TODO: compression
-        datedir = "/home/lsst/test_frames/"+ date.today().strftime('%Y%m%d')
-        if not os.path.isdir(datedir):
-            #creates directory for that date
-            os.mkdir(datedir)
-        fitsname = os.path.join(datedir,os.path.splitext(imgname)[0])+'.fits' # TODO: names with test types
-        hdulist.writeto(fitsname, clobber=True)
+        if fitsname: # using LSST scheme for directory and image name
+            # TODO
+            fitsdir = os.path.join(self.fitstopdir, "sensorData", self.sensorID, self.testtype, self.teststamp)
+        else:  # structure for specific tests
+            fitsdir = os.path.join(self.fitstopdir,date.today().strftime('%Y%m%d'))
+            fitsname = imgstr +'.fits'
 
-        print("Wrote FITS file "+fitsname)
+        if not os.path.isdir(fitsdir):
+            os.mkdir(fitsdir)
+
+        primaryhdu.header["FILENAME"] = fitsname
+        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        hdulist.writeto(os.path.join(fitsdir, fitsname), clobber=True)
+
+        print("Wrote FITS file "+fitsname +" to "+ fitsdir)
 
 if __name__ == '__main__':
 
