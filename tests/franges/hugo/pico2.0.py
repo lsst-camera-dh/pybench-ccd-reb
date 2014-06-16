@@ -121,19 +121,19 @@ def pico_frange(i,alpha,precx,precy) :
     comptdia = 0
     comptx = 0
     compty = 0
-    while ( (comptdia < 500*diag) and (comptx < 500*(dxp-2)) and (compty < 500*(dyp-2))  ) :
-        if ( comptdia + 500 > 500*diag):
-            mot.select("A1",1)
-            mot.send("REL A1 " + str(500*diag-comptdia) + " g" + mot.EOL)
-            comptdia = comptdia +500
-            img = cam.capture(exposure = 0.001)
+    while ( (comptdia < 500*diag) and (comptx < 500*(dxp)) and (compty < 500*(dyp))  ) :
+       # if ( comptdia + 500 > 500*diag):
+       #     mot.select("A1",1)
+       #     mot.send("REL A1 " + str(500*diag-comptdia) + " g" + mot.EOL)
+       #     comptdia = comptdia +500
+       #     img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
-            fftcimg = fft_2(img,1,1)
+       #     fftcimg = fft_2(img,1,1)
             #d.set('frame 2')
             #d.set_np2arr(fftcimg)
-            (dx,dy,x2,y2) = max_pos(fftcimg)
-        elif(comptdia < 500*diag) :
+       #     (dx,dy,x2,y2) = max_pos(fftcimg)
+       # elif(comptdia < 500*diag) :
             mot.select("A1",1)
             mot.send("REL A1 " + str(500) + " g" + mot.EOL)
             comptdia = comptdia +500
@@ -144,18 +144,18 @@ def pico_frange(i,alpha,precx,precy) :
             #d.set('frame 2')
             #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-        if ( comptx + 500 > 500*(dxp-2)):
-            mot.select("A1",0)
-            mot.send("REL A1 " + str(500*(dxp-2)-comptx) + " g" + mot.EOL)
-            comptx = comptx + 500
-            img = cam.capture(exposure = 0.001)
+       # if ( comptx + 500 > 500*(dxp-2)):
+       #     mot.select("A1",0)
+       #     mot.send("REL A1 " + str(500*(dxp-2)-comptx) + " g" + mot.EOL)
+       #     comptx = comptx + 500
+       #     img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
-            fftcimg = fft_2(img,1,1)
+       #     fftcimg = fft_2(img,1,1)
             #d.set('frame 2')
             #d.set_np2arr(fftcimg)
-            (dx,dy,x2,y2) = max_pos(fftcimg)
-        elif(comptx < 500*(dxp-2)) :
+       #     (dx,dy,x2,y2) = max_pos(fftcimg)
+       # elif(comptx < 500*(dxp-2)) :
             mot.select("A1",0)
             mot.send("REL A1 " + str(500) + " g" + mot.EOL)
             comptx = comptx + 500
@@ -166,18 +166,18 @@ def pico_frange(i,alpha,precx,precy) :
             #d.set('frame 2')
             #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-        if ( compty + 500 > 500*(dy-2)):
-            mot.select("A1",2)
-            mot.send("REL A1 " + str(500*(dyp-2)-compty) + " g" + mot.EOL)
-            compty = compty+500
-            img = cam.capture(exposure = 0.001)
+       # if ( compty + 500 > 500*(dy-2)):
+       #     mot.select("A1",2)
+       #     mot.send("REL A1 " + str(500*(dyp-2)-compty) + " g" + mot.EOL)
+       #     compty = compty+500
+       #     img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
-            fftcimg = fft_2(img,1,1)
+       #     fftcimg = fft_2(img,1,1)
             #d.set('frame 2')
             #d.set_np2arr(fftcimg)
-            (dx,dy,x2,y2) = max_pos(fftcimg)
-        elif (compty < 500*(dyp-2)) :
+       #     (dx,dy,x2,y2) = max_pos(fftcimg)
+       # elif (compty < 500*(dyp-2)) :
             mot.select("A1",2)
             mot.send("REL A1 " + str(500) + " g" + mot.EOL)
             compty = compty +500
@@ -191,7 +191,7 @@ def pico_frange(i,alpha,precx,precy) :
     if (int(dx) != int(posx_1)) :
         mot.select("A1",0)
         while ( int(dx)<int(posx_1)):
-            mot.send("REL A1 100 g"+ mot.EOL)
+            mot.send("REL A1 150 g"+ mot.EOL)
             img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
@@ -200,7 +200,7 @@ def pico_frange(i,alpha,precx,precy) :
             #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
         while (int(dx)>int(posx_1)) : 
-            mot.send("REL A1 -100 g" + mot.EOL)
+            mot.send("REL A1 -150 g" + mot.EOL)
             img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
@@ -211,7 +211,7 @@ def pico_frange(i,alpha,precx,precy) :
     if (int(dy) != int(posy_1)) : 
         mot.select("A1",2)
         while ( int(dy)<int(posy_1)):
-            mot.send("REL A1 100 g" + mot.EOL)
+            mot.send("REL A1 150 g" + mot.EOL)
             img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
@@ -220,7 +220,7 @@ def pico_frange(i,alpha,precx,precy) :
             #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
         while (int(dy)>int(posy_1)) : 
-            mot.send("REL A1 -100 g" + mot.EOL)
+            mot.send("REL A1 -150 g" + mot.EOL)
             img = cam.capture(exposure = 0.001)
             #d.set('frame 1')
             #d.set_np2arr(img)
@@ -228,11 +228,16 @@ def pico_frange(i,alpha,precx,precy) :
             #d.set('frame 2')
             #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-    cam.capture_and_save(exposure = 0.001, filename="frange_i-35_a-35", filetype="FITS")
+    cam.capture_and_save(exposure = 0.001, filename="frange_i-15_a-45", filetype="FITS")
 
 #--------------------------------------------------------------------------------
 
-i = 35
-alpha = 35
-pico_frange(i,alpha,0,0)
+i = 25
+alpha = 45
+u = 960
+v = 1280
+(precx,precy) = pos_fft(i,alpha,u,v)
+i = 15
+alpha = 45
+pico_frange(i,alpha,precx,precy)
 
