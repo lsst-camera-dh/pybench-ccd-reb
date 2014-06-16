@@ -65,37 +65,37 @@ os.system(commande)
 
 
 ##--Raffinement-du-focus-------------------------
-#print mov.get_position()
+print mov.get_position()
 
 
-#FOCUS_EQ_EST_OUEST(mov, cam, cut = opt_cut)
-#cam.capture_and_save(exposure=test_expo, filename = "5micron", filetype = "FITS")
-#commande = "ds9 5micron.fits"
-#os.system(commande)
-#print mov.get_position()
+FOCUS_EQ_EST_OUEST(mov, cam, cut = opt_cut)
+cam.capture_and_save(exposure=test_expo, filename = "5micron", filetype = "FITS")
+commande = "ds9 5micron.fits"
+os.system(commande)
+print mov.get_position()
 
-#FOCUS_EQ_VERTICAL(mov, cam, cut = opt_cut)
-#cam.capture_and_save(exposure=test_expo, filename = "5micron", filetype = "FITS")
-#commande = "ds9 5micron.fits"
-#os.system(commande)
-#print mov.get_position()
+FOCUS_EQ_VERTICAL(mov, cam, cut = opt_cut)
+cam.capture_and_save(exposure=test_expo, filename = "5micron", filetype = "FITS")
+commande = "ds9 5micron.fits"
+os.system(commande)
+print mov.get_position()
 
-#mov.move(dz=-0.001) #Verifier le sens
+mov.move(dz=-0.001) #Verifier le sens
 
 #On minimise le flux dans le pixel au dessus de celui max, et on retourne a la position
-#print mov.get_position()
+print mov.get_position()
 
-#foc_raff = FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001, cut = opt_cut)
-#images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES(foc_raff)
+foc_raff = FOCUS(mov = mov, cam = cam, interval = 0.001, pas = 0.0001, cut = opt_cut)
+images_raff, data_raff, maxima_raff, sums_raff, ratios_raff, ratios_pix_sup_raff = INIT_IMAGES(foc_raff)
 
-#print mov.get_position()
+print mov.get_position()
 
-#NB_FOCUS_RAFF = np.where(ratios_pix_sup_raff==np.min(ratios_pix_sup_raff))[0][0]
-#POS_FOCUS_RAFF = images_raff[NB_FOCUS_RAFF].header['YPOS']
+NB_FOCUS_RAFF = np.where(ratios_pix_sup_raff==np.min(ratios_pix_sup_raff))[0][0]
+POS_FOCUS_RAFF = images_raff[NB_FOCUS_RAFF].header['YPOS']
 
-#mov.move(y=POS_FOCUS_RAFF)
+mov.move(y=POS_FOCUS_RAFF)
 
-#print mov.get_position()
+print mov.get_position()
 
 CHANGE_DEFAULT_POS(mov)
 

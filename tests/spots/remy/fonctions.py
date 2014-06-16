@@ -293,7 +293,7 @@ def READ_RESULTS(fichier):
     plt.ylabel("Flux")
     plt.show()
 
-def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.05, cut = "no"):
+def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 0.05, cut = "no"):
     data = cam.capture(exposure = expo)
 
     temp_max = np.where(data==np.max(data))
@@ -302,7 +302,7 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision 
     pixels_flux = PF(data, max_i)
     pixel_central_flux = PCF(data, max_i)
     
-    while((pixels_flux[1]/pixels_flux[2] > precision) or (pixels_flux[2]/pixels_flux[1] > precision)):
+    while((pixels_flux[1] > pixels_flux[2] + pixels_flux[2]*precision  ) or (pixels_flux[2] > pixels_flux[1] + pixels_flux[1]*precision)):
         if pixels_flux[1] > pixels_flux[2]:
             mov.move(dx=pas_raff) #Verifier le sens
         else:
@@ -316,7 +316,7 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision 
 
     print "Fin de l'alignement horizontal"
 
-def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.05, cut = "no"):
+def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 0.05, cut = "no"):
     data = cam.capture(exposure = expo)
 
     data = np.array(data)
@@ -327,7 +327,7 @@ def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision =
     pixels_flux = PF(data, max_i)
     pixel_central_flux = PCF(data, max_i)
     
-    while((pixel_central_flux/pixels_flux[3] > precision) or (pixels_flux[3]/pixel_central_flux > precision)):
+    while((pixel_central_flux > pixels_flux[3] + pixels_flux[3]*precision) or (pixels_flux[3] > pixel_central_flux + pixel_central_flux*precision)):
         if pixel_central_flux > pixels_flux[3]:
             mov.move(dz=pas_raff) #Verifier le sens
         else:
@@ -456,8 +456,24 @@ def analyse_vke(temps, pix1 = 3, pix2 = 4, axe = "z"):
     return pos, flux, flux2
 
 
-def take(cam, expo= test_expo):
-    cam.capture_and_save(exposure = expo, filename = "take", filetype = "FITS")
+def take(cam, expo = test_expo, mode = 1):
+    print "Before..."
+    print cam.device.get_property({'identifier': 'Brightness'})
+    print cam.device.get_property({'identifier': 'Gamma'})
+    print cam.device.get_property({'identifier': 'Gain'})
+    print cam.device.get_property({'identifier': 'Exposure, Auto'})
+    print cam.device.get_property({'identifier': 'Exposure (Absolute)'})
+    print cam.device.get_property({'identifier': 'frame rate'})
+    print "Taking frame..."
+    cam.capture_and_save(exposure = expo, filename = "take", filetype = "FITS", mode = mode)
+    print "Taking frame done."
+    print "After..."
+    print cam.device.get_property({'identifier': 'Brightness'})
+    print cam.device.get_property({'identifier': 'Gamma'})
+    print cam.device.get_property({'identifier': 'Gain'})
+    print cam.device.get_property({'identifier': 'Exposure, Auto'})
+    print cam.device.get_property({'identifier': 'Exposure (Absolute)'})
+    print cam.device.get_property({'identifier': 'frame rate'})
     
     commande = "ds9 take.fits" 
     os.system(commande)
