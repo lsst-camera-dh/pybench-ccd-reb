@@ -68,9 +68,9 @@ class Bench(object):
         self.primeheader["CTRLCFG"] = self.xmlfile
         self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")# wrong
         self.bss.connect()
-	self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # OK
+        self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # OK
         self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")  # OK
-	self.ttl.connect()
+        self.ttl.connect()
         # light sources: create objects here, does not try to connect
         self.qth = xmlrpclib.ServerProxy("http://lpnlsst:")  # TBC
         self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")  # TBC
@@ -188,7 +188,7 @@ class Bench(object):
         print("CCD shutdown complete")
 
     def bench_shutdown(self):
-	self.ttl.closeShutter()
+        self.ttl.closeShutter()
 
     def config_bss(self, voltage=40):
         """
@@ -274,9 +274,9 @@ class Bench(object):
             self.set_slit_size(self.slitsize)
         self.testheader["MONOTYPE"] = "Triax180"
 
-	self.multi.connect()
-	if self.multi.checkConnection() != '6514':
-		print("Incorrect connection to Keithley 6514 multimeter")
+        self.multi.connect()
+        if self.multi.checkConnection() != '6514':
+            print("Incorrect connection to Keithley 6514 multimeter")
 
     def get_headers(self):
         """
