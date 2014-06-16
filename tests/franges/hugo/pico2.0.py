@@ -5,7 +5,7 @@ import pyfits
 import scipy.ndimage as scind
 import lsst.testbench.picomotor as pico
 import lsst.testbench.dmk41au02as as d
-import ds9
+#import ds9
 #--------------------------------------
 #fonction calcul de la FFT 2D et rearrangement de la FFT  
 #option echelle log ,suppression moyenne et convolution gaussienne
@@ -87,148 +87,148 @@ def mot_open():
     return mot
 #------------------------------------------------
 #fonction ouvrant ds9 avec deux fenetre 'frame 1' et 'frame 2'
-def ini_ds9() : 
-    d = ds9.ds9()
-    d.set('width 1280')
-    d.set('height 1024')
-    d.set('tile')
-    d.set('frame 2')
-    return d
+#def ini_ds9() : 
+#    d = ds9.ds9()
+#    d.set('width 1280')
+#    d.set('height 1024')
+#   d.set('tile')
+#   d.set('frame 2')
+#   return d
 #-------------------------------------------------
-def pointeur(x,y,b,c): #b pour box et c pour cercle
-    if (c) : 
-        d.set('region command {circle x y 25}')
-    if (b) :
-        d.set('region command {box x y 25 25}')
+#def pointeur(x,y,b,c): #b pour box et c pour cercle
+#   if (c) : 
+#       d.set('region command {circle x y 25}')
+#   if (b) :
+#       d.set('region command {box x y 25 25}')
 #------------------------------------------------
 #fonction connaissant i et alpha bouge le moteur a la position de la figure d'interfrange
 def pico_frange(i,alpha,precx,precy) : 
     mot = mot_open()
     cam = camera()
-    d = ini_ds9()
+   # d = ini_ds9()
     u = 960
     v = 1280
     (posx_1,posy_1) = pos_fft(i,alpha,u,v)
     dx = posx_1-precx
     dy = posy_1-precy
-    diag = int(np.minimmum(dx,dy)/2.)
-    if (np.minimim(dx,dy)==dx) :
-        dx = int(dx/2.)
+    diag = int(np.minimum(dx,dy)/2.)
+    if (np.minimum(dx,dy)==dx) :
+        dxp = int(dx/2.)
+        dyp = int(dy)
     else : 
-        dy = int(dy/2.)
+        dyp = int(dy/2.)
+        dxp = int(dx)
     comptdia = 0
     comptx = 0
     compty = 0
-    while ( comptdia < 500*diag ) :
+    while ( (comptdia < 500*diag) and (comptx < 500*(dxp-2)) and (compty < 500*(dyp-2))  ) :
         if ( comptdia + 500 > 500*diag):
             mot.select("A1",1)
             mot.send("REL A1 " + str(500*diag-comptdia) + " g" + mot.EOL)
             comptdia = comptdia +500
             img = cam.capture(exposure = 0.001)
-            d.set('frame 1')
-            d.set_np2arr(img)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
             fftcimg = fft_2(img,1,1)
-            d.set('frame 2')
-            d.set_np2arr(fftcimg)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-        else :
+        elif(comptdia < 500*diag) :
             mot.select("A1",1)
             mot.send("REL A1 " + str(500) + " g" + mot.EOL)
             comptdia = comptdia +500
             img = cam.capture(exposure = 0.001)
-            d.set('frame 1')
-            d.set_np2arr(img)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
             fftcimg = fft_2(img,1,1)
-            d.set('frame 2')
-            d.set_np2arr(fftcimg)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-        while (comptx < 500*(dx-2)):
-            if ( comptx + 500 > 500*(dx-2)):
-                mot.select("A1",0)
-                mot.send("REL A1 " + str(500*(dx-2)-comptx) + " g" + mot.EOL)
-                comptx = comptx + 500
-                img = cam.capture(exposure = 0.001)
-                d.set('frame 1')
-                d.set_np2arr(img)
-                fftcimg = fft_2(img,1,1)
-                d.set('frame 2')
-                d.set_np2arr(fftcimg)
-                (dx,dy,x2,y2) = max_pos(fftcimg)
-            else :
-                mot.select("A1",0)
-                mot.send("REL A1 " + str(500) + " g" + mot.EOL)
-                comptx = comptx + 500
-                img = cam.capture(exposure = 0.001)
-                d.set('frame 1')
-                d.set_np2arr(img)
-                fftcimg = fft_2(img,1,1)
-                d.set('frame 2')
-                d.set_np2arr(fftcimg)
-                (dx,dy,x2,y2) = max_pos(fftcimg)
-            while (compty < 500*(dy-2)):
-                if ( compty + 500 > 500*(dy-2)):
-                    mot.select("A1",2)
-                    mot.send("REL A1 " + str(500*(dy-2)-compty) + " g" + mot.EOL)
-                    compty = compty+500
-                    img = cam.capture(exposure = 0.001)
-                    d.set('frame 1')
-                    d.set_np2arr(img)
-                    fftcimg = fft_2(img,1,1)
-                    d.set('frame 2')
-                    d.set_np2arr(fftcimg)
-                    (dx,dy,x2,y2) = max_pos(fftcimg)
-                else :
-                    mot.select("A1",2)
-                    mot.send("REL A1 " + str(500) + " g" + mot.EOL)
-                    compty = compty +500
-                    img = cam.capture(exposure = 0.001)
-                    d.set('frame 1')
-                    d.set_np2arr(img)
-                    fftcimg = fft_2(img,1,1)
-                    d.set('frame 2')
-                    d.set_np2arr(fftcimg)
-                    (dx,dy,x2,y2) = max_pos(fftcimg)
-     if (dx != posx_1) :
+        if ( comptx + 500 > 500*(dxp-2)):
+            mot.select("A1",0)
+            mot.send("REL A1 " + str(500*(dxp-2)-comptx) + " g" + mot.EOL)
+            comptx = comptx + 500
+            img = cam.capture(exposure = 0.001)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
+            fftcimg = fft_2(img,1,1)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
+            (dx,dy,x2,y2) = max_pos(fftcimg)
+        elif(comptx < 500*(dxp-2)) :
+            mot.select("A1",0)
+            mot.send("REL A1 " + str(500) + " g" + mot.EOL)
+            comptx = comptx + 500
+            img = cam.capture(exposure = 0.001)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
+            fftcimg = fft_2(img,1,1)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
+            (dx,dy,x2,y2) = max_pos(fftcimg)
+        if ( compty + 500 > 500*(dy-2)):
+            mot.select("A1",2)
+            mot.send("REL A1 " + str(500*(dyp-2)-compty) + " g" + mot.EOL)
+            compty = compty+500
+            img = cam.capture(exposure = 0.001)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
+            fftcimg = fft_2(img,1,1)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
+            (dx,dy,x2,y2) = max_pos(fftcimg)
+        elif (compty < 500*(dyp-2)) :
+            mot.select("A1",2)
+            mot.send("REL A1 " + str(500) + " g" + mot.EOL)
+            compty = compty +500
+            img = cam.capture(exposure = 0.001)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
+            fftcimg = fft_2(img,1,1)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
+            (dx,dy,x2,y2) = max_pos(fftcimg)
+    if (int(dx) != int(posx_1)) :
         mot.select("A1",0)
-        while ( dx<posx_1):
+        while ( int(dx)<int(posx_1)):
             mot.send("REL A1 100 g"+ mot.EOL)
             img = cam.capture(exposure = 0.001)
-            d.set('frame 1')
-            d.set_np2arr(img)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
             fftcimg = fft_2(img,1,1)
-            d.set('frame 2')
-            d.set_np2arr(fftcimg)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-        while (x1>posx_1) : 
+        while (int(dx)>int(posx_1)) : 
             mot.send("REL A1 -100 g" + mot.EOL)
             img = cam.capture(exposure = 0.001)
-            d.set('frame 1')
-            d.set_np2arr(img)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
             fftcimg = fft_2(img,1,1)
-            d.set('frame 2')
-            d.set_np2arr(fftcimg)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-    if (y1 != posy_1) : 
+    if (int(dy) != int(posy_1)) : 
         mot.select("A1",2)
-        while ( y1<posy_1):
+        while ( int(dy)<int(posy_1)):
             mot.send("REL A1 100 g" + mot.EOL)
             img = cam.capture(exposure = 0.001)
-            d.set('frame 1')
-            d.set_np2arr(img)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
             fftcimg = fft_2(img,1,1)
-            d.set('frame 2')
-            d.set_np2arr(fftcimg)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-        while (y1>posy_1) : 
+        while (int(dy)>int(posy_1)) : 
             mot.send("REL A1 -100 g" + mot.EOL)
             img = cam.capture(exposure = 0.001)
-            d.set('frame 1')
-            d.set_np2arr(img)
+            #d.set('frame 1')
+            #d.set_np2arr(img)
             fftcimg = fft_2(img,1,1)
-            d.set('frame 2')
-            d.set_np2arr(fftcimg)
+            #d.set('frame 2')
+            #d.set_np2arr(fftcimg)
             (dx,dy,x2,y2) = max_pos(fftcimg)
-
+    cam.capture_and_save(exposure = 0.001, filename="frange_i-35_a-35", filetype="FITS")
 
 #--------------------------------------------------------------------------------
 

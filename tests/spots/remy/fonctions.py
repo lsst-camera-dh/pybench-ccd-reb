@@ -22,9 +22,9 @@ test_expo = 0.5
 def INIT_MOV():
     mov = xyz.XYZ()
 
-    mov.x_port = '/dev/ttyUSB9'
-    mov.y_port = '/dev/ttyUSB10'
-    mov.z_port = '/dev/ttyUSB11'
+    mov.x_port = '/dev/ttyUSB8'
+    mov.y_port = '/dev/ttyUSB9'
+    mov.z_port = '/dev/ttyUSB10'
 
     return mov
 
@@ -53,7 +53,7 @@ def CUT(data, hauteur = 50, largeur = 50):
     return cuts
 
 def CUTS(data, hauteur = 50, largeur = 50):
-    ''' Coupe plusieurs image autour du centre de la première.                                             
+    ''' Coupe plusieurs image autour du centre de la premiere.                                             
     @param data: tableau de donnees a analyser                                                                   
     @param hauteur: nombre de pixels au dessus et en dessous du point max                                        
     @param largeur: nombre de pixels a gauche et a droite du pixel max                                          
@@ -104,12 +104,12 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
     
     borne = int(interval/pas)
 
-    if auto = 1:
+    if auto == 0:
         print("Attention : voulez vous supprimer le contenu de ./focus (yes = 1/no = 0) ? : ")
         suppr = input()
 
         if suppr == 1:
-            commande = "rm -f ./focus/*.fits"
+            commande = "rm -f -r ./focus/*"
             os.system(commande)
 
     mov.move(dy=-interval)
@@ -127,7 +127,7 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
         img = cam.capture(exposure = expo)
         
         img = np.array(img)
-        temp_max = np.where(data==np.max(data))
+        temp_max = np.where(img==np.max(img))
         a, b = [temp_max[0][0], temp_max[1][0]]
         
         if cut == "yes":
@@ -136,15 +136,15 @@ def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron
         h.update('xpos', XPOS)
         h.update('ypos', YPOS)
         h.update('zpos', ZPOS)
-        h.update('pos_pix_max_row', a)
-        h.update('pos_pix_max_col', b)
+        h.update('pixmax_x', a)
+        h.update('pixmax_y', b)
         py.writeto(name + ".fits", img, header = h, clobber=True)
 
     mov.move(dy=-interval) 
 
     return temps_debut
 
-def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1):
+def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, trou = "5micron", cut = "no", signe = 1, auto = 1):
     '''Deplace le spot verticalement ou horizontalement, et prend une image a chaque pas
     @param mov: nom des moteurs
     @param cam: nom de la camera
@@ -167,12 +167,13 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
 
     borne = int(interval/pas)
 
-    print("Attention : voulez vous supprimer le contenu de ./vke_beta (yes = 1/no = 0) ? : ")
-    suppr = input()
+    if auto == 0:
+        print("Attention : voulez vous supprimer le contenu de ./vke_beta (yes = 1/no = 0) ? : ")
+        suppr = input()
 
-    if suppr == 1:
-        commande = "rm -f ./vke_beta/*.fits"
-        os.system(commande)
+        if suppr == 1:
+            commande = "rm -f -r ./vke_beta/*"
+            os.system(commande)
 
     if axe == "z":
         for i in range(0,borne):
@@ -186,7 +187,8 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             name = dossier + "/aller_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             mov.move(dz=signe*pas)
-
+            
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -205,6 +207,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             name = dossier + "/retour_z_" + str(time.time()) + "_z=" + str(ZPOS) + "_" + trou + "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -224,6 +227,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             
             mov.move(dx=pas*signe)
             
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -242,6 +246,7 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
             name = dossier + "/retour_x_" + str(time.time()) + "_x=" + str(XPOS) + "_" + trou + "_" + str(pas) + "mm" + "_" + str(interval) + "_"  + str(signe)
             img = cam.capture(exposure = expo)
             
+            img = np.array(img)
             h.update('xpos', XPOS)
             h.update('ypos', YPOS)
             h.update('zpos', ZPOS)
@@ -351,7 +356,7 @@ def CHANGE_DEFAULT_POS(mov):
         pos.close()
 
 def INIT_IMAGES(temps):
-    fichiers = gl.glob("./focus/" + str(temps) "/*fits")
+    fichiers = gl.glob("./focus/" + str(temps) + "/*fits")
     fichiers = sorted(fichiers)
 
     images = []
@@ -404,14 +409,14 @@ def analyse_vke(temps, pix1 = 3, pix2 = 4, axe = "z"):
         y_pos.append(temp[0].header['YPOS'])
         z_pos.append(temp[0].header['ZPOS'])
 
-    if axe = "z":
+    if axe == "z":
         max_i = np.where(data[0]==np.max(data[0]))
         max_i = [max_i[0][0] - pix1, max_i[1][0]] #Pixel voision du pixel central
         
         max_i2 = np.where(data[0]==np.max(data[0]))
         max_i2 = [max_i2[0][0] - pix2, max_i2[1][0]]
 
-    elif axe = "x":
+    elif axe == "x":
         max_i = np.where(data[0]==np.max(data[0]))
         max_i = [max_i[0][0], max_i[1][0] + pix1] #Pixel voision du pixel central
         
