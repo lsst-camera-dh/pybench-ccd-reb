@@ -47,7 +47,7 @@ if make_default == 1:
     MOVE_TO_DEFAULT(mov)
 
 #-----Premiere etape du focus: minimisation de la taille du spot
-foc = FOCUS(mov = mov, cam = cam, interval = 0.02, pas = 0.001, cut = opt_cut)
+foc = FOCUS(mov = mov, cam = cam, interval = 0.04, pas = 0.001, cut = opt_cut)
 images, data, maxima, sums, ratios, ratio_pix_sup = INIT_IMAGES(foc)
 
 print mov.get_position()
@@ -97,6 +97,6 @@ os.system(commande)
 
 #print mov.get_position()
 
-#CHANGE_DEFAULT_POS(mov)
+CHANGE_DEFAULT_POS(mov)
 
 

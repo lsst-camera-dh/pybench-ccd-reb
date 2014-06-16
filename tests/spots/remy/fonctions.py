@@ -293,7 +293,7 @@ def READ_RESULTS(fichier):
     plt.ylabel("Flux")
     plt.show()
 
-def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.05, cut = "no"):
     data = cam.capture(exposure = expo)
 
     temp_max = np.where(data==np.max(data))
@@ -316,7 +316,7 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision 
 
     print "Fin de l'alignement horizontal"
 
-def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.1, cut = "no"):
+def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 1.05, cut = "no"):
     data = cam.capture(exposure = expo)
 
     data = np.array(data)
