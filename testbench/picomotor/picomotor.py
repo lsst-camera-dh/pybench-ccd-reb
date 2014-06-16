@@ -27,8 +27,8 @@ class Picomotor(object):
     # ---------- Constructor ---------------------------------
 
     def __init__(self,
-                 host = None,
-                 port = None, # either TCP/IP or serial one
+                 host = "134.158.154.199",
+                 port = 23, 
                  debug = True):
 
         # self.serial_conn = None
@@ -44,6 +44,10 @@ class Picomotor(object):
     
         # ---- debug mode
         self.debug = debug
+
+        # --- moves memory 
+
+        self.moves = {}
 
     # ---------- Open the controller device ------------------
 
@@ -239,36 +243,30 @@ class Picomotor(object):
 
     def move(self, driver, channel, offset, immediate = True):
         self.select(driver, channel)
-        
+       
         command = "REL %s %d" % (driver, offset)
         if immediate:
             command += " G"
 
         self.send(command)
 
+        key = (driver,channel)
+        if not(self.moves.has_key(key)):
+            self.moves[key] = 0
+        self.moves[key] += offset
+
         ## TODO : check errors
 
 
-    # ---------- Current motor position ---------------------- 
-
-    def get_position(self):
-        """
-        Return the current axis position.
-        """
-        answer = self.send(("%d" % self.axis) + " np")
-
-        if len(answer) < 1:
-            raise IOError(("Not responding to " + ("%d" % self.axis) + " np on serial port %s") % 
-                          self.port)
-        
-        position = float(answer[0])
-        return position
-
-    position = property(get_position, doc="Axis current position")
-
     # ---------- Move absolute and relative ------------------ 
 
-    def is_moving(self):
+    def is_moving(self, driver):
+        # TODO: Adapt this
+        # send : STA <driver>
+        # analyze status bit mask
+        
+        
+
         answer = self.send(("%d" % self.axis) + " nst")
         if len(answer) < 1:
             raise IOError(("Not responding to 1 nst on serial port %s") % 
@@ -280,139 +278,8 @@ class Picomotor(object):
             return False
         
 
-    def move_absolute(self, position, wait=True, check = False):
-        """
-        Move the axis to absolute position 'position'.
-        @param position: target position.
-        @param wait: control is returned only when the movement is finished.
-        @param check: to take into account the limits of the range, if False, move without constraints.
-        """
-        
-        if check and self.__limits:
-            # Limits are already known so we can check
-            if ( (position < self.__limits['down']) or 
-                 (position > self.__limits['up']) ):
-                raise ValueError("Invalid position (out of range)")
-
-        command = ("%f" % position) + " " + ("%d" % self.axis) + " nm"
-        answer = self.send(command)
-        # in ECHO=1 no answer []
-
-        if wait:
-            while (self.is_moving()):
-                pass
-
-
-
-    def move_relative(self, offset, wait = True, check = False):
-        """
-        Move the axis of relative offset 'offset'.
-        @param offset: position offset (positive or negative)
-        @param check: to take into account the limits of the range. If False, move without constraints.
-        """
-
-        if check and self.__limits:
-            target = self.get_position() + offset
-            # Limits are already known so we can check
-            if ( (target < self.__limits['down']) or 
-                 (target > self.__limits['up']) ):
-                raise ValueError("Invalid position (out of range)")
-
-        command = ("%f" % offset) + " " + ("%d" % self.axis) + " nr"
-        answer = self.send(command)
-        # in ECHO=1 no answer []
-
-        if wait:
-            while (self.is_moving()):
-                pass
-
 
     # =========================================================
 
-    # Adapted from SkyDice motors
-    
-    # ---------- Detect limits (range) -------------------------- 
-
-    def find_limits(self):
-        """
-        Pollux motors is supposed to find its limits on its own,
-        using calibrate command (lower limit, set to zero after calibration) 
-        and using range (find the range, so the upper limit).
-
-        When power-on for the first time, the actual position
-        is thought to be zero, whatever the position is.
-        """
-
-        self.__limits = {}
-
-        # first look for the lower limit (and set that position to zero)
-
-        command = ("%d" % self.axis) + " ncal"
-        answer = self.send(command)
-        while (self.is_moving()): 
-            pass
-            
-        self.__limits['down'] = self.position  # zero in fact
-
-        # then look for the upper limit 
-
-        command = ("%d" % self.axis) + " nrm"
-        answer = self.send(command)
-        while (self.is_moving()): 
-            pass
-            
-        self.__limits['up'] = self.position
-
-        return self.__limits
-
-    # ---------- Set zero at the current position ------------ 
-
-    def set_zero(self, position = 0):
-        """
-        Define the current position of the motor to be 'position'. 
-        From then on, all positions reported for that motor will
-        be relative to that point.
-
-        @param position: new value for the current position.
-        """
-       
-        command = ("%f" % float(position)) + " " + ("%d" % self.axis) + " setnpos" 
-        answer = self.send(command)
-
-    # ---------- Home : find_limits and set zeros ------------ 
-
-    def home(self):
-        """
-        Look for the limits (find_limits()), move the motor
-        to the middle position, and then set the zero there.
-
-        Please use this procedure instead of find_limits().
-        """
-        limits = self.find_limits()
-        # use the middle point as zero
-        middle = (limits['up'] + limits['down'])/2.0
-        self.move_absolute(middle, wait = True, check = False)
-        self.set_zero()
-
-        for k in ['up', 'down']:
-            if self.__limits.has_key(k):
-                self.__limits[k] -= middle # subtract the offset
-
-
-    # ---------- Return limits ------------------------------- 
-
-    def get_limits(self):
-        return self.__limits
-
-    # def check_limits(self, position):
-    #     if self.__limits.has_key('up'):
-    #         if position > self.__limits['up']:
-    #             return False
-
-    #     if self.__limits.has_key('down'):
-    #         if position < self.__limits['down']:
-    #             return False
-
-    #     return True
 
 # ===================================================================

@@ -28,9 +28,9 @@ STEP = 2
 #----------------------------------------------------------------
 
 for i in range(0, STEP):
-    VKE(mov, cam, interval = INTERVAL, pas = PAS, expo = test_expo, trou = "5micron", signe = 1):
-    VKE(mov, cam, interval = INTERVAL, pas = PAS, expo = test_expo, trou = "5micron", signe = -1):
-    VKE(mov, cam, interval = INTERVAL, pas = PAS, expo = test_expo, trou = "5micron", signe = 1):
+    VKE(mov, cam, interval = INTERVAL, pas = PAS, expo = test_expo, trou = "5micron", signe = 1)
+    VKE(mov, cam, interval = INTERVAL, pas = PAS, expo = test_expo, trou = "5micron", signe = -1)
+    VKE(mov, cam, interval = INTERVAL, pas = PAS, expo = test_expo, trou = "5micron", signe = 1)
 
     PAS += 0
     INTERVAL +=0 
