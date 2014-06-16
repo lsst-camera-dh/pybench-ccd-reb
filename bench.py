@@ -85,6 +85,8 @@ class Bench(object):
     nchannels = 16
     imgtag = 0
     xmlfile = "camera/reb/sequencer-soi.xml"
+    rawimgdir = "/home/lsst/test_images"
+    fitstopdir = "/home/lsst/test_frames"
     # The following should come from the XML file instead
     imglines = 2020
     imgcols = 550
@@ -128,6 +130,7 @@ class Bench(object):
 
         print("REB ready to connect to CCD")
         #subprocess.Popen("imageClient %d" % self.reb_id, shell=True)  # hijacks the ipython shell
+        print("Remember to launch imageClient in %s" % self.rawimgdir)
 
     def CCDpowerup(self):
         """
@@ -397,7 +400,7 @@ class Bench(object):
         # check for output image
         #getting tag from FPGA registers
         hextag = self.reb.fpga.get_time()
-        imgname = '0x%016x.img' % hextag
+        imgname = os.path.join(self.rawimgdir,'0x%016x.img' % hextag)
         if os.path.isfile(imgname):
             self.get_headers()
 
@@ -435,7 +438,7 @@ class Bench(object):
         # Creating FITS HDUs:
         # Create empty primary HDU and fills header
         primaryhdu = pyfits.PrimaryHDU()
-        imgstr = os.path.splitext(imgname)[0]
+        imgstr = os.path.splitext(os.path.basename(imgname))[0]
         self.primeheader["IMAGETAG"] = imgstr
         # more keywords ?
         dict_to_fitshdu(self.primeheader, primaryhdu)
@@ -471,9 +474,9 @@ class Bench(object):
         # TODO: compression
         if fitsname: # using LSST scheme for directory and image name
             # TODO
-            fitsdir = "/home/lsst/test_frames/sensorData/%s/%s/%s" % (self.sensorID, self.testtype, self.teststamp)
+            fitsdir = os.path.join(self.fitstopdir, "sensorData", self.sensorID, self.testtype, self.teststamp)
         else:  # structure for specific tests
-            fitsdir = "/home/lsst/test_frames/"+ date.today().strftime('%Y%m%d')
+            fitsdir = os.path.join(self.fitstopdir,date.today().strftime('%Y%m%d'))
             fitsname = imgstr +'.fits'
 
         if not os.path.isdir(fitsdir):
