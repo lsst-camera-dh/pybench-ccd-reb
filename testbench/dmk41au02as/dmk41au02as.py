@@ -77,7 +77,7 @@ class Camera(object):
         self.device.set_property({'identifier': 'Exposure (Absolute)', 'value': self.default_expo_int})
 
 
-    def capture(self, exposure = 1.0e-2):
+    def capture(self, exposure = 1.0e-2, mode = 1):
         """
         Take one shot with exposure <exposure> (in seconds).
         Return a PIL image object.
@@ -87,7 +87,7 @@ class Camera(object):
         # TODO : check if the value is allowed
 
         auto_exposure_mode = self.device.get_property({'identifier': 'Exposure, Auto'})
-        self.device.set_property({'identifier': 'Exposure, Auto', 'value': 1})
+        self.device.set_property({'identifier': 'Exposure, Auto', 'value': mode})
 
         # exposure = int(self.device.get_property({'identifier': 'Exposure (Absolute)'}))
         self.device.set_property({'identifier': 'Exposure (Absolute)', 'value': expo_int})
@@ -118,13 +118,13 @@ class Camera(object):
         return img
 
 
-    def capture_and_save(self, exposure, filename, filetype):
+    def capture_and_save(self, exposure, filename, filetype, mode = 1):
         """
         Take one shot with exposure <exposure> (in seconds).
         Save the resulting image to file <filename>.
         """
 
-        img = self.capture(exposure)
+        img = self.capture(exposure = exposure, mode = mode)
 
         if filetype == "FITS":
             data = np.array(img)
