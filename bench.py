@@ -59,8 +59,10 @@ class Bench(object):
     imgcols = 550
     detsize = '[0:4400,0:4040]'
     exposureadd = 0x3000d0 # depends on XML loading, tbc
-    exposurereg = 0x16000000 # call to exposure function
+    exposurereg = 0x16000000 # call pointing to exposure function, same comment
     testtype = "Test"
+    sensorID = "100-00"
+    teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
     def __init__(self):
         self.reb = reb.REB(reb_id=self.reb_id)
@@ -339,7 +341,7 @@ class Bench(object):
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
 
-    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1):
+    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
             :param self:
@@ -375,7 +377,7 @@ class Bench(object):
                 self.primeheader["SHUT_DEL"] = 100
             self.primeheader["IMGTYPE"] = name
             self.primeheader["EXPTIME"] = exposuretime
-            self.save_to_fits(imgname)
+            self.save_to_fits(imgname, fitsname)
             self.imgtag = self.imgtag + 1
             hextag = generate_tag(self.imgtag)
             self.reb.fpga.set_time(hextag)  # setting up tag for next image
@@ -387,7 +389,7 @@ class Bench(object):
         while self.reb.fpga.get_state() & 4:  # sequencer status bit in the register
             time.sleep(1)
 
-    def save_to_fits(self, imgname):
+    def save_to_fits(self, imgname, fitsname = ""):
         """
         Turns img file from imageClient into FITS file.
         """
@@ -403,7 +405,8 @@ class Bench(object):
         # Creating FITS HDUs:
         # Create empty primary HDU and fills header
         primaryhdu = pyfits.PrimaryHDU()
-        self.primeheader["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        imgstr = os.path.splitext(imgname)[0]
+        self.primeheader["IMAGETAG"] = imgstr
         # more keywords ?
         dict_to_fitshdu(self.primeheader, primaryhdu)
         # also need info from 'localheader.txt'
@@ -437,14 +440,21 @@ class Bench(object):
 
         # Writing file
         # TODO: compression
-        datedir = "/home/lsst/test_frames/"+ date.today().strftime('%Y%m%d')
-        if not os.path.isdir(datedir):
-            #creates directory for that date
-            os.mkdir(datedir)
-        fitsname = os.path.join(datedir,os.path.splitext(imgname)[0])+'.fits' # TODO: names with test types
-        hdulist.writeto(fitsname, clobber=True)
+        if fitsname: # using LSST scheme for directory and image name
+            # TODO
+            fitsdir = "/home/lsst/test_frames/sensorData/%s/%s/%s" % (self.sensorID, self.testtype, self.teststamp)
+        else:  # structure for specific tests
+            fitsdir = "/home/lsst/test_frames/"+ date.today().strftime('%Y%m%d')
+            fitsname = imgstr +'.fits'
 
-        print("Wrote FITS file "+fitsname)
+        if not os.path.isdir(fitsdir):
+            os.mkdir(fitsdir)
+
+        primaryhdu.header["FILENAME"] = fitsname
+        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        hdulist.writeto(os.path.join(fitsdir, fitsname), clobber=True)
+
+        print("Wrote FITS file "+fitsname +" to "+ fitsdir)
 
 if __name__ == '__main__':
 
