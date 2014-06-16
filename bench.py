@@ -67,7 +67,7 @@ def get_sequencer_hdu(fpga):
     outputcol = pyfits.Column(name="Output", format='A32', array=output)
     durationcol = pyfits.Column(name="Time", format='I8', array=duration)
 
-    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+    exthdu = pyfits.TableHDU(pyfits.FITS_rec.from_columns([slicecol, outputcol, durationcol]), name="SEQ_DUMP")
 
     return exthdu
 
@@ -81,7 +81,7 @@ class Bench(object):
     primeheader = {}
     slitsize = 30
     reb_id = 2
-    setvoltbss = 40
+    setvoltbss = -40
     nchannels = 16
     imgtag = 0
     xmlfile = "camera/reb/sequencer-soi.xml"
@@ -226,18 +226,21 @@ class Bench(object):
     def bench_shutdown(self):
         self.ttl.closeShutter()
 
-    def config_bss(self, voltage=40):
+    def config_bss(self, voltage=-40):
         """
         Configuration of Keithley 6487 used to generate back-substrate voltage.
         """
 
-        if voltage < 50:
+        if abs(voltage) < 50:
             range = 50.0
         else:
             range = 500.0
         self.bss.selectOutputVoltageRange(range, 2.5e-5)
 
-        self.bss.setOutputVoltage(voltage)
+        if voltage < 0:
+            self.bss.setOutputVoltage(voltage)
+        else:
+            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
 
         self.bss.zeroCorrect()
         self.bss.selectCurrent(2e-5)
@@ -374,6 +377,20 @@ class Bench(object):
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
+    def waiting_sequence(self, name="Wait"):
+        """
+        Lets CCD wait until keyboard interrupt is sent by clearing periodically
+
+        """
+        self.wait_end_sequencer()
+        keepwaiting = True
+        while keepwaiting:
+            try:
+                self.reb.run_subroutine(name)
+                time.sleep(60)
+            except KeyboardInterrupt:
+                keepwaiting = False
+
     def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
@@ -454,7 +471,8 @@ class Bench(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             #creates extension to fits file
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)
+            # exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
@@ -471,9 +489,7 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Writing file
-        # TODO: compression
         if fitsname: # using LSST scheme for directory and image name
-            # TODO
             fitsdir = os.path.join(self.fitstopdir, "sensorData", self.sensorID, self.testtype, self.teststamp)
         else:  # structure for specific tests
             fitsdir = os.path.join(self.fitstopdir,date.today().strftime('%Y%m%d'))
@@ -488,13 +504,21 @@ class Bench(object):
 
         print("Wrote FITS file "+fitsname +" to "+ fitsdir)
 
-if __name__ == '__main__':
-
-    bench = Bench()
-    bench.REBpowerup()
+def start():
+    b = Bench()
+    b.REBpowerup()
     wait_for_action("REB can be connected to CCD now.")
-    bench.CCDpowerup()
+    b.CCDpowerup()
     # Puts CCD in waiting state by clearing periodically, while waiting for a new command.
-    while True:
-        bench.execute_sequence("Wait", waittime=60)
+    b.waiting_sequence()
+    return b
+
+
+def stop(b):
+    b.CCDshutdown()
+    b.bench_shutdown()
+
+
+if __name__ == '__main__':
+    b = start()
 
