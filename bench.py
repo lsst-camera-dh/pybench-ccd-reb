@@ -39,6 +39,38 @@ def dict_to_fitshdu(dictheader, fitshdu):
     for keyword in dictheader:
         fitsheader[keyword] = dictheader[keyword]
 
+def get_sequencer_hdu(fpga):
+    """
+    Builds table HDU for FITS file containing sequencer dump
+        :param seq:
+        :return:
+        """
+    prog = fpga.dump_program()
+    progaddr = prog.instructions.keys()
+    prognum = 256 + len(progaddr)
+    slicenum = np.ndarray(shape=(prognum,), dtype=np.dtype('a4'))
+    output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
+    duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
+    for ifunc in range(16):
+        for islice in range(16):
+            seq = fpga.dump_function(ifunc)
+            i = ifunc * 16 + islice
+            slicenum[i] = hex(i)[2:]
+            output[i] = bin(seq.outputs[islice])[2:]
+            duration = seq.timelengths[islice]
+    for i, addr in enumerate(sorted(progaddr)):
+        slicenum[i+256] = '30' + hex(addr)[2:]
+        output[i+256] = prog.instructions[addr].__repr__()[:20]
+        duration[i+256] = prog.instructions[addr].repeat
+
+    slicecol = pyfits.Column(name="Address", format='A2', array=slicenum)
+    outputcol = pyfits.Column(name="Output", format='A32', array=output)
+    durationcol = pyfits.Column(name="Time", format='I8', array=duration)
+
+    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+
+    return exthdu
+
 
 class Bench(object):
     """
@@ -47,7 +79,6 @@ class Bench(object):
     opheader = {}
     testheader = {}
     primeheader = {}
-    sequencerheader = {}
     slitsize = 30
     reb_id = 2
     setvoltbss = 40
@@ -340,7 +371,6 @@ class Bench(object):
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
-
     def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
@@ -434,9 +464,8 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Sequencer dump
-        #slicenum = pyfits.Column(name="Slice", format='A2', array=)
-        #exthdu = pyfits.new_table([slicenum, output, duration], tbtype='TableHDU')
-        #hdulist.append(exthdu)
+        exthdu = get_sequencer_hdu(self.reb.fpga)
+        hdulist.append(exthdu)
 
         # Writing file
         # TODO: compression
