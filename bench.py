@@ -34,10 +34,26 @@ def generate_tag(number):
     return tag
 
 
+def log(name, logger, cmd, value = None):
+    """
+
+    :param name:
+    :param logger:
+    :param cmd:
+    :param value:
+    """
+    if logger:
+        if value:
+            logger.log("%s : writing %s with %s" % (name, str(cmd), str(value)) )
+        else:
+            logger.log("%s : writing %s" % (name, str(cmd)) )
+
+
 def dict_to_fitshdu(dictheader, fitshdu):
     fitsheader = fitshdu.header
     for keyword in dictheader:
         fitsheader[keyword] = dictheader[keyword]
+
 
 def get_sequencer_hdu(fpga):
     """
@@ -67,9 +83,71 @@ def get_sequencer_hdu(fpga):
     outputcol = pyfits.Column(name="Output", format='A32', array=output)
     durationcol = pyfits.Column(name="Time", format='I8', array=duration)
 
-    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+    exthdu = pyfits.TableHDU(pyfits.FITS_rec.from_columns([slicecol, outputcol, durationcol]), name="SEQ_DUMP")
 
     return exthdu
+
+
+class XMLRPC(object):
+    """
+    Generic class to manage objects connected through XMLRPC
+    """
+
+    def __init__(self, server, idstr, name):
+        self.name = name
+        self.server = server
+        self.idstr = idstr
+        self.comm = xmlrpclib.ServerProxy(self.server)
+
+    def connect(self):
+        self.comm.connect()
+        if self.comm.checkConnection() != self.idstr:
+            print("Incorrect connection to %s" % self.name)
+
+
+class BackSubstrate(XMLRPC):
+    """
+    Managing back-substrate voltage controlled by Keithley 6487
+    """
+    setvoltbss = 0  # desired voltage setting (independent of actual value)
+
+    def __init__(self):
+        XMLRPC.__init__(self, server="http://lpnlsst:8087/", idstr="6487", name="Keithley 6487")
+
+    def connect(self):
+        XMLRPC.connect(self)
+
+    def config(self, voltage=-40):
+        """
+        Configuration of voltage and current limits and current readout.
+        """
+
+        if abs(voltage) < 50:
+            range = 50.0
+        else:
+            range = 500.0
+        self.comm.selectOutputVoltageRange(range, 2.5e-5)
+
+        if voltage < 0:
+            self.comm.setOutputVoltage(voltage)
+            self.setvoltbss = voltage
+        else:
+            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
+
+        self.comm.zeroCorrect()
+        self.comm.selectCurrent(2e-5)
+
+    def enable(self):
+
+        self.comm.setVoltageOperate(1)
+        while abs(self.comm.getVoltage() - self.setvoltbss) > 0.1:
+            time.sleep(1)
+
+    def disable(self):
+
+        self.comm.setVoltageOperate(0)
+        while abs(self.comm.getVoltage() - 0) > 0.1:
+            time.sleep(1)
 
 
 class Bench(object):
@@ -81,12 +159,12 @@ class Bench(object):
     primeheader = {}
     slitsize = 30
     reb_id = 2
-    setvoltbss = 40
     nchannels = 16
     imgtag = 0
     xmlfile = "camera/reb/sequencer-soi.xml"
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
+    logger = None  # update later if using logger
     # The following should come from the XML file instead
     imglines = 2020
     imgcols = 550
@@ -97,11 +175,11 @@ class Bench(object):
     sensorID = "100-00"
     teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
-    def __init__(self):
+    def __init__(self, logger=None):
         self.reb = reb.REB(reb_id=self.reb_id)
         self.seq = xml.fromxmlfile(self.xmlfile)
         self.primeheader["CTRLCFG"] = self.xmlfile
-        self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")# wrong
+        self.bss = BackSubstrate()
         self.bss.connect()
         self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # OK
         self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")  # OK
@@ -111,6 +189,7 @@ class Bench(object):
         self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")  # TBC
         self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")  # OK
         self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")  # TBC
+        self.logger = logger
 
     def REBpowerup(self):
         """
@@ -178,10 +257,8 @@ class Bench(object):
         time.sleep(1)
 
         #starts Keithley backsubstrate voltage
-        self.config_bss(self.setvoltbss)
-        self.bss.setVoltageOperate(1)
-        while abs(self.bss.getVoltage() - self.setvoltbss) > 0.1:
-            time.sleep(1)
+        self.bss.config(voltage=-40)
+        self.bss.enable()
 
         print("Start-up sequence complete")
 
@@ -192,10 +269,7 @@ class Bench(object):
 
         self.wait_end_sequencer()
         #Back-substrate first
-        self.bss.setVoltageOperate(0)
-
-        while abs(self.bss.getVoltage()) > 0.1:
-            time.sleep(1)
+        self.bss.disable()
 
         #current source
         self.reb.set_dacs({"I_OS": 0})
@@ -225,22 +299,6 @@ class Bench(object):
 
     def bench_shutdown(self):
         self.ttl.closeShutter()
-
-    def config_bss(self, voltage=40):
-        """
-        Configuration of Keithley 6487 used to generate back-substrate voltage.
-        """
-
-        if voltage < 50:
-            range = 50.0
-        else:
-            range = 500.0
-        self.bss.selectOutputVoltageRange(range, 2.5e-5)
-
-        self.bss.setOutputVoltage(voltage)
-
-        self.bss.zeroCorrect()
-        self.bss.selectCurrent(2e-5)
 
     def set_slit_size(self, slitsize):
         """
@@ -374,6 +432,20 @@ class Bench(object):
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
+    def waiting_sequence(self, name="Wait"):
+        """
+        Lets CCD wait until keyboard interrupt is sent by clearing periodically
+
+        """
+        self.wait_end_sequencer()
+        keepwaiting = True
+        while keepwaiting:
+            try:
+                self.reb.run_subroutine(name)
+                time.sleep(60)
+            except KeyboardInterrupt:
+                keepwaiting = False
+
     def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
@@ -454,7 +526,8 @@ class Bench(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             #creates extension to fits file
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)
+            # exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
@@ -471,9 +544,7 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Writing file
-        # TODO: compression
         if fitsname: # using LSST scheme for directory and image name
-            # TODO
             fitsdir = os.path.join(self.fitstopdir, "sensorData", self.sensorID, self.testtype, self.teststamp)
         else:  # structure for specific tests
             fitsdir = os.path.join(self.fitstopdir,date.today().strftime('%Y%m%d'))
@@ -488,13 +559,21 @@ class Bench(object):
 
         print("Wrote FITS file "+fitsname +" to "+ fitsdir)
 
-if __name__ == '__main__':
-
-    bench = Bench()
-    bench.REBpowerup()
+def start():
+    b = Bench()
+    b.REBpowerup()
     wait_for_action("REB can be connected to CCD now.")
-    bench.CCDpowerup()
+    b.CCDpowerup()
     # Puts CCD in waiting state by clearing periodically, while waiting for a new command.
-    while True:
-        bench.execute_sequence("Wait", waittime=60)
+    b.waiting_sequence()
+    return b
+
+
+def stop(b):
+    b.CCDshutdown()
+    b.bench_shutdown()
+
+
+if __name__ == '__main__':
+    b = start()
 

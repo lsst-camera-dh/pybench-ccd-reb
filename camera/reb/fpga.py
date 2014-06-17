@@ -882,8 +882,13 @@ class FPGA(object):
         Load the functions and the program at once.
         """
         # self.send_program(seq.program, clear = clear)
+        print >>sys.stderr, "Loading the sequencer program..."
         self.send_program(seq.program, clear = clear)
+        print >>sys.stderr, "Loading the sequencer program done."
+
+        print >>sys.stderr, "Loading the sequencer functions..."
         self.send_functions(seq.functions)
+        print >>sys.stderr, "Loading the sequencer functions done."
 
     def dump_sequencer(self):
         """
