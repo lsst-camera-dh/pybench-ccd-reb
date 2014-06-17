@@ -92,8 +92,12 @@ def camera():
 #alpha en deg et entre 0 et 90 
 def pos_fft(i,alpha,u,v) :
     alpha = np.radians(alpha)
-    posx_1 = (u*v)/(i*m.cos(alpha)*(u+v))
-    posy_1 = (u*v)/(i*m.sin(alpha)*(u+v))
+    if ( alpha<np.arctan(float(v)/u)) :
+        quant = m.sqrt((u*m.cos(alpha))**2+(u*m.tan(alpha))**2)
+    else : 
+        quant = m.sqrt((v*m.sin(alpha))**2+(v/m.tan(alpha))**2)
+    posx_1 = quant*m.cos(alpha)/i
+    posy_1 = quant*m.sin(alpha)/i
     return (posx_1,posy_1)
 #------------------------------------------------
 #fonction ouverture moteur
@@ -149,7 +153,7 @@ def move_to_target(camera, motor, target_x, target_y):
     print "Target ", target_x, target_y
     print "Peak:  ", x1, y1, x2, y2
 
-    scale = 25.0
+    scale = 10.0
     dx = int(scale * (target_x - x1))
     dy = int(scale * (target_y - y1))
 
@@ -180,8 +184,8 @@ DS9.set("view info no")
 DS9.set("view panner no")
 DS9.set("view magnifier no")
 
-# view  [layout horizontal|vertical]
-#       [info yes|no]
+#view  [layout horizontal|vertical]
+#      [info yes|no]
 #       [panner yes|no]
 #       [magnifier yes|no]
 #       [buttons yes|no]
@@ -200,13 +204,13 @@ DS9.set("view magnifier no")
 #       [blue yes|no]
 
 DS9.set('width 1280')
-# DS9.set('height 1024')
+#DS9.set('height 1024')
 DS9.set('tile')
 DS9.set('frame 1')
 DS9.set('zoom 0.5')
 DS9.set('scale mode zscale')
 DS9.set('frame 2')
-DS9.set('zoom 4')
+DS9.set('zoom 2')
 DS9.set('scale linear')
 DS9.set('scale mode minmax')
 
@@ -219,7 +223,7 @@ x1,y1 = 0, 0
 
 while True:
 
-    scale = 40.0
+    scale = 10.0
     dx = int(round(scale * (tx - x1)))
     dy = int(round(scale * (ty - y1)))
 
