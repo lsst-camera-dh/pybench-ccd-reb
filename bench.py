@@ -34,21 +34,6 @@ def generate_tag(number):
     return tag
 
 
-def log(name, logger, cmd, value = None):
-    """
-
-    :param name:
-    :param logger:
-    :param cmd:
-    :param value:
-    """
-    if logger:
-        if value:
-            logger.log("%s : writing %s with %s" % (name, str(cmd), str(value)) )
-        else:
-            logger.log("%s : writing %s" % (name, str(cmd)) )
-
-
 def dict_to_fitshdu(dictheader, fitshdu):
     fitsheader = fitshdu.header
     for keyword in dictheader:
@@ -101,8 +86,9 @@ class XMLRPC(object):
 
     def connect(self):
         self.comm.connect()
-        if self.comm.checkConnection() != self.idstr:
-            print("Incorrect connection to %s" % self.name)
+        checkstr = self.comm.checkConnection()
+        if checkstr != self.idstr:
+            print("Incorrect connection to %s, returns %s " % (self.name, checkstr))
 
 
 class BackSubstrate(XMLRPC):
@@ -117,9 +103,9 @@ class BackSubstrate(XMLRPC):
     def connect(self):
         XMLRPC.connect(self)
 
-    def config(self, voltage=-40):
+    def config(self, voltage=0):
         """
-        Configuration of voltage and current limits and current readout.
+        Configuration of voltage, current limits and current readout.
         """
 
         if abs(voltage) < 50:
@@ -129,13 +115,26 @@ class BackSubstrate(XMLRPC):
         self.comm.selectOutputVoltageRange(range, 2.5e-5)
 
         if voltage < 0:
-            self.comm.setOutputVoltage(voltage)
+            self.comm.setOutputVoltage(float(voltage))
             self.setvoltbss = voltage
         else:
             raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
 
         self.comm.zeroCorrect()
         self.comm.selectCurrent(2e-5)
+
+    def set_volt(self, voltage):
+        """
+        Changes voltage without changing configuration
+        """
+        if voltage < 0:
+            self.comm.setOutputVoltage(float(voltage))
+            self.setvoltbss = voltage
+        else:
+            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
+
+        while abs(self.comm.getVoltage() - self.setvoltbss) > 0.1:
+            time.sleep(1)
 
     def enable(self):
 
@@ -175,7 +174,7 @@ class Bench(object):
     sensorID = "100-00"
     teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
-    def __init__(self, logger=None):
+    def __init__(self):
         self.reb = reb.REB(reb_id=self.reb_id)
         self.seq = xml.fromxmlfile(self.xmlfile)
         self.primeheader["CTRLCFG"] = self.xmlfile
@@ -189,7 +188,6 @@ class Bench(object):
         self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")  # TBC
         self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")  # OK
         self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")  # TBC
-        self.logger = logger
 
     def REBpowerup(self):
         """
@@ -446,12 +444,12 @@ class Bench(object):
             except KeyboardInterrupt:
                 keepwaiting = False
 
-    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
+    def execute_sequence(self, name, exposuretime=2, waittime=15, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
             :param self:
-            :param name: sequence name in the XML
-            :param number: number of times to execute (if calling a subroutine)
+            :param name: string
+
             """
         # TODO: Check that both options work
 
@@ -462,10 +460,7 @@ class Bench(object):
         self.reb.fpga.write(self.exposureadd, self.exposurereg + int(exposuretime * 1000))
         self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
 
-        if number > 1:
-            self.reb.run_subroutine(name, repeat=number)
-        else:
-            self.reb.run_subroutine(name)
+        self.reb.run_subroutine(name)
 
         time.sleep(exposuretime + waittime)
 
@@ -544,22 +539,25 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Writing file
-        if fitsname: # using LSST scheme for directory and image name
-            fitsdir = os.path.join(self.fitstopdir, "sensorData", self.sensorID, self.testtype, self.teststamp)
-        else:  # structure for specific tests
-            fitsdir = os.path.join(self.fitstopdir,date.today().strftime('%Y%m%d'))
-            fitsname = imgstr +'.fits'
+        if not fitsname:  # structure for specific tests
+            fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.localtime()))
+            if not os.path.isdir(fitsdir):
+                os.mkdir(fitsdir)
+            fitsname = os.path.join(fitsdir, imgstr +'.fits')
+        # else: using LSST scheme for directory and image name, already built in fitsname
 
-        if not os.path.isdir(fitsdir):
-            os.mkdir(fitsdir)
-
-        primaryhdu.header["FILENAME"] = fitsname
+        primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
         primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
-        hdulist.writeto(os.path.join(fitsdir, fitsname), clobber=True)
+        hdulist.writeto(fitsname, clobber=True)
 
-        print("Wrote FITS file "+fitsname +" to "+ fitsdir)
+        print("Wrote FITS file "+fitsname)
 
 def start():
+    """
+    Bench start-up operations strung together.
+
+    :return: Bench()
+    """
     b = Bench()
     b.REBpowerup()
     wait_for_action("REB can be connected to CCD now.")
@@ -574,6 +572,43 @@ def stop(b):
     b.bench_shutdown()
 
 
+def PTC(b):
+    """
+    Acquires a series of pairs of flat with increasing exposure times.
+    Could also use Peter Doherty's ccdacq for this, would give structure for file names and directories.
+    :param b:
+    :return:
+    """
+    # TODO: power / set lamp or laser ?
+    ptclog = open(os.path.join(self.fitstopdir,"PTClog.txt"), mode='a')
+    for exptime in range(0.25, 5, 0.25):
+        first = b.imgtag
+        b.execute_sequence('Acquisition',exposuretime=exptime)
+        second = b.imgtag
+        b.execute_sequence('Acquisition',exposuretime=exptime)
+        ptclog.write("%4.2f\t%s\t%s\n" % (exptime, first, second))
+    ptclog.close()
+
+
+def timing_ramp(b):
+    """
+    Series of acquisitions to compare timings.
+    """
+    # TODO: power on laser/other ?
+    ramplog = open(os.path.join(self.fitstopdir,"ramplog.txt"), mode='a')
+    func1 = 2
+    slice1 = 6  # TBC depending on which slice and which function we test
+    for imtype in ['Bias','Acquisition']:
+        for duration in range(150,450,20):
+            curfunc = b.reb.fpga.dump_function(func1)
+            curfunc.timelengths[slice1] = duration
+            b.reb.fpga.send_function(func1, curfunc)
+            ramplog.write("%d\t%s\n" % (duration, b.imgtag))
+            b.execute_sequence(imtype)
+    ramplog.close()
+    
+
 if __name__ == '__main__':
     b = start()
+    PTC(b)
 
