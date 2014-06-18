@@ -2,7 +2,6 @@
 import sys
 import os, os.path
 import time, datetime
-
 import math as m
 import numpy as np
 import pylab as pb
@@ -13,7 +12,7 @@ import lsst.testbench.dmk41au02as as d
 import ds9
 #--------------------------------------
 #fonction calcul de la FFT 2D et rearrangement de la FFT  
-#option echelle log ,suppression moyenne et convolution gaussienne
+#option suppression moyenne et convolution gaussienne
 def fft_2(L, remove_mean=True,convolve=True): 
     u = np.shape(L)[0]
     v = np.shape(L)[1]
@@ -30,9 +29,7 @@ def fft_2(L, remove_mean=True,convolve=True):
         y = x.transpose()
         G = np.exp(-(x**2+y**2)/(2*sigma**2))
         FFTL = scind.convolve(FFTL, G, mode='constant', cval=0.0)
-    
     return FFTL
-
 #-------------------------------------------
 #fonction de recherche des max et leurs positions
 def max_pos(M) : # par rapport au centre
@@ -51,7 +48,7 @@ def max_pos(M) : # par rapport au centre
 def int_ori(M):
     """
     Calcule interfrange et orientation des franges
-    a partir de l'image M
+    a partir de la fft M de l'image
     """
     u = np.shape(M)[0]
     v = np.shape(M)[1]
