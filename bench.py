@@ -39,6 +39,7 @@ def dict_to_fitshdu(dictheader, fitshdu):
     for keyword in dictheader:
         fitsheader[keyword] = dictheader[keyword]
 
+
 def get_sequencer_hdu(fpga):
     """
     Builds table HDU for FITS file containing sequencer dump
@@ -67,9 +68,85 @@ def get_sequencer_hdu(fpga):
     outputcol = pyfits.Column(name="Output", format='A32', array=output)
     durationcol = pyfits.Column(name="Time", format='I8', array=duration)
 
-    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+    exthdu = pyfits.TableHDU(pyfits.FITS_rec.from_columns([slicecol, outputcol, durationcol]), name="SEQ_DUMP")
 
     return exthdu
+
+
+class XMLRPC(object):
+    """
+    Generic class to manage objects connected through XMLRPC
+    """
+
+    def __init__(self, server, idstr, name):
+        self.name = name
+        self.server = server
+        self.idstr = idstr
+        self.comm = xmlrpclib.ServerProxy(self.server)
+
+    def connect(self):
+        self.comm.connect()
+        checkstr = self.comm.checkConnection()
+        if checkstr != self.idstr:
+            print("Incorrect connection to %s, returns %s " % (self.name, checkstr))
+
+
+class BackSubstrate(XMLRPC):
+    """
+    Managing back-substrate voltage controlled by Keithley 6487
+    """
+    setvoltbss = 0  # desired voltage setting (independent of actual value)
+
+    def __init__(self):
+        XMLRPC.__init__(self, server="http://lpnlsst:8087/", idstr="6487", name="Keithley 6487")
+
+    def connect(self):
+        XMLRPC.connect(self)
+
+    def config(self, voltage=0):
+        """
+        Configuration of voltage, current limits and current readout.
+        """
+
+        if abs(voltage) < 50:
+            range = 50.0
+        else:
+            range = 500.0
+        self.comm.selectOutputVoltageRange(range, 2.5e-5)
+
+        if voltage < 0:
+            self.comm.setOutputVoltage(float(voltage))
+            self.setvoltbss = voltage
+        else:
+            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
+
+        self.comm.zeroCorrect()
+        self.comm.selectCurrent(2e-5)
+
+    def set_volt(self, voltage):
+        """
+        Changes voltage without changing configuration
+        """
+        if voltage < 0:
+            self.comm.setOutputVoltage(float(voltage))
+            self.setvoltbss = voltage
+        else:
+            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
+
+        while abs(self.comm.getVoltage() - self.setvoltbss) > 0.1:
+            time.sleep(1)
+
+    def enable(self):
+
+        self.comm.setVoltageOperate(1)
+        while abs(self.comm.getVoltage() - self.setvoltbss) > 0.1:
+            time.sleep(1)
+
+    def disable(self):
+
+        self.comm.setVoltageOperate(0)
+        while abs(self.comm.getVoltage() - 0) > 0.1:
+            time.sleep(1)
 
 
 class Bench(object):
@@ -81,12 +158,12 @@ class Bench(object):
     primeheader = {}
     slitsize = 30
     reb_id = 2
-    setvoltbss = 40
     nchannels = 16
     imgtag = 0
     xmlfile = "camera/reb/sequencer-soi.xml"
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
+    logger = None  # update later if using logger
     # The following should come from the XML file instead
     imglines = 2020
     imgcols = 550
@@ -101,7 +178,7 @@ class Bench(object):
         self.reb = reb.REB(reb_id=self.reb_id)
         self.seq = xml.fromxmlfile(self.xmlfile)
         self.primeheader["CTRLCFG"] = self.xmlfile
-        self.bss = xmlrpclib.ServerProxy("http://lpnlsst:8087/")# wrong
+        self.bss = BackSubstrate()
         self.bss.connect()
         self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # OK
         self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")  # OK
@@ -178,10 +255,8 @@ class Bench(object):
         time.sleep(1)
 
         #starts Keithley backsubstrate voltage
-        self.config_bss(self.setvoltbss)
-        self.bss.setVoltageOperate(1)
-        while abs(self.bss.getVoltage() - self.setvoltbss) > 0.1:
-            time.sleep(1)
+        self.bss.config(voltage=-40)
+        self.bss.enable()
 
         print("Start-up sequence complete")
 
@@ -192,10 +267,7 @@ class Bench(object):
 
         self.wait_end_sequencer()
         #Back-substrate first
-        self.bss.setVoltageOperate(0)
-
-        while abs(self.bss.getVoltage()) > 0.1:
-            time.sleep(1)
+        self.bss.disable()
 
         #current source
         self.reb.set_dacs({"I_OS": 0})
@@ -225,22 +297,6 @@ class Bench(object):
 
     def bench_shutdown(self):
         self.ttl.closeShutter()
-
-    def config_bss(self, voltage=40):
-        """
-        Configuration of Keithley 6487 used to generate back-substrate voltage.
-        """
-
-        if voltage < 50:
-            range = 50.0
-        else:
-            range = 500.0
-        self.bss.selectOutputVoltageRange(range, 2.5e-5)
-
-        self.bss.setOutputVoltage(voltage)
-
-        self.bss.zeroCorrect()
-        self.bss.selectCurrent(2e-5)
 
     def set_slit_size(self, slitsize):
         """
@@ -374,12 +430,26 @@ class Bench(object):
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
-    def execute_sequence(self, name, exposuretime = 2, waittime=15, number=1, fitsname=""):
+    def waiting_sequence(self, name="Wait"):
+        """
+        Lets CCD wait until keyboard interrupt is sent by clearing periodically
+
+        """
+        self.wait_end_sequencer()
+        keepwaiting = True
+        while keepwaiting:
+            try:
+                self.reb.run_subroutine(name)
+                time.sleep(60)
+            except KeyboardInterrupt:
+                keepwaiting = False
+
+    def execute_sequence(self, name, exposuretime=2, waittime=15, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
             :param self:
-            :param name: sequence name in the XML
-            :param number: number of times to execute (if calling a subroutine)
+            :param name: string
+
             """
         # TODO: Check that both options work
 
@@ -390,10 +460,7 @@ class Bench(object):
         self.reb.fpga.write(self.exposureadd, self.exposurereg + int(exposuretime * 1000))
         self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
 
-        if number > 1:
-            self.reb.run_subroutine(name, repeat=number)
-        else:
-            self.reb.run_subroutine(name)
+        self.reb.run_subroutine(name)
 
         time.sleep(exposuretime + waittime)
 
@@ -454,7 +521,8 @@ class Bench(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             #creates extension to fits file
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)
+            # exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
@@ -471,30 +539,76 @@ class Bench(object):
         hdulist.append(exthdu)
 
         # Writing file
-        # TODO: compression
-        if fitsname: # using LSST scheme for directory and image name
-            # TODO
-            fitsdir = os.path.join(self.fitstopdir, "sensorData", self.sensorID, self.testtype, self.teststamp)
-        else:  # structure for specific tests
-            fitsdir = os.path.join(self.fitstopdir,date.today().strftime('%Y%m%d'))
-            fitsname = imgstr +'.fits'
+        if not fitsname:  # structure for specific tests
+            fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.localtime()))
+            if not os.path.isdir(fitsdir):
+                os.mkdir(fitsdir)
+            fitsname = os.path.join(fitsdir, imgstr +'.fits')
+        # else: using LSST scheme for directory and image name, already built in fitsname
 
-        if not os.path.isdir(fitsdir):
-            os.mkdir(fitsdir)
-
-        primaryhdu.header["FILENAME"] = fitsname
+        primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
         primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
-        hdulist.writeto(os.path.join(fitsdir, fitsname), clobber=True)
+        hdulist.writeto(fitsname, clobber=True)
 
-        print("Wrote FITS file "+fitsname +" to "+ fitsdir)
+        print("Wrote FITS file "+fitsname)
+
+def start():
+    """
+    Bench start-up operations strung together.
+
+    :return: Bench()
+    """
+    b = Bench()
+    b.REBpowerup()
+    wait_for_action("REB can be connected to CCD now.")
+    b.CCDpowerup()
+    # Puts CCD in waiting state by clearing periodically, while waiting for a new command.
+    b.waiting_sequence()
+    return b
+
+
+def stop(b):
+    b.CCDshutdown()
+    b.bench_shutdown()
+
+
+def PTC(b):
+    """
+    Acquires a series of pairs of flat with increasing exposure times.
+    Could also use Peter Doherty's ccdacq for this, would give structure for file names and directories.
+    :param b:
+    :return:
+    """
+    # TODO: power / set lamp or laser ?
+    ptclog = open(os.path.join(self.fitstopdir,"PTClog.txt"), mode='a')
+    for exptime in range(0.25, 5, 0.25):
+        first = b.imgtag
+        b.execute_sequence('Acquisition',exposuretime=exptime)
+        second = b.imgtag
+        b.execute_sequence('Acquisition',exposuretime=exptime)
+        ptclog.write("%4.2f\t%s\t%s\n" % (exptime, first, second))
+    ptclog.close()
+
+
+def timing_ramp(b):
+    """
+    Series of acquisitions to compare timings.
+    """
+    # TODO: power on laser/other ?
+    ramplog = open(os.path.join(self.fitstopdir,"ramplog.txt"), mode='a')
+    func1 = 2
+    slice1 = 6  # TBC depending on which slice and which function we test
+    for imtype in ['Bias','Acquisition']:
+        for duration in range(150,450,20):
+            curfunc = b.reb.fpga.dump_function(func1)
+            curfunc.timelengths[slice1] = duration
+            b.reb.fpga.send_function(func1, curfunc)
+            ramplog.write("%d\t%s\n" % (duration, b.imgtag))
+            b.execute_sequence(imtype)
+    ramplog.close()
+    
 
 if __name__ == '__main__':
-
-    bench = Bench()
-    bench.REBpowerup()
-    wait_for_action("REB can be connected to CCD now.")
-    bench.CCDpowerup()
-    # Puts CCD in waiting state by clearing periodically, while waiting for a new command.
-    while True:
-        bench.execute_sequence("Wait", waittime=60)
+    b = start()
+    PTC(b)
 
