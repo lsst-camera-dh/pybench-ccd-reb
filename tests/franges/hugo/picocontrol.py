@@ -29,7 +29,6 @@ def fft_2(L, remove_mean=True,convolve=True,mask=True):
         y = x.transpose()
         G = np.exp(-(x**2+y**2)/(2*sigma**2))
         FFTL = scind.convolve(FFTL, G, mode='constant', cval=0.0)
-
     if mask:
         uu = np.array([np.arange(u) - u/2]).transpose()
         vv = np.array([np.arange(v) - v/2])
@@ -39,7 +38,6 @@ def fft_2(L, remove_mean=True,convolve=True,mask=True):
         FFTL[r2 < 10**2] = 0
     
     return FFTL
-
 #-------------------------------------------
 #fonction de recherche des max et leurs positions
 def max_pos(M) : # par rapport au centre
@@ -58,7 +56,7 @@ def max_pos(M) : # par rapport au centre
 def int_ori(M):
     """
     Calcule interfrange et orientation des franges
-    a partir de l'image M
+    a partir de la fft M de l'image
     """
     u = np.shape(M)[0]
     v = np.shape(M)[1]
