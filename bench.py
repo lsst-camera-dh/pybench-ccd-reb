@@ -170,6 +170,8 @@ class Bench(object):
     detsize = '[0:4400,0:4040]'
     exposureadd = 0x3000d0 # depends on XML loading, tbc
     exposurereg = 0x16000000 # call pointing to exposure function, same comment
+    exposuresub = "Exposure1ms"
+    darksub = "Dark1ms"
     testtype = "Test"
     sensorID = "100-00"
     teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
@@ -451,7 +453,6 @@ class Bench(object):
             :param name: string
 
             """
-        # TODO: Check that both options work
 
         # Wait until sequencer is finished with current sequence
         self.wait_end_sequencer()

@@ -274,11 +274,11 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>20 ns</duration>
+                        <duration>50 ns</duration>
                         <value>1</value>
                     </timeslice>
                     <timeslice id="slice2">
-                        <duration>20 ns</duration>
+                        <duration>50 ns</duration>
                         <value>0</value>
                     </timeslice>
                 </slicelist>
@@ -446,61 +446,61 @@
                     <constant ref="RST"> 1 </constant>
                 </constants>
             </function>
+            <function id="ReverseTransferLine">
+                <fullname>Single line reversed transfer</fullname>
+                <clocklist>
+                    <clock ref="P1"/>
+                    <clock ref="P2"/>
+                    <clock ref="P3"/>
+                    <clock ref="P4"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>BufferP</duration>
+                        <value>0110</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>TimeP</duration>
+                        <value>1110</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeP</duration>
+                        <value>1100</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>TimeP</duration>
+                        <value>1101</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeP</duration>
+                        <value>1001</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>TimeP</duration>
+                        <value>1011</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>TimeP</duration>
+                        <value>0011</value>
+                    </timeslice>
+                    <timeslice id="slice8">
+                        <duration>TimeP</duration>
+                        <value>0111</value>
+                    </timeslice>
+                    <timeslice id="slice9">
+                        <duration>TimeP</duration>
+                        <value>0110</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="RG"> 1 </constant>
+                    <constant ref="R1"> 1 </constant>
+                    <constant ref="R2"> 1 </constant>
+                    <constant ref="CL"> 1 </constant>
+                    <constant ref="RST"> 1 </constant>
+                </constants>
+            </function>
         </functions>
-        <function id="ReverseTransferLine">
-            <fullname>Single line reversed transfer</fullname>
-            <clocklist>
-                <clock ref="P1"/>
-                <clock ref="P2"/>
-                <clock ref="P3"/>
-                <clock ref="P4"/>
-            </clocklist>
-            <slicelist>
-                <timeslice id="slice1">
-                    <duration>BufferP</duration>
-                    <value>0110</value>
-                </timeslice>
-                <timeslice id="slice2">
-                    <duration>TimeP</duration>
-                    <value>1110</value>
-                </timeslice>
-                <timeslice id="slice3">
-                    <duration>TimeP</duration>
-                    <value>1100</value>
-                </timeslice>
-                <timeslice id="slice4">
-                    <duration>TimeP</duration>
-                    <value>1101</value>
-                </timeslice>
-                <timeslice id="slice5">
-                    <duration>TimeP</duration>
-                    <value>1001</value>
-                </timeslice>
-                <timeslice id="slice6">
-                    <duration>TimeP</duration>
-                    <value>1011</value>
-                </timeslice>
-                <timeslice id="slice7">
-                    <duration>TimeP</duration>
-                    <value>0011</value>
-                </timeslice>
-                <timeslice id="slice8">
-                    <duration>TimeP</duration>
-                    <value>0111</value>
-                </timeslice>
-                <timeslice id="slice9">
-                    <duration>TimeP</duration>
-                    <value>0110</value>
-                </timeslice>
-            </slicelist>
-            <constants>
-                <constant ref="RG"> 1 </constant>
-                <constant ref="R1"> 1 </constant>
-                <constant ref="R2"> 1 </constant>
-                <constant ref="CL"> 1 </constant>
-                <constant ref="RST"> 1 </constant>
-            </constants>
-        </function>
     </sequencer-config>
     <sequencer-routines>
         <subroutines>
