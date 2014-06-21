@@ -560,6 +560,17 @@
                 <call ref="FlushSerial">
                     <repeat>500</repeat>
                 </call>
+            <subroutine id="Exposure">
+                <fullname>Full exposure time</fullname>
+                <call ref="Exposure1ms">
+                    <repeat>ExposureTime</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="DarkExposure">
+                <fullname>Full dark time</fullname>
+                <call ref="Dark1ms">
+                    <repeat>ExposureTime</repeat>
+                </call>
             </subroutine>
             <subroutine id="PumpLine">
                 <fullname>Pumps line back and forth</fullname>
@@ -577,9 +588,7 @@
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
-                <call ref="Exposure1ms">
-                    <repeat>ExposureTime</repeat>
-                </call>
+                <call ref="Exposure"/>
                 <call ref="StartOfImage"/>
                 <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
@@ -590,9 +599,7 @@
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
-                <call ref="Dark1ms">
-                    <repeat>ExposureTime</repeat>
-                </call>
+                <call ref="DarkExposure"/>
                 <call ref="StartOfImage"/>
                 <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
@@ -603,9 +610,7 @@
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
-                <call ref="Exposure1ms">
-                    <repeat>ExposureTime</repeat>
-                </call>
+                <call ref="Exposure"/>
                 <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
             </subroutine>
@@ -620,9 +625,7 @@
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
-                <call ref="Exposure1ms">
-                    <repeat>ExposureTime</repeat>
-                </call>
+                <call ref="Exposure"/>
                 <call ref="StartOfImage"/>
                 <call ref="CloseShutter"/>
                 <call ref="ReadWindow"/>
@@ -633,9 +636,7 @@
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
-                <call ref="Exposure1ms">
-                    <repeat>ExposureTime</repeat>
-                </call>
+                <call ref="Exposure"/>
                 <call ref="CloseShutter"/>
                 <call ref="PumpLine">
                     <repeat>1000</repeat>

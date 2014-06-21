@@ -168,10 +168,8 @@ class Bench(object):
     imglines = 2020
     imgcols = 550
     detsize = '[0:4400,0:4040]'
-    exposureadd = 0x3000d0 # depends on XML loading, tbc
-    exposurereg = 0x16000000 # call pointing to exposure function, same comment
-    exposuresub = "Exposure1ms"
-    darksub = "Dark1ms"
+    exposuresub = "Exposure"
+    darksub = "DarkExposure"
     testtype = "Test"
     sensorID = "100-00"
     teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
@@ -446,6 +444,31 @@ class Bench(object):
             except KeyboardInterrupt:
                 keepwaiting = False
 
+    def set_exposure_time(self, exptime, lighttime=True, darktime=True):
+        """
+        Modifies exposure subroutines to last the given exposure time
+        (input in seconds). By default both exposures with shutter open
+        and closed are modified, use optional parameters to preserve one
+        or the other.
+        :param exptime:
+        :param lighttime:
+        :param darktime:
+        """
+        newiter = int(exptime * 1000)  # Exposures iterate over 1ms subroutines
+        # look up address of exposure subroutine
+        # then get current instruction and rewrite the number of iterations only
+        if lighttime:
+            exposureadd = self.seq.program.subroutines[self.exposuresub]
+            newinstruction = self.seq.program.instructions[exposureadd]
+            newinstruction.repeat = newiter
+            self.reb.fpga.send_program_instruction(exposureadd, newinstruction)
+        #same for dark subroutine
+        if darktime:
+            darkadd = self.seq.program.subroutines[self.darksub]
+            newinstruction = self.seq.program.instructions[darkadd]
+            newinstruction.repeat = newiter
+            self.reb.fpga.send_program_instruction(darkadd, newinstruction)
+
     def execute_sequence(self, name, exposuretime=2, waittime=15, fitsname=""):
         """
             Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
@@ -458,7 +481,7 @@ class Bench(object):
         self.wait_end_sequencer()
 
         # load new exposure time here (better: with XML parameter ?)
-        self.reb.fpga.write(self.exposureadd, self.exposurereg + int(exposuretime * 1000))
+        self.set_exposure_time(exposuretime)
         self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
 
         self.reb.run_subroutine(name)
