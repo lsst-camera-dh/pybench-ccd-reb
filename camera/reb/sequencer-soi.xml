@@ -560,6 +560,7 @@
                 <call ref="FlushSerial">
                     <repeat>500</repeat>
                 </call>
+            </subroutine>
             <subroutine id="Exposure">
                 <fullname>Full exposure time</fullname>
                 <call ref="Exposure1ms">

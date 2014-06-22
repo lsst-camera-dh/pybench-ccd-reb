@@ -149,6 +149,54 @@ class BackSubstrate(XMLRPC):
             time.sleep(1)
 
 
+class Source(object):
+    """
+    Management of the light sources and iron 55 source.
+    """
+    source_selector = ("Fe55", "XeHg", "QTH", "Laser")
+    lamp_list = ["XeHg", "QTH"]
+
+    def __init__(self):
+        self.source_name = None
+        self.laser = XMLRPC("http://lpnlsst:8082/", "TBC", "Laser Thorlab") # TBC
+        self.ttl = XMLRPC("http://lpnlsst:8083/","TBC","TTL")  # OK
+        self.ttl.connect()
+        # light sources: create objects here, does not try to connect
+        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:","TBC", "QTH lamp")  # TBC
+        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
+
+    def select_source(self, sourcetype):
+
+        if sourcetype == "Fe55":
+            pass  # will be motorized at some point
+        elif sourcetype == "Laser":
+            self.laser.connect()
+            # TODO: selects output based on wavelength
+        elif sourcetype == "QTH":
+            self.ttl.selectQTH()
+            self.qth.connect()
+            # TODO: start lamp here
+        elif sourcetype == "XeHg":
+            self.ttl.openShutter()
+            self.ttl.selectXeHg()
+            self.xehg.connect()
+            # TODO: start lamp here
+        else:
+            raise IOError("Unknown type of source")
+        self.source_name = sourcetype
+
+    def getWatts(self):
+        pass
+
+    def setWatts(self):
+        pass
+
+    def on(self):
+        if self.source_name in self.lamp_list:
+            self.ttl.openShutter()
+
+        pass
+
 class Bench(object):
     """
     Internal representation of the full bench
@@ -180,14 +228,9 @@ class Bench(object):
         self.primeheader["CTRLCFG"] = self.xmlfile
         self.bss = BackSubstrate()
         self.bss.connect()
-        self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # OK
-        self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")  # OK
-        self.ttl.connect()
-        # light sources: create objects here, does not try to connect
-        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:")  # TBC
-        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/")  # TBC
+        self.lamp = Source()
         self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")  # OK
-        self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")  # TBC
+        self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # To be changed: 6487 should be here
 
     def REBpowerup(self):
         """
@@ -339,28 +382,12 @@ class Bench(object):
         """
             Connects and starts whichever light source is going to be used
             """
-        if sourcetype == "Fe55":
-            pass  # will be motorized at some point
-        elif sourcetype == "laser":
-            self.laser.connect()
-            # TODO: selects output based on wavelength
-        elif sourcetype == "qth":
-            self.ttl.openShutter()
-            self.ttl.selectQTH()
-            self.qth.connect()
-            # TODO: start lamp here
-        elif sourcetype == "xehg":
-            self.ttl.openShutter()
-            self.ttl.selectXeHg()
-            self.xehg.connect()
-            # TODO: start lamp here
-        else:
-            raise IOError("Unknown type of source")
+        self.lamp.select_source(sourcetype)
         self.testheader["SRCTYPE"] = sourcetype.upper()
         #self.testheader["SCRMODL"]  # source model
-        #self.testheader["SRCPWR"]  # source power in Watts
+        self.testheader["SRCPWR"] = self.lamp.getWatts()
 
-        if sourcetype in ["qth", "xehg"]:
+        if sourcetype in self.lamp.lamp_list:
             self.triax.connect()
             self.move_to_wavelength(wavelength, True)
             self.set_slit_size(self.slitsize)
@@ -460,7 +487,7 @@ class Bench(object):
         if lighttime:
             exposureadd = self.seq.program.subroutines[self.exposuresub]
             newinstruction = self.seq.program.instructions[exposureadd]
-            newinstruction.repeat = newiter
+            newinstruction.repeat = newiter  # This does rewrite the seq.program too
             self.reb.fpga.send_program_instruction(exposureadd, newinstruction)
         #same for dark subroutine
         if darktime:
