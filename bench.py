@@ -34,6 +34,21 @@ def generate_tag(number):
     return tag
 
 
+def log(name, logger, cmd, value = None):
+    """
+
+    :param name:
+    :param logger:
+    :param cmd:
+    :param value:
+    """
+    if logger:
+        if value:
+            logger.log("%s : writing %s with %s" % (name, str(cmd), str(value)) )
+        else:
+            logger.log("%s : writing %s" % (name, str(cmd)) )
+
+
 def dict_to_fitshdu(dictheader, fitshdu):
     fitsheader = fitshdu.header
     for keyword in dictheader:
@@ -156,7 +171,7 @@ class Source(object):
     source_selector = ("Fe55", "XeHg", "QTH", "Laser")
     lamp_list = ["XeHg", "QTH"]
 
-    def __init__(self):
+    def __init__(self, logger=None):
         self.source_name = None
         self.laser = XMLRPC("http://lpnlsst:8082/", "TBC", "Laser Thorlab") # TBC
         self.ttl = XMLRPC("http://lpnlsst:8083/","TBC","TTL")  # OK
@@ -164,6 +179,7 @@ class Source(object):
         # light sources: create objects here, does not try to connect
         self.qth = xmlrpclib.ServerProxy("http://lpnlsst:","TBC", "QTH lamp")  # TBC
         self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
+        self.logger = logger
 
     def select_source(self, sourcetype):
 
@@ -177,7 +193,6 @@ class Source(object):
             self.qth.connect()
             # TODO: start lamp here
         elif sourcetype == "XeHg":
-            self.ttl.openShutter()
             self.ttl.selectXeHg()
             self.xehg.connect()
             # TODO: start lamp here
@@ -186,9 +201,10 @@ class Source(object):
         self.source_name = sourcetype
 
     def getWatts(self):
-        pass
+        if self.source_name == "Fe55":
+            pass
 
-    def setWatts(self):
+    def setWatts(self, power):
         pass
 
     def on(self):
@@ -222,13 +238,14 @@ class Bench(object):
     sensorID = "100-00"
     teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
-    def __init__(self):
+    def __init__(self, logger=None):
         self.reb = reb.REB(reb_id=self.reb_id)
         self.seq = xml.fromxmlfile(self.xmlfile)
         self.primeheader["CTRLCFG"] = self.xmlfile
-        self.bss = BackSubstrate()
+        self.bss = BackSubstrate()  # logged in higher-level class k6487
         self.bss.connect()
-        self.lamp = Source()
+        self.lamp = Source(logger)
+        # triax and multi need to be logged too
         self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")  # OK
         self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # To be changed: 6487 should be here
 
