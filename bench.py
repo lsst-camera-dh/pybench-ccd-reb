@@ -7,7 +7,7 @@
 import time
 from datetime import date
 import os
-import subprocess
+#import subprocess
 import xmlrpclib
 import reb
 import fpga
@@ -44,9 +44,9 @@ def log(name, logger, cmd, value = None):
     """
     if logger:
         if value:
-            logger.log("%s : writing %s with %s" % (name, str(cmd), str(value)) )
+            logger.log("%s : %s = %s" % (name, str(cmd), str(value)) )
         else:
-            logger.log("%s : writing %s" % (name, str(cmd)) )
+            logger.log("%s : %s" % (name, str(cmd)) )
 
 
 def dict_to_fitshdu(dictheader, fitshdu):
@@ -58,8 +58,8 @@ def dict_to_fitshdu(dictheader, fitshdu):
 def get_sequencer_hdu(fpga):
     """
     Builds table HDU for FITS file containing sequencer dump
-        :param seq:
-        :return:
+        :param fpga: FPGA
+        :return: pyfits.TableHDU
         """
     prog = fpga.dump_program()
     progaddr = prog.instructions.keys()
@@ -177,8 +177,8 @@ class Source(object):
         self.ttl = XMLRPC("http://lpnlsst:8083/","TBC","TTL")  # OK
         self.ttl.connect()
         # light sources: create objects here, does not try to connect
-        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:","TBC", "QTH lamp")  # TBC
-        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
+        self.qth = XMLRPC("http://lpnlsst:","TBC", "QTH lamp")  # TBC
+        self.xehg = XMLRPC("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
         self.logger = logger
 
     def select_source(self, sourcetype):
@@ -189,11 +189,11 @@ class Source(object):
             self.laser.connect()
             # TODO: selects output based on wavelength
         elif sourcetype == "QTH":
-            self.ttl.selectQTH()
+            self.ttl.comm.selectQTH()
             self.qth.connect()
             # TODO: start lamp here
         elif sourcetype == "XeHg":
-            self.ttl.selectXeHg()
+            self.ttl.comm.selectXeHg()
             self.xehg.connect()
             # TODO: start lamp here
         else:
@@ -202,16 +202,97 @@ class Source(object):
 
     def getWatts(self):
         if self.source_name == "Fe55":
+            return None
+        else:
             pass
+            #self.logger.log("%s : Watts = %f" % (self.source_name, value) )
 
     def setWatts(self, power):
-        pass
+        # TODO
+        log(self.source_name, self.logger, "Set Watts", power)
+
+    def getAlim(self):
+        """
+        Current limit on lamps.
+        """
+        if self.source_name == "XeHg":
+            return self.xehg.comm.getPresetCurrent()
+
+        return None
 
     def on(self):
         if self.source_name in self.lamp_list:
-            self.ttl.openShutter()
+            self.ttl.comm.openShutter()
+        if self.source_name == "XeHg":
+            self.xehg.power(1)
+        # TODO: other types
+        log(self.source_name, self.logger, "On")
 
+    def off(self):
+        if self.source_name in self.lamp_list:
+            self.ttl.comm.closeShutter()
+        if self.source_name == "XeHg":
+            self.xehg.power(0)
+        log(self.source_name, self.logger, "Off")
+
+
+class Monochromator(object):
+    """
+    Management of monochromator and input filter
+    """
+    testheader = {}
+    slitsize = 30
+
+    def __init__(self, logger=None):
+        self.triax = XMLRPC("http://lpnlsst:8086/", "1", "Triax 180")  # idstr TBC
+        # TODO: add filter management
+        self.logger = logger
+
+    def connect(self):
+        self.triax.connect()
+
+    def set_slit_size(self, slitsize):
+        """
+        Sets both slit sizes on the monochromator and waits until complete
+        :param slitsize:
+        :return:
+        """
+        self.slitsize = slitsize
+        self.triax.comm.setInSlit(self.slitsize)
+        while self.triax.comm.status() == 0:
+            time.sleep(1.0)
+        self.triax.comm.setOutSlit(self.slitsize)
+        while self.triax.comm.status() == 0:
+            time.sleep(1.0)
+
+    def setWavelength(self, wavelength, SelectGrating=False):
+        """
+        Moves the monochromator to the selected wavelength and waits until it is done.
+        Calculates automatically which grating to use if authorized to change.
+        """
+
+        if SelectGrating:
+            if wavelength < 800:
+                grating = 0
+                lines = 1198
+            elif wavelength < 1400:
+                grating = 1
+                lines = 599
+            else:
+                grating = 2
+                lines = 599  # TODO: check values
+            self.triax.comm.setGrating(grating)
+            self.testheader["MONOPOS"] = grating
+            self.testheader["MONOGRAT"] = lines
+
+        self.triax.comm.setWavelength(wavelength)
+        while self.triax.comm.status() == 0:
+            time.sleep(1.0)
+        log(self.triax.name, "setWavelength", wl)
+
+    def setFilter(self, value):
         pass
+
 
 class Bench(object):
     """
@@ -220,7 +301,6 @@ class Bench(object):
     opheader = {}
     testheader = {}
     primeheader = {}
-    slitsize = 30
     reb_id = 2
     nchannels = 16
     imgtag = 0
@@ -245,8 +325,7 @@ class Bench(object):
         self.bss = BackSubstrate()  # logged in higher-level class k6487
         self.bss.connect()
         self.lamp = Source(logger)
-        # triax and multi need to be logged too
-        self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")  # OK
+        self.monochromator = Monochromator(logger)
         self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # To be changed: 6487 should be here
 
     def REBpowerup(self):
@@ -356,44 +435,7 @@ class Bench(object):
         print("CCD shutdown complete")
 
     def bench_shutdown(self):
-        self.ttl.closeShutter()
-
-    def set_slit_size(self, slitsize):
-        """
-        Sets both slit sizes on the monochromator and waits until complete
-        :param slitsize:
-        :return:
-        """
-        self.slitsize = slitsize
-        self.triax.setInSlit(self.slitsize)
-        while self.triax.status() == 0:
-            time.sleep(1.0)
-        self.triax.setOutSlit(self.slitsize)
-        while self.triax.status() == 0:
-            time.sleep(1.0)
-
-    def move_to_wavelength(self, wavelength, SelectGrating=False):
-        """
-            Moves the monochromator to the selected wavelength and waits until it is done.
-            Calculates automatically which grating to use if authorized to change.
-            """
-        if SelectGrating:
-            if wavelength < 800:
-                grating = 0
-                lines = 1198
-            elif wavelength < 1400:
-                grating = 1
-                lines = 599
-            else:
-                grating = 2
-                lines = 599  # TODO: check values
-            self.triax.setGrating(grating) 
-            self.testheader["MONOPOS"] = grating
-            self.testheader["MONOGRAT"] = lines
-
-        self.triax.setWavelength(wavelength)
-        while self.triax.status() == 0:
-            time.sleep(1.0)
+        self.lamp.ttl.comm.closeShutter()
 
     def select_source(self, sourcetype, wavelength=500.0):
         """
@@ -405,9 +447,9 @@ class Bench(object):
         self.testheader["SRCPWR"] = self.lamp.getWatts()
 
         if sourcetype in self.lamp.lamp_list:
-            self.triax.connect()
-            self.move_to_wavelength(wavelength, True)
-            self.set_slit_size(self.slitsize)
+            self.monochromator.connect()
+            self.monochromator.setWavelength(wavelength, True)
+            self.monochromator.set_slit_size(30)
         self.testheader["MONOTYPE"] = "Triax180"
 
         self.multi.connect()
@@ -421,9 +463,9 @@ class Bench(object):
         #CCD operating conditions header
         self.opheader = self.reb.get_operating_header()
 
-        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.getOutputVoltage())
+        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.comm.getOutputVoltage())
         # gives only current at this time, might upgrade to get measures during exposure
-        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())
+        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.comm.getCurrent())
         # TODO: power supply currents and voltages
 
         #need to add instruments header, optional sequencer header
@@ -432,12 +474,12 @@ class Bench(object):
         self.primeheader["DETSIZE"] = self.detsize
         self.primeheader["TESTTYPE"] = self.testtype
         try:
-            wavelength = self.triax.getWavelength()
+            wavelength = self.monochromator.triax.comm.getWavelength()
         except:
             wavelength = 0.0
         self.primeheader["MONOWL"] = wavelength
 
-        self.testheader["MONOWL"] = wavelength
+        self.monochromator.testheader["MONOWL"] = wavelength
         #TODO: temperature
 
     def get_extension_header(self, REBchannel, fitshdu, borders = False):
@@ -596,6 +638,7 @@ class Bench(object):
 
         # More header HDUs
         exthdu = pyfits.BinTableHDU(name="TEST_COND")
+        self.testheader.update(self.monochromator.testheader)
         dict_to_fitshdu(self.testheader,exthdu)
         hdulist.append(exthdu)
         exthdu = pyfits.BinTableHDU(name="CCD_COND")
