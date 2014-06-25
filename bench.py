@@ -88,7 +88,7 @@ def get_sequencer_hdu(fpga):
     return exthdu
 
 
-class XMLRPC(object):
+class XMLRPC(xmlrpclib.ServerProxy):
     """
     Generic class to manage objects connected through XMLRPC
     """
@@ -97,11 +97,11 @@ class XMLRPC(object):
         self.name = name
         self.server = server
         self.idstr = idstr
-        self.comm = xmlrpclib.ServerProxy(self.server)
+        xmlrpclib.ServerProxy.__init__(self,self.server)
 
     def connect(self):
-        self.comm.connect()
-        checkstr = self.comm.checkConnection()
+        self.connect()
+        checkstr = self.checkConnection()
         if checkstr != self.idstr:
             print("Incorrect connection to %s, returns %s " % (self.name, checkstr))
 
@@ -127,40 +127,40 @@ class BackSubstrate(XMLRPC):
             range = 50.0
         else:
             range = 500.0
-        self.comm.selectOutputVoltageRange(range, 2.5e-5)
+        self.selectOutputVoltageRange(range, 2.5e-5)
 
         if voltage < 0:
-            self.comm.setOutputVoltage(float(voltage))
+            self.setOutputVoltage(float(voltage))
             self.setvoltbss = voltage
         else:
             raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
 
-        self.comm.zeroCorrect()
-        self.comm.selectCurrent(2e-5)
+        self.zeroCorrect()
+        self.selectCurrent(2e-5)
 
     def set_volt(self, voltage):
         """
         Changes voltage without changing configuration
         """
         if voltage < 0:
-            self.comm.setOutputVoltage(float(voltage))
+            self.setOutputVoltage(float(voltage))
             self.setvoltbss = voltage
         else:
             raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
 
-        while abs(self.comm.getVoltage() - self.setvoltbss) > 0.1:
+        while abs(self.getVoltage() - self.setvoltbss) > 0.1:
             time.sleep(1)
 
     def enable(self):
 
-        self.comm.setVoltageOperate(1)
-        while abs(self.comm.getVoltage() - self.setvoltbss) > 0.1:
+        self.setVoltageOperate(1)
+        while abs(self.getVoltage() - self.setvoltbss) > 0.1:
             time.sleep(1)
 
     def disable(self):
 
-        self.comm.setVoltageOperate(0)
-        while abs(self.comm.getVoltage() - 0) > 0.1:
+        self.setVoltageOperate(0)
+        while abs(self.getVoltage() - 0) > 0.1:
             time.sleep(1)
 
 
@@ -189,16 +189,18 @@ class Source(object):
             self.laser.connect()
             # TODO: selects output based on wavelength
         elif sourcetype == "QTH":
-            self.ttl.comm.selectQTH()
+            self.ttl.selectQTH()
             self.qth.connect()
             # TODO: start lamp here
         elif sourcetype == "XeHg":
-            self.ttl.comm.selectXeHg()
+            self.ttl.selectXeHg()
             self.xehg.connect()
             # TODO: start lamp here
         else:
             raise IOError("Unknown type of source")
         self.source_name = sourcetype
+
+        log(self.source_name, self.logger, "Selected")
 
     def getWatts(self):
         if self.source_name == "Fe55":
@@ -216,13 +218,13 @@ class Source(object):
         Current limit on lamps.
         """
         if self.source_name == "XeHg":
-            return self.xehg.comm.getPresetCurrent()
+            return self.xehg.getPresetCurrent()
 
         return None
 
     def on(self):
         if self.source_name in self.lamp_list:
-            self.ttl.comm.openShutter()
+            self.ttl.openShutter()
         if self.source_name == "XeHg":
             self.xehg.power(1)
         # TODO: other types
@@ -230,7 +232,7 @@ class Source(object):
 
     def off(self):
         if self.source_name in self.lamp_list:
-            self.ttl.comm.closeShutter()
+            self.ttl.closeShutter()
         if self.source_name == "XeHg":
             self.xehg.power(0)
         log(self.source_name, self.logger, "Off")
@@ -258,11 +260,11 @@ class Monochromator(object):
         :return:
         """
         self.slitsize = slitsize
-        self.triax.comm.setInSlit(self.slitsize)
-        while self.triax.comm.status() == 0:
+        self.triax.setInSlit(self.slitsize)
+        while self.triax.status() == 0:
             time.sleep(1.0)
-        self.triax.comm.setOutSlit(self.slitsize)
-        while self.triax.comm.status() == 0:
+        self.triax.setOutSlit(self.slitsize)
+        while self.triax.status() == 0:
             time.sleep(1.0)
 
     def setWavelength(self, wavelength, SelectGrating=False):
@@ -281,12 +283,12 @@ class Monochromator(object):
             else:
                 grating = 2
                 lines = 599  # TODO: check values
-            self.triax.comm.setGrating(grating)
+            self.triax.setGrating(grating)
             self.testheader["MONOPOS"] = grating
             self.testheader["MONOGRAT"] = lines
 
-        self.triax.comm.setWavelength(wavelength)
-        while self.triax.comm.status() == 0:
+        self.triax.setWavelength(wavelength)
+        while self.triax.status() == 0:
             time.sleep(1.0)
         log(self.triax.name, "setWavelength", wl)
 
@@ -463,9 +465,9 @@ class Bench(object):
         #CCD operating conditions header
         self.opheader = self.reb.get_operating_header()
 
-        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.comm.getOutputVoltage())
+        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.getOutputVoltage())
         # gives only current at this time, might upgrade to get measures during exposure
-        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.comm.getCurrent())
+        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())
         # TODO: power supply currents and voltages
 
         #need to add instruments header, optional sequencer header
@@ -474,7 +476,7 @@ class Bench(object):
         self.primeheader["DETSIZE"] = self.detsize
         self.primeheader["TESTTYPE"] = self.testtype
         try:
-            wavelength = self.monochromator.triax.comm.getWavelength()
+            wavelength = self.monochromator.triax.getWavelength()
         except:
             wavelength = 0.0
         self.primeheader["MONOWL"] = wavelength
