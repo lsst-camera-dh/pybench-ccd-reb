@@ -20,15 +20,23 @@ import lsst.testbench.dmk41au02as as d
 test_expo = 0.5
 
 def INIT_MOV():
+    '''
+    Initialise les moteurs a des valeurs par defaut
+    '''
     mov = xyz.XYZ()
 
-    mov.x_port = '/dev/ttyUSB8'
-    mov.y_port = '/dev/ttyUSB9'
-    mov.z_port = '/dev/ttyUSB10'
+    mov.x_port = '/dev/ttyUSB0'
+    mov.y_port = '/dev/ttyUSB1'
+    mov.z_port = '/dev/ttyUSB2'
 
     return mov
 
 def MOVE_TO_DEFAULT(mov):
+    '''
+    Deplace les moteurs a une position par default
+
+    @param mov: ensemble de moteur
+    '''
     default = np.loadtxt("default_pos.data", comments = '#')
 
     xpos = default[0]
@@ -67,24 +75,45 @@ def CUTS(data, hauteur = 50, largeur = 50):
 
     return cuts
 
-def PF(data, max_i): # Obtient le flux dans les pixels voisin sous la forme [SUD,OUEST,EST,NORD]
+def PF(data, max_i): 
+    '''
+    Obtient le flux dans les pixels voisin sous la forme [SUD,OUEST,EST,NORD]
+
+    @param data: une image
+    @param max_i: position du maximum
+    '''
+
     pixels_flux = [data[max_i[0] - 1][max_i[1]], data[max_i[0]][max_i[1] -1], data[max_i[0]][max_i[1] + 1], data[max_i[0] + 1][max_i[1]]]
 
     return pixels_flux
 
 def PCF(data, max_i):
+    '''
+    Obtient le flux dans le pixel central (de flux max)
+    
+    @param data: une image
+    @param max_i: position du maximum
+    '''
     pcf = data[max_i[0]][max_i[1]]
     
     return pcf
 
 def RATIO(pixel_central_flux, pixels_flux, nb_flux):
+    '''
+    Calcul un ratio de flux
+
+    @param pixel_central_flux: flux du pixel central
+    @param pixels_flux: flux des pixels peripheriques sous forme [SUD,OUEST,EST,NORD]
+    @param nb_flux:
+    '''
     ratio = float(pixels_flux[nb_flux])/pixel_central_flux
     
     return ratio
 
 def FOCUS(mov, cam, interval=0.005, pas=0.001, expo = test_expo, trou = "5micron", cut = "no", auto = 1):
     ''' Fait le focus pour un interval, un pas et un trou donne.
-    Attention : moteurs et camera doivent etre initialises@param mov: nom des moteurs
+    Attention : moteurs et camera doivent etre initialises
+
     @param mov: nom des moteurs
     @param cam: nom de la camera
     @param interval: autour d'un point d'origine, distance avant et apres ce point sur laquelle travailler
@@ -256,16 +285,18 @@ def VKE(mov, cam, interval = 0.03, pas = 0.0001, axe = "z", expo = test_expo, tr
 
 def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_0.1micron", dist = "_sur_20micron", trou = "_5micron", pose = "_0.1s", ext = ".res"):
     '''
-    @param position:
-    @param flux:
-    @param flux2:
-    @param direc:
-    @param axe:
-    @param pas:
-    @param dist:
-    @param trou:
-    @param pose:
-    @param ext:
+    Pour sauvegarder la mesure de transition de flux sur deux pixels adjacents
+    
+    @param position: tableau des positions
+    @param flux: flux du premier pixel
+    @param flux2: flux du deuxieme pixel
+    @param direc: dossier ou enregistrer
+    @param axe: axe de deplacemet
+    @param pas: pas du mouvement
+    @param dist: distnace a parcourir
+    @param trou: trou utilise
+    @param pose: temps de pose pour la camera
+    @param ext: extension du fichier souhaite
     '''
     name = direc + axe + pas + dist + trou + pose + ext
 
@@ -282,6 +313,9 @@ def SAVE_RESULTS(position, flux, flux2, direc ="./results/", axe = "z", pas = "_
     r.close()
 
 def READ_RESULTS(fichier):
+    '''
+    Pour lire un fichiers ecrit par la fonction SAVE_RESULTS()
+    '''
     f = np.loadtxt(fichier)
     pos = f[:,0]
     flux = f[:,1]
@@ -294,6 +328,16 @@ def READ_RESULTS(fichier):
     plt.show()
 
 def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 0.05, cut = "no"):
+    '''
+    Egalise les flux sur les deux pixels adjacents au pixel central
+
+    @param mov: nom des moteurs
+    @param cam: nom de la camera
+    @param pas_raff: pas de prise d'image
+    @param expo: temps d'exposition desire
+    @param precision: degre degalite
+    '''
+
     data = cam.capture(exposure = expo)
 
     temp_max = np.where(data==np.max(data))
@@ -317,6 +361,15 @@ def FOCUS_EQ_EST_OUEST(mov, cam, expo = test_expo, pas_raff = 0.0005, precision 
     print "Fin de l'alignement horizontal"
 
 def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision = 0.05, cut = "no"):
+    '''
+    Egalise les flux du pixel central et superieur
+
+    @param mov: nom des moteurs
+    @param cam: nom de la camera
+    @param pas_raff: pas de prise d'image
+    @param expo: temps d'exposition desire
+    @param precision: degre degalite
+    '''
     data = cam.capture(exposure = expo)
 
     data = np.array(data)
@@ -342,6 +395,12 @@ def FOCUS_EQ_VERTICAL(mov, cam, expo = test_expo, pas_raff = 0.0005, precision =
     print "Fin de l'egalisation verticale"
 
 def CHANGE_DEFAULT_POS(mov):
+    '''
+    Change la position par defaul
+
+    @param mov: nom des moteurs
+    '''
+    
     print("Changer les positions par defaut du focus (yes = 1/no = 0) ? : ")
     suppr = input()
 
@@ -356,6 +415,11 @@ def CHANGE_DEFAULT_POS(mov):
         pos.close()
 
 def INIT_IMAGES(temps):
+    '''
+    Initialise les donnees pour choisir dans un dossier dimage le spot de plus petite taille
+    @param temps: nom du dossier dimages prises par la fontion FOCUS
+    '''
+
     fichiers = gl.glob("./focus/" + str(temps) + "/*fits")
     fichiers = sorted(fichiers)
 
@@ -392,6 +456,14 @@ def INIT_IMAGES(temps):
     return images, donnees, maxima, sums, ratios, ratios_pix_sup_raff
 
 def analyse_vke(temps, pix1 = 3, pix2 = 4, axe = "z"):
+    '''
+    Analyse les images prises par la fonction VKE
+
+    @param temps: nom du dossier dimages prises par la fontion VKE
+    @param pix1: premier pixel a analyser
+    @param pix2: deuxieme pixel a analyser
+    @param axe: axe de deplacement
+    '''
     
     direc = "./vke_beta/" + str(temps) + "/*fits"
     fichiers = gl.glob(direc)
@@ -457,6 +529,13 @@ def analyse_vke(temps, pix1 = 3, pix2 = 4, axe = "z"):
 
 
 def take(cam, expo = test_expo, mode = 1):
+    '''
+    Prend une image avec un temps de pose donne
+    
+    @param cam: nom de la camera
+    @param expo: temps dexposition
+    @param mode: mode de fonctionnement de la camera
+    '''
     print "Before..."
     print cam.device.get_property({'identifier': 'Brightness'})
     print cam.device.get_property({'identifier': 'Gamma'})
