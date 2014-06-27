@@ -3,6 +3,8 @@ Auteur : Rémy Le Breton
 
 Chemin des fichiers décrit : ~/LSST/lsst/py/tests/spots/remy/
 
+A faire : vérifier les fonctions FOCUS_EQ_EST_OUEST et FOCUS_EQ_VERTICAL.
+
 *.fits : 
        Des images tests, peuvent être effacées.
 
@@ -18,35 +20,23 @@ Chemin des fichiers décrit : ~/LSST/lsst/py/tests/spots/remy/
 
      focus.py : procède au focus en plusieurs étapes. Utilise les fonctions de fonctions.py.
      
-     focus_second_step.py : ancienne version du focus en plusieurs étapes. N'est plus utilisé.
-
      fonctions.py : comprend les fonctions que j'ai écrite pour le focus, déplacments suivant un certain axes...
 
      fonctions_test.py : script pour tester une fonction créée avant de l'inclure dans fonctions.py.
 
      init_mov_cam.py : initialise les moteurs et la caméra.
 
-     __init__.py :
+     __init__.py : je ne me souviens pas avoir créé ce fichiers.
 
-     intensite.py :
+     intensite.py : pour prendre des images à des intensités différentes. Ne marche pas si la caméra a un auto-gain !
 
-     move_and_test.py :
+     test_home_pos.py : fait des home en boucle, et écrit les valeurs des ranges.
 
-     profil.py :
+     test_home.py : fait des home en boucle, et regarde la position du maximum (le focus doit être fait à l'avance car on va à chque fois à la position par défaut.
 
-     save_results.py :
+     vke_beta.py : analogue à la fonctions VKE dans fonctions.py
 
-     take_and_test.py :
-
-     test_divers.py :
-
-     test_home_pos.py :
-
-     test_home.py :
-
-     vke_beta.py :
-
-     vke_n_steps.py :
+     vke_n_steps.py : fait un aller retour dans un sens, puis dans l'autre, puis à nouveau dans le premier sens. Boucle sur ce principes.
 
 
 dossiers :
