@@ -12,7 +12,7 @@ import lsst.testbench.pollux.xyz as xyz
 mov = xyz.XYZ()
 mov.open()
 
-nb_boucles = 10
+nb_boucles = 20
 
 name = "test_home_pos/" + str(time.time()) + ".data"
 r = open(name, mode = "w")
@@ -38,6 +38,6 @@ for i in range(0,nb_boucles):
     r.write(" ")
     r.write("\n")
 
-    print nb_boucles
+    print i
 
 r.close()
