@@ -1,4 +1,4 @@
-Description des scripts écrit durant le stage de M2
+Description des scripts écrit durant le stage de M2 de 2014
 Auteur : Rémy Le Breton
 
 Chemin des fichiers décrit : ~/LSST/lsst/py/tests/spots/remy/
