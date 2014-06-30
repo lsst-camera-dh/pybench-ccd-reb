@@ -21,6 +21,9 @@ cam.open()
 
 maxima = []
 
+name = "test_home.data"
+r = open(name, mode = "w")
+
 for i in range(0,2):
     mov.home()
     MOVE_TO_DEFAULT(mov)
@@ -29,14 +32,14 @@ for i in range(0,2):
     mov.move(dx=pas)
     img = np.array(img)
 
-    name = "test_home.data"
     temp_max = np.where(img==np.max(img))
     max_i = [temp_max[0][0], temp_max[1][0]]
-    r = open(name, mode = "w")
 
-    r.write(max_i[0])
+    r.write(str(max_i[0]))
     r.write(" ")
-    r.write(max_i[1])
+    r.write(str(max_i[1]))
+    r.write(" ")
+    r.write(str(img[max_i[0],max_i[1]]))
     r.write("\n")
 
 r.close()
