@@ -170,6 +170,8 @@ class Source(object):
     """
     source_selector = ("Fe55", "XeHg", "QTH", "Laser")
     lamp_list = ["XeHg", "QTH"]
+    XED_SHUTTER = 0  # activate Fe55 arm (when it will be motorized), name chosen for compatibility
+    MONO_SHUTTER = 1
 
     def __init__(self, logger=None):
         self.source_name = None
@@ -181,13 +183,31 @@ class Source(object):
         self.xehg = XMLRPC("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
         self.logger = logger
 
+    def setChannel(self, channel):
+        """
+        Activates or retracts Fe55 arm, when it exists
+        """
+        if channel == self.XED_SHUTTER:
+            # activates
+            pass
+        else:
+            # retracts
+            pass
+
     def select_source(self, sourcetype):
 
+        if sourcetype not in self.source_selector:
+            raise ValueError("Unknown type of source")
+
         if sourcetype == "Fe55":
-            pass  # will be motorized at some point
-        elif sourcetype == "Laser":
+            self.setChannel(self.XED_SHUTTER)
+            time.sleep(5)  # time to move (tbc)
+        else:
+            self.setChannel(self.MONO_SHUTTER)
+
+        if sourcetype == "Laser":
             self.laser.connect()
-            # TODO: selects output based on wavelength
+            # TODO: selects output
         elif sourcetype == "QTH":
             self.ttl.selectQTH()
             self.qth.connect()
@@ -196,8 +216,8 @@ class Source(object):
             self.ttl.selectXeHg()
             self.xehg.connect()
             # TODO: start lamp here
-        else:
-            raise IOError("Unknown type of source")
+        # wait for stabilisation ?
+
         self.source_name = sourcetype
 
         log(self.source_name, self.logger, "Selected")
@@ -244,6 +264,7 @@ class Monochromator(object):
     """
     testheader = {}
     slitsize = 30
+    grating = 0
 
     def __init__(self, logger=None):
         self.triax = XMLRPC("http://lpnlsst:8086/", "1", "Triax 180")  # idstr TBC
@@ -275,25 +296,33 @@ class Monochromator(object):
 
         if SelectGrating:
             if wavelength < 800:
-                grating = 0
+                self.grating = 0
                 lines = 1198
             elif wavelength < 1400:
-                grating = 1
+                self.grating = 1
                 lines = 599
             else:
-                grating = 2
+                self.grating = 2
                 lines = 599  # TODO: check values
-            self.triax.setGrating(grating)
-            self.testheader["MONOPOS"] = grating
+            self.setGrating(self.grating)
+            self.testheader["MONOPOS"] = self.grating
             self.testheader["MONOGRAT"] = lines
 
         self.triax.setWavelength(wavelength)
         while self.triax.status() == 0:
             time.sleep(1.0)
-        log(self.triax.name, "setWavelength", wl)
+        log(self.triax.name, "Wavelength", wl)
 
     def setFilter(self, value):
         pass
+
+    def setGrating(self, value):
+        self.grating = int(value)
+        if self.grating in [0,1,2]:
+            self.triax.setGrating(self.grating)
+            log(self.triax.name, "Grating", self.grating)
+        else:
+            raise ValueError("Grating value %f" % value)
 
 
 class Bench(object):
@@ -452,6 +481,9 @@ class Bench(object):
             self.monochromator.connect()
             self.monochromator.setWavelength(wavelength, True)
             self.monochromator.set_slit_size(30)
+        elif sourcetype == "Laser":
+            # select channel based on wavelength
+            pass
         self.testheader["MONOTYPE"] = "Triax180"
 
         self.multi.connect()
@@ -669,7 +701,7 @@ def start():
     """
     Bench start-up operations strung together.
 
-    :return: Bench()
+    :return: Bench
     """
     b = Bench()
     b.REBpowerup()
@@ -689,10 +721,11 @@ def PTC(b):
     """
     Acquires a series of pairs of flat with increasing exposure times.
     Could also use Peter Doherty's ccdacq for this, would give structure for file names and directories.
-    :param b:
+    :param b: Bench
     :return:
     """
-    # TODO: power / set lamp or laser ?
+    b.select_source("Laser", 635)
+    b.lamp.on()
     ptclog = open(os.path.join(self.fitstopdir,"PTClog.txt"), mode='a')
     for exptime in range(0.25, 5, 0.25):
         first = b.imgtag
