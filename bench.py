@@ -103,7 +103,7 @@ class XMLRPC(xmlrpclib.ServerProxy):
         self.connect()
         checkstr = self.checkConnection()
         if checkstr != self.idstr:
-            print("Incorrect connection to %s, returns %s " % (self.name, checkstr))
+            raise ValueError("Incorrect connection to %s, returns %s " % (self.name, checkstr))
 
 
 class BackSubstrate(XMLRPC):
@@ -169,6 +169,7 @@ class Source(object):
     lamp_list = ["XeHg", "QTH"]
     XED_SHUTTER = 0  # activate Fe55 arm (when it will be motorized), name chosen for compatibility
     MONO_SHUTTER = 1
+    rate = 1.0
 
     def __init__(self, logger=None):
         self.source_name = None
@@ -176,8 +177,9 @@ class Source(object):
         self.ttl = XMLRPC("http://lpnlsst:8083/","TBC","TTL")  # OK
         self.ttl.connect()
         # light sources: create objects here, does not try to connect
-        self.qth = XMLRPC("http://lpnlsst:8089","69931", "QTH lamp")  # TBC
-        self.xehg = XMLRPC("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
+        self.qth = XMLRPC("http://lpnlsst:8089/","69931", "QTH lamp")
+        self.xehg = XMLRPC("http://lpnlsst:8085/", "20", "XeHg lamp")
+        self.multi = XMLRPC("http://lpnlsst:8088/", "6514", "Keithley 6514")
         self.logger = logger
 
     def setChannel(self, channel):
@@ -201,6 +203,14 @@ class Source(object):
             time.sleep(5)  # time to move (tbc)
         else:
             self.setChannel(self.MONO_SHUTTER)
+
+        # monitoring photodiode
+        try:
+            self.multi.connect()
+            self.multi.zeroCorrect()
+            self.multi.setRate(self.rate)  # default choice: 1 reading/s
+        except:
+            self.multi = None
 
         if sourcetype == "Laser":
             self.laser.connect()
@@ -229,6 +239,44 @@ class Source(object):
     def setWatts(self, power):
         # TODO
         log(self.source_name, self.logger, "Set Watts", power)
+
+    def getMonitor(self):
+        """
+        Gets a single instantaneous reading of the current in the monitoring photodiode.
+
+        """
+        self.multi.startSequence(1)
+        while self.multi.status() == 3:
+            time.sleep(1)
+        reading = self.multi.getSequence()
+        return reading[0]
+
+    def start_monitor(self, exptime):
+        """
+        Configures current monitoring for an exposure
+        :param exptime: double
+        """
+        if self.multi:
+            if exptime> 60 :
+                self.rate = 10.0
+                self.multi.setRate(self.rate)  # for long exposures, more stable
+
+            num = int(exptime/self.rate)+ 1
+            self.multi.startSequence(num)
+
+    def read_monitor(self):
+        """
+        Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
+        :return: double
+        """
+        if self.multi:
+            readarray = np.array(self.multi.getSequence())
+            # TODO: need to correct the sequence we get currently
+            av_read = readarray.mean()  # TODO: remove outliers (dark)
+        else:
+            av_read = 0
+            
+        return av_read
 
     def getAlim(self):
         """
@@ -264,7 +312,7 @@ class Monochromator(object):
     grating = 0
 
     def __init__(self, logger=None):
-        self.triax = XMLRPC("http://lpnlsst:8086/", "1", "Triax 180")  # idstr TBC
+        self.triax = XMLRPC("http://lpnlsst:8086/", "1", "Triax 180")
         # TODO: add filter management
         self.logger = logger
 
@@ -297,15 +345,16 @@ class Monochromator(object):
                 lines = 1198
             elif wavelength < 1400:
                 self.grating = 1
-                lines = 599
+                lines = 1198
             else:
                 self.grating = 2
-                lines = 599  # TODO: check values
+                lines = 599
             self.setGrating(self.grating)
             self.testheader["MONOPOS"] = self.grating
             self.testheader["MONOGRAT"] = lines
 
-        self.triax.setWavelength(wavelength)
+        wl = float(wavelength)
+        self.triax.setWavelength(wl)
         while self.triax.status() == 0:
             time.sleep(1.0)
         log(self.triax.name, "Wavelength", wl)
@@ -362,7 +411,6 @@ class Bench(object):
         self.bss.connect()
         self.lamp = Source(logger)
         self.monochromator = Monochromator(logger)
-        self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")  # To be changed: 6487 should be here
 
     def REBpowerup(self):
         """
@@ -490,10 +538,6 @@ class Bench(object):
             # select channel based on wavelength
             pass
 
-        self.multi.connect()
-        if self.multi.checkConnection() != '6514':
-            print("Incorrect connection to Keithley 6514 multimeter")
-
     def get_headers(self):
         """
             Fills image header dictionaries for current setup.
@@ -503,7 +547,7 @@ class Bench(object):
 
         self.opheader["V_BSS"] = "{:.2f}".format(self.bss.getOutputVoltage())
         # gives only current at this time, might upgrade to get measures during exposure
-        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())
+        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())  # TBC
         # TODO: power supply currents and voltages
 
         #need to add instruments header, optional sequencer header
@@ -610,7 +654,9 @@ class Bench(object):
 
         self.reb.run_subroutine(name)
 
+        self.lamp.start_monitor(exposuretime)
         time.sleep(exposuretime + waittime)
+        self.primeheader["MONDIODE"] = self.lamp.read_monitor()
 
         # check for output image
         #getting tag from FPGA registers
