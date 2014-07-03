@@ -148,9 +148,6 @@ class BackSubstrate(XMLRPC):
         else:
             raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
 
-        while abs(self.getVoltage() - self.setvoltbss) > 0.1:
-            time.sleep(1)
-
     def enable(self):
 
         self.setVoltageOperate(1)
@@ -179,7 +176,7 @@ class Source(object):
         self.ttl = XMLRPC("http://lpnlsst:8083/","TBC","TTL")  # OK
         self.ttl.connect()
         # light sources: create objects here, does not try to connect
-        self.qth = XMLRPC("http://lpnlsst:","TBC", "QTH lamp")  # TBC
+        self.qth = XMLRPC("http://lpnlsst:8089","69931", "QTH lamp")  # TBC
         self.xehg = XMLRPC("http://lpnlsst:8089/", "TBC", "XeHg lamp")  # TBC
         self.logger = logger
 
@@ -262,7 +259,7 @@ class Monochromator(object):
     """
     Management of monochromator and input filter
     """
-    testheader = {}
+    testheader = {"MONOTYPE":"Triax", "MONOMODL":"180"}
     slitsize = 30
     grating = 0
 
@@ -312,6 +309,14 @@ class Monochromator(object):
         while self.triax.status() == 0:
             time.sleep(1.0)
         log(self.triax.name, "Wavelength", wl)
+
+    def getWavelength(self):
+        """
+        Reads the wavelength once movement is stopped.
+        """
+        while self.triax.status() == 0:
+            time.sleep(1.0)
+        return self.triax.getWavelength()
 
     def setFilter(self, value):
         pass
@@ -484,7 +489,6 @@ class Bench(object):
         elif sourcetype == "Laser":
             # select channel based on wavelength
             pass
-        self.testheader["MONOTYPE"] = "Triax180"
 
         self.multi.connect()
         if self.multi.checkConnection() != '6514':
@@ -508,7 +512,7 @@ class Bench(object):
         self.primeheader["DETSIZE"] = self.detsize
         self.primeheader["TESTTYPE"] = self.testtype
         try:
-            wavelength = self.monochromator.triax.getWavelength()
+            wavelength = self.monochromator.getWavelength()
         except:
             wavelength = 0.0
         self.primeheader["MONOWL"] = wavelength
@@ -591,11 +595,11 @@ class Bench(object):
 
     def execute_sequence(self, name, exposuretime=2, waittime=15, fitsname=""):
         """
-            Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
-            :param self:
-            :param name: string
+        Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
+        :param self:
+        :param name: string
 
-            """
+        """
 
         # Wait until sequencer is finished with current sequence
         self.wait_end_sequencer()
