@@ -168,8 +168,10 @@ class Source(object):
     source_selector = ("Fe55", "XeHg", "QTH", "Laser")
     lamp_list = ["XeHg", "QTH"]
     XED_SHUTTER = 0  # activate Fe55 arm (when it will be motorized), name chosen for compatibility
-    MONO_SHUTTER = 1
-    rate = 1.0
+    MONO_SHUTTER = 1  # deactivates Fe55, same
+    rate = 1.0  # monitoring photodiode, spl/s
+    QTH_power = 150
+    XeHg_power = 200
 
     def __init__(self, logger=None):
         self.source_name = None
@@ -194,7 +196,11 @@ class Source(object):
             pass
 
     def select_source(self, sourcetype):
-
+        """
+        Selects source and configure it, does not power up (except Fe55).
+        :param sourcetype:
+        :return:
+        """
         if sourcetype not in self.source_selector:
             raise ValueError("Unknown type of source")
 
@@ -214,30 +220,42 @@ class Source(object):
 
         if sourcetype == "Laser":
             self.laser.connect()
-            # TODO: selects output
+            # TODO: selects output and power
         elif sourcetype == "QTH":
             self.ttl.selectQTH()
             self.qth.connect()
-            # TODO: start lamp here
+            self.qth.setPresetPower(self.QTH_power)
         elif sourcetype == "XeHg":
             self.ttl.selectXeHg()
             self.xehg.connect()
-            # TODO: start lamp here
-        # wait for stabilisation ?
+            self.xehg.setPresetPower(self.XeHg_power)
 
         self.source_name = sourcetype
 
         log(self.source_name, self.logger, "Selected")
 
     def getWatts(self):
-        if self.source_name == "Fe55":
-            return None
-        else:
+        pw = 0
+        if self.source_name == "Laser":
             pass
-            #self.logger.log("%s : Watts = %f" % (self.source_name, value) )
+        elif self.source_name == "QTH":
+            pw = self.qth.getPresetPower()
+        elif self.source_name == "XeHg":
+            pw = self.xehg.getPresetPower()
+        return pw
 
     def setWatts(self, power):
-        # TODO
+        if self.source_name == "Laser":
+            pass
+            # TODO: set power
+        elif self.source_name == "QTH":
+            self.qth.setFluxControl(0)
+            self.qth.setPresetPower(power)
+            self.QTH_power = power
+        elif self.source_name == "XeHg":
+            self.xehg.setFluxControl(0)
+            self.xehg.setPresetPower(power)
+            self.XeHg_power = power
         log(self.source_name, self.logger, "Set Watts", power)
 
     def getMonitor(self):
@@ -284,22 +302,34 @@ class Source(object):
         """
         if self.source_name == "XeHg":
             return self.xehg.getPresetCurrent()
+        if self.source_name == "QTH":
+            return self.qth.getPresetCurrent()
 
-        return None
+        return 0
 
     def on(self):
         if self.source_name in self.lamp_list:
             self.ttl.openShutter()
         if self.source_name == "XeHg":
             self.xehg.power(1)
-        # TODO: other types
+            time.sleep(20)
+            self.xehg.setFluxControl(1)
+        elif self.source_name == "QTH":
+            self.qth.power(1)
+            time.sleep(20)
+            self.qth.setFluxControl(1)
+        # TODO: laser
         log(self.source_name, self.logger, "On")
 
     def off(self):
         if self.source_name in self.lamp_list:
             self.ttl.closeShutter()
         if self.source_name == "XeHg":
+            self.xehg.setFluxControl(0)
             self.xehg.power(0)
+        if self.source_name == "QTH":
+            self.qth.setFluxControl(0)
+            self.qth.power(0)
         log(self.source_name, self.logger, "Off")
 
 
