@@ -9,7 +9,7 @@ triax /dev/ttyUSB0 8086
 keithley *tbc* 8087
 # Keithley 6514 multimeter
 keithley /dev/ttyUSB1 8088
-# TTL interface
-ttl *tbc* 8083?
-# lasers Thorlabs
-laserthorlab *tbc* 8082?
+# TTL interface (8083)
+ttl
+# lasers Thorlabs (8082)
+laserthorlabs

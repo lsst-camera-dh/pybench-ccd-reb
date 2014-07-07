@@ -170,15 +170,15 @@ class Source(object):
     XED_SHUTTER = 0  # activate Fe55 arm (when it will be motorized), name chosen for compatibility
     MONO_SHUTTER = 1  # deactivates Fe55, same
     rate = 1.0  # monitoring photodiode, spl/s
-    QTH_power = 150
-    XeHg_power = 200
-    laser_power = 25
+    QTH_power = 150.0
+    XeHg_power = 200.0
+    laser_current = 25.0
     laser_channel = 2
 
     def __init__(self, logger=None):
         self.source_name = None
-        self.laser = XMLRPC("http://lpnlsst:8082/", "TBC", "Laser Thorlab") # TBC
-        self.ttl = XMLRPC("http://lpnlsst:8083/","TBC","TTL")  # OK
+        self.laser = XMLRPC("http://lpnlsst:8082/", "THORLABS MCLS vers 1.06", "Laser Thorlab")
+        self.ttl = XMLRPC("http://lpnlsst:8083/", True, "TTL")
         self.ttl.connect()
         # light sources: create objects here, does not try to connect
         self.qth = XMLRPC("http://lpnlsst:8089/","69931", "QTH lamp")
@@ -224,17 +224,25 @@ class Source(object):
 
         if sourcetype == "Laser":
             self.laser.connect()
-            # TODO: check output wavelength
+            # default current values give approximately 1.5 mW of power
             if wl<500:
-                self.laser_channel = 1
+                self.laser_channel = 1  # 406 nm
+                self.laser_current = 26.0  # min: 23, max: 35
             elif wl<750:
-                self.laser_channel = 2
-            elif wl<850:
-                self.laser_channel = 3
+                self.laser_channel = 2  # 635 nm
+                self.laser_current = 50.0  # min: 45, max: 64
+            elif wl<900:
+                self.laser_channel = 3  # 808 nm
+                self.laser_current = 26.0  # min: 20, max: 66
             else:
-                self.laser_channel = 4
-            self.laser.select(self.laser_channel)
-            self.setWatts(self.laser_power)
+                self.laser_channel = 4  # 980 nm
+                self.laser_current = 30.0  # min: 25, max: 55
+            for channel in range(1,5):
+                if channel == self.laser_channel:
+                    self.laser.select(self.laser_channel)
+                else:
+                    self.laser.select(-channel)  # make sure to unselect others
+            self.setWatts(self.laser_current)
         elif sourcetype == "QTH":
             self.ttl.selectQTH()
             self.qth.connect()
@@ -249,7 +257,7 @@ class Source(object):
     def getWatts(self):
         pw = 0
         if self.source_name == "Laser":
-            pw = self.laser.getPower(self.laser_channel)
+            pw = self.laser.getPower(self.laser_channel)*0.001  # converts to Watts
         elif self.source_name == "QTH":
             pw = self.qth.getPresetPower()
         elif self.source_name == "XeHg":
@@ -257,18 +265,21 @@ class Source(object):
         return pw
 
     def setWatts(self, power):
+        """
+        Sets power for lamps (in W), current for laser (in mA)
+        :param power: float
+        """
         if self.source_name == "Laser":
-            current = power
-            self.laser.setCurrent(self.laser_channel, current)
-            # TODO: check conversion and units !!!
+            self.laser_current = float(power)
+            self.laser.setCurrent(self.laser_channel, self.laser_current)
         elif self.source_name == "QTH":
             self.qth.setFluxControl(0)
-            self.qth.setPresetPower(power)
-            self.QTH_power = power
+            self.QTH_power = float(power)
+            self.qth.setPresetPower(self.QTH_power)
         elif self.source_name == "XeHg":
             self.xehg.setFluxControl(0)
-            self.xehg.setPresetPower(power)
-            self.XeHg_power = power
+            self.XeHg_power = float(power)
+            self.xehg.setPresetPower(self.XeHg_power)
         log(self.source_name, self.logger, "Set Watts", power)
 
     def getMonitor(self):
@@ -311,22 +322,25 @@ class Source(object):
 
     def getAlim(self):
         """
-        Current limit on lamps.
+        Current limit on lamps (target current for laser).
         """
         if self.source_name == "XeHg":
             return self.xehg.getPresetCurrent()
-        if self.source_name == "QTH":
+        elif self.source_name == "QTH":
             return self.qth.getPresetCurrent()
-
+        elif self.source_name == "Laser":
+            return self.laser.getCurrent(self.laser_channel)*0.001  # put in Amps
         return 0
 
     def on(self):
         if self.source_name in self.lamp_list:
-            # if we want to check that the filter wheel is in the right position:
-            # self.ttl.homeFilterWheel()
-            # while self.ttl.status() == ???:
-            #    time.sleep(1)
+            # to move the filter wheel to the home position:
+            self.ttl.homeFilterWheel()
+            while self.ttl.status()[2] != 0:
+                time.sleep(1)
+
             self.ttl.openShutter()
+
         if self.source_name == "XeHg":
             self.xehg.power(1)
             time.sleep(20)
@@ -337,11 +351,15 @@ class Source(object):
             self.qth.setFluxControl(1)
         elif self.source_name == "Laser":
             self.laser.enable()
+
         log(self.source_name, self.logger, "On")
 
     def off(self):
         if self.source_name in self.lamp_list:
-            self.ttl.closeShutter()
+            ret = self.ttl.closeShutter()
+            #if ret != 0:
+            #    raise IOError("Error on shutter close")
+
         if self.source_name == "XeHg":
             self.xehg.setFluxControl(0)
             self.xehg.power(0)
@@ -350,7 +368,8 @@ class Source(object):
             self.qth.power(0)
         elif self.source_name == "Laser":
             self.laser.disable()
-       log(self.source_name, self.logger, "Off")
+
+        log(self.source_name, self.logger, "Off")
 
 
 class Monochromator(object):
@@ -363,7 +382,7 @@ class Monochromator(object):
 
     def __init__(self, logger=None):
         self.triax = XMLRPC("http://lpnlsst:8086/", "1", "Triax 180")
-        # TODO: add filter management
+        # TODO: add filter management (when there will be filters)
         self.logger = logger
 
     def connect(self):
@@ -836,12 +855,18 @@ def PTC(b):
 def timing_ramp(b):
     """
     Series of acquisitions to compare timings.
+    :param b: Bench
     """
-    # TODO: power on laser/other ?
+    b.select_source("Laser", 635)
+
     ramplog = open(os.path.join(self.fitstopdir,"ramplog.txt"), mode='a')
     func1 = 2
     slice1 = 6  # TBC depending on which slice and which function we test
+
     for imtype in ['Bias','Acquisition']:
+        if imtype == 'Acquisition':
+            b.lamp.on()
+            time.sleep(10)
         for duration in range(150,450,20):
             curfunc = b.reb.fpga.dump_function(func1)
             curfunc.timelengths[slice1] = duration
@@ -849,7 +874,7 @@ def timing_ramp(b):
             ramplog.write("%d\t%s\n" % (duration, b.imgtag))
             b.execute_sequence(imtype)
     ramplog.close()
-    
+    b.lamp.off()
 
 if __name__ == '__main__':
     b = start()
