@@ -1,0 +1,15 @@
+# default configuration of instrument drivers: ttyUSB ports and XMLRPC ports
+# QTH lamp
+oriel /dev/ttyUSB3 8089
+# XeHg lamp
+oriel /dev/ttyUSB2 8085
+# Triax monochromator
+triax /dev/ttyUSB0 8086
+# Keithley 6487 current+voltage source
+keithley *tbc* 8087
+# Keithley 6514 multimeter
+keithley /dev/ttyUSB1 8088
+# TTL interface
+ttl *tbc* 8083?
+# lasers Thorlabs
+laserthorlab *tbc* 8082?

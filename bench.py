@@ -172,6 +172,8 @@ class Source(object):
     rate = 1.0  # monitoring photodiode, spl/s
     QTH_power = 150
     XeHg_power = 200
+    laser_power = 25
+    laser_channel = 2
 
     def __init__(self, logger=None):
         self.source_name = None
@@ -195,14 +197,16 @@ class Source(object):
             # retracts
             pass
 
-    def select_source(self, sourcetype):
+    def select_source(self, sourcetype, wl=635.0):
         """
         Selects source and configure it, does not power up (except Fe55).
-        :param sourcetype:
+        :param sourcetype: string
+        :param wl: double
         :return:
         """
         if sourcetype not in self.source_selector:
             raise ValueError("Unknown type of source")
+        self.source_name = sourcetype
 
         if sourcetype == "Fe55":
             self.setChannel(self.XED_SHUTTER)
@@ -220,24 +224,32 @@ class Source(object):
 
         if sourcetype == "Laser":
             self.laser.connect()
-            # TODO: selects output and power
+            # TODO: check output wavelength
+            if wl<500:
+                self.laser_channel = 1
+            elif wl<750:
+                self.laser_channel = 2
+            elif wl<850:
+                self.laser_channel = 3
+            else:
+                self.laser_channel = 4
+            self.laser.select(self.laser_channel)
+            self.setWatts(self.laser_power)
         elif sourcetype == "QTH":
             self.ttl.selectQTH()
             self.qth.connect()
-            self.qth.setPresetPower(self.QTH_power)
+            self.setWatts(self.QTH_power)
         elif sourcetype == "XeHg":
             self.ttl.selectXeHg()
             self.xehg.connect()
-            self.xehg.setPresetPower(self.XeHg_power)
-
-        self.source_name = sourcetype
+            self.setWatts(self.XeHg_power)
 
         log(self.source_name, self.logger, "Selected")
 
     def getWatts(self):
         pw = 0
         if self.source_name == "Laser":
-            pass
+            pw = self.laser.getPower(self.laser_channel)
         elif self.source_name == "QTH":
             pw = self.qth.getPresetPower()
         elif self.source_name == "XeHg":
@@ -246,8 +258,9 @@ class Source(object):
 
     def setWatts(self, power):
         if self.source_name == "Laser":
-            pass
-            # TODO: set power
+            current = power
+            self.laser.setCurrent(self.laser_channel, current)
+            # TODO: check conversion and units !!!
         elif self.source_name == "QTH":
             self.qth.setFluxControl(0)
             self.qth.setPresetPower(power)
@@ -309,6 +322,10 @@ class Source(object):
 
     def on(self):
         if self.source_name in self.lamp_list:
+            # if we want to check that the filter wheel is in the right position:
+            # self.ttl.homeFilterWheel()
+            # while self.ttl.status() == ???:
+            #    time.sleep(1)
             self.ttl.openShutter()
         if self.source_name == "XeHg":
             self.xehg.power(1)
@@ -318,7 +335,8 @@ class Source(object):
             self.qth.power(1)
             time.sleep(20)
             self.qth.setFluxControl(1)
-        # TODO: laser
+        elif self.source_name == "Laser":
+            self.laser.enable()
         log(self.source_name, self.logger, "On")
 
     def off(self):
@@ -327,10 +345,12 @@ class Source(object):
         if self.source_name == "XeHg":
             self.xehg.setFluxControl(0)
             self.xehg.power(0)
-        if self.source_name == "QTH":
+        elif self.source_name == "QTH":
             self.qth.setFluxControl(0)
             self.qth.power(0)
-        log(self.source_name, self.logger, "Off")
+        elif self.source_name == "Laser":
+            self.laser.disable()
+       log(self.source_name, self.logger, "Off")
 
 
 class Monochromator(object):
@@ -555,7 +575,7 @@ class Bench(object):
         """
             Connects and starts whichever light source is going to be used
             """
-        self.lamp.select_source(sourcetype)
+        self.lamp.select_source(sourcetype, wavelength)
         self.testheader["SRCTYPE"] = sourcetype.upper()
         #self.testheader["SCRMODL"]  # source model
         self.testheader["SRCPWR"] = self.lamp.getWatts()
@@ -564,9 +584,6 @@ class Bench(object):
             self.monochromator.connect()
             self.monochromator.setWavelength(wavelength, True)
             self.monochromator.set_slit_size(30)
-        elif sourcetype == "Laser":
-            # select channel based on wavelength
-            pass
 
     def get_headers(self):
         """
