@@ -137,7 +137,7 @@ class BackSubstrate(XMLRPC):
     setvoltbss = 0  # desired voltage setting (independent of actual value)
 
     def __init__(self):
-        XMLRPC.__init__(self, server="http://lpnlsst:8087/", idstr="6487", name="Keithley 6487")
+        XMLRPC.__init__(self, server="http://lpnlsst:8088/", idstr="6487", name="Keithley 6487")
 
     def connect(self):
         XMLRPC.connect(self)
@@ -148,41 +148,67 @@ class BackSubstrate(XMLRPC):
         """
 
         if abs(voltage) < 50:
-            range = 50.0
+            range = 1
         else:
-            range = 500.0
-        self.selectOutputVoltageRange(range, 2.5e-5)
+            range = 2  # 500 V
+        self.setVoltageRange(range)
 
-        if voltage < 0:
-            self.setOutputVoltage(float(voltage))
-            self.setvoltbss = voltage
-        else:
-            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
-
+        self.set_volt(voltage)
+        #self.selectCurrent(2e-5)  # selecting current range: not implemented yet
         self.zeroCorrect()
-        self.selectCurrent(2e-5)
+        self.setCurrentLimit(0)  # 25 uA
+
+    def check_config(self):
+        inti = self.getCurrentLimit()
+        if inti != 0:
+            raise IOError("Wrong current limit setting on bss: %d" % inti)
+        # can add check on range (getVoltageRange) and setvoltbss (getVoltage)
 
     def set_volt(self, voltage):
         """
         Changes voltage without changing configuration
         """
         if voltage < 0:
-            self.setOutputVoltage(float(voltage))
+            self.setVoltage(float(voltage))
             self.setvoltbss = voltage
         else:
             raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
 
     def enable(self):
 
-        self.setVoltageOperate(1)
+        self.sourceVoltage(1)
         while abs(self.getVoltage() - self.setvoltbss) > 0.1:
             time.sleep(1)
 
+        #check
+        ena = self.voltageStatus()
+        if ena != 1:
+            raise IOError("Error on back-substrate voltage: not enabled.")
+
     def disable(self):
 
-        self.setVoltageOperate(0)
+        self.sourceVoltage(0)
         while abs(self.getVoltage() - 0) > 0.1:
             time.sleep(1)
+
+        #check
+        ena = self.voltageStatus()
+        if ena != 0:
+            raise IOError("Error on back-substrate voltage: not disabled.")
+
+    def get_operating_header(self):
+        """
+        Gets voltage and current on back substrate in header dictionary format.
+        : return : dict
+        """
+        vss = "0.0"
+        if self.voltageStatus():
+            vss = "{:.2f}".format(self.bss.getVoltage())
+        # gives only current at this time, could implement continuous measures elsewhere
+        self.startSequence(1)
+        iss = "{:.2f}".format(self.bss.getSequence()[0])
+
+        return {"V_BSS": vss, "I_BSS": iss}
 
 
 class Source(object):
@@ -207,7 +233,7 @@ class Source(object):
         # light sources: create objects here, does not try to connect
         self.qth = XMLRPC("http://lpnlsst:8089/","69931", "QTH lamp")
         self.xehg = XMLRPC("http://lpnlsst:8085/", "20", "XeHg lamp")
-        self.multi = XMLRPC("http://lpnlsst:8088/", "6514", "Keithley 6514")
+        self.multi = XMLRPC("http://lpnlsst:8087/", "6514", "Keithley 6514")
         self.logger = logger
 
     def setChannel(self, channel):
@@ -314,8 +340,8 @@ class Source(object):
         self.multi.startSequence(1)
         while self.multi.status() == 3:
             time.sleep(1)
-        reading = self.multi.getLastReading()
-        return reading
+        reading = self.multi.getSequence()
+        return reading[0]
 
     def start_monitor(self, exptime):
         """
@@ -501,7 +527,6 @@ class Bench(object):
     exposuresub = "Exposure"
     darksub = "DarkExposure"
     testtype = "Test"
-    sensorID = "100-00"
     teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
     def __init__(self, logger=None):
@@ -645,9 +670,7 @@ class Bench(object):
         #CCD operating conditions header
         self.opheader = self.reb.get_operating_header()
 
-        self.opheader["V_BSS"] = "{:.2f}".format(self.bss.getOutputVoltage())
-        # gives only current at this time, might upgrade to get measures during exposure
-        self.opheader["I_BSS"] = "{:.2f}".format(self.bss.getCurrent())  # TBC
+        self.opheader.append(self.bss.get_operating_header())
         # TODO: power supply currents and voltages
 
         #need to add instruments header, optional sequencer header
@@ -798,7 +821,9 @@ class Bench(object):
         dt = np.dtype('i4')
         buff = np.fromfile(imgname, dtype=dt)
         # negative numbers still need to be translated
-        buffer = np.vectorize(lambda i: i - 0x40000 if i & (1 << 17) else i )(buff)
+        #buffer = np.vectorize(lambda i: i - 0x40000 if i & (1 << 17) else i )(buff)
+        # also invert sign on all data
+        buffer = np.vectorize(lambda i: 0x3FFFF-i if i & (1 << 17) else -i-1 )(buff)
         # reshape by channel
         length = self.imglines * self.imgcols
         buffer = buffer.reshape(length, self.nchannels)
@@ -811,7 +836,7 @@ class Bench(object):
         # more keywords ?
         dict_to_fitshdu(self.primeheader, primaryhdu)
         # also need info from 'localheader.txt'
-        localheader = pyfits.Header.fromtextfile("/home/lsst/ccd_scripts/headers/localheader.txt")
+        localheader = pyfits.Header.fromtextfile("camera/localheader.txt")
         primaryhdu.header.update(localheader)
         # Create HDU list
         hdulist = pyfits.HDUList([primaryhdu])
@@ -880,6 +905,7 @@ def PTC(b):
     """
     b.select_source("Laser", 635)
     b.lamp.on()
+    b.testtype = "PTC"
     ptclog = open(os.path.join(b.fitstopdir,"PTClog.txt"), mode='a')
     for exptime in range(0.25, 5, 0.25):
         first = b.imgtag
@@ -934,7 +960,7 @@ def scan_pixel(b):
     b.primeheader["IMGTYPE"] = "SCAN"
     b.execute_sequence('Acquisition', exposuretime=0.5, fitsname=fitsname)
     b.reb.fpga.stop_increment()
-    del(b.primeheader["IMGTYPE"])
+    del b.primeheader["IMGTYPE"]
 
 if __name__ == '__main__':
     b = start()
