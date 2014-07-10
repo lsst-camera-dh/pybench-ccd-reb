@@ -13,3 +13,6 @@ keithley /dev/ttyUSB1 8088
 ttl
 # lasers Thorlabs (8082)
 laserthorlabs
+# temperature
+
+# pressure

@@ -1004,6 +1004,20 @@ class FPGA(object):
         """
         self.write(0x320000, 1)
 
+    def increment(self):
+        """
+        Send the command to increment the ADC sampling time by 1 cycle after
+        each ADC trigger.
+        """
+        self.write(0x330000, 1)
+
+    def stop_increment(self):
+        """
+        Send the command to stop incrementing the ADC sampling time and reset the shift.
+        """
+        self.write(0x330000, 0)
+        self.write(0x340000, 0)
+
     # ----------------------------------------------------------
 
     def get_board_temperatures(self):

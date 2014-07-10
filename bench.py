@@ -106,6 +106,30 @@ class XMLRPC(xmlrpclib.ServerProxy):
             raise ValueError("Incorrect connection to %s, returns %s " % (self.name, checkstr))
 
 
+class TempController(XMLRPC):
+    """
+    Managing Lakeshore temperature controller.
+    """
+    temp_target = -100
+    rampPID = (35,0,0)
+
+    def __init__(self, logger=None):  # TODO
+        XMLRPC.__init__(self, server="http://lpnlsst:/", idstr="", name="")
+        self.logger = logger
+
+    def setTemp(self, temp):
+        """
+
+        :param temp: float
+        """
+        pass
+
+    def getTemp(self):
+        pass
+
+    def setPID(self, p, i, d):
+        pass
+
 class BackSubstrate(XMLRPC):
     """
     Managing back-substrate voltage controlled by Keithley 6487
@@ -290,8 +314,8 @@ class Source(object):
         self.multi.startSequence(1)
         while self.multi.status() == 3:
             time.sleep(1)
-        reading = self.multi.getSequence()
-        return reading[0]
+        reading = self.multi.getLastReading()
+        return reading
 
     def start_monitor(self, exptime):
         """
@@ -426,6 +450,15 @@ class Monochromator(object):
         self.triax.setWavelength(wl)
         while self.triax.status() == 0:
             time.sleep(1.0)
+        # check
+        new_wl = self.getWavelength()
+        if abs(wl-new_wl) > 1:
+            # try again
+            self.triax.setWavelength(wl)
+            time.sleep(1.0)
+            new_wl = self.getWavelength()  # will wait
+            if abs(wl-new_wl) > 1:
+                raise ValueError("Monochromator cannot reach wavelength %f" % wl)
         log(self.triax.name, "Wavelength", wl)
 
     def getWavelength(self):
@@ -445,7 +478,7 @@ class Monochromator(object):
             self.triax.setGrating(self.grating)
             log(self.triax.name, "Grating", self.grating)
         else:
-            raise ValueError("Grating value %f" % value)
+            raise ValueError("Non-existent grating value %d" % value)
 
 
 class Bench(object):
@@ -465,7 +498,6 @@ class Bench(object):
     # The following should come from the XML file instead
     imglines = 2020
     imgcols = 550
-    detsize = '[0:4400,0:4040]'
     exposuresub = "Exposure"
     darksub = "DarkExposure"
     testtype = "Test"
@@ -478,6 +510,8 @@ class Bench(object):
         self.primeheader["CTRLCFG"] = self.xmlfile
         self.bss = BackSubstrate()  # logged in higher-level class k6487
         self.bss.connect()
+        self.temp = TempController(logger)
+        self.temp.connect()
         self.lamp = Source(logger)
         self.monochromator = Monochromator(logger)
 
@@ -606,8 +640,8 @@ class Bench(object):
 
     def get_headers(self):
         """
-            Fills image header dictionaries for current setup.
-            """
+        Fills image header dictionaries for current setup.
+        """
         #CCD operating conditions header
         self.opheader = self.reb.get_operating_header()
 
@@ -619,7 +653,7 @@ class Bench(object):
         #need to add instruments header, optional sequencer header
         self.primeheader["WIDTH"] = self.imgcols
         self.primeheader["HEIGHT"] = self.imglines
-        self.primeheader["DETSIZE"] = self.detsize
+        self.primeheader["DETSIZE"] = '[0:{},0:{}]'.format(self.imgcols*self.nchannels/2, 2*self.imglines)
         self.primeheader["TESTTYPE"] = self.testtype
         try:
             wavelength = self.monochromator.getWavelength()
@@ -633,7 +667,7 @@ class Bench(object):
     def get_extension_header(self, REBchannel, fitshdu, borders = False):
         """
         Builds FITS extension header with position information for each channel
-        :param REBchannel:
+        :param REBchannel: int
         :return:
         """
         extheader = fitshdu.header
@@ -647,11 +681,11 @@ class Bench(object):
             extheader['DETSIZE'] = '[1:4096,1:4004]'
             extheader['DATASEC'] = '[11:522,1:2002]'
         else :
-            parstringlow = '1:2020'
-            parstringhigh = '4040:2021'
+            parstringlow = '1:{}'.format(self.imglines)
+            parstringhigh = '{}:{}'.format(2*self.imglines, self.imglines+1)
             colwidth = self.imgcols
-            extheader['DETSIZE'] = self.detsize
-            extheader['DATASEC'] = '[1:550,1:2020]'
+            extheader['DETSIZE'] = self.primeheader["DETSIZE"]
+            extheader['DATASEC'] = '[1:{},1:{}]'.format(self.imgcols, self.imglines)
 
         if REBchannel<self.nchannels/2:
             pdet = parstringlow
@@ -749,6 +783,13 @@ class Bench(object):
         while self.reb.fpga.get_state() & 4:  # sequencer status bit in the register
             time.sleep(1)
 
+    def make_fits_name(self, imgstr):
+        fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.localtime()))
+        if not os.path.isdir(fitsdir):
+            os.mkdir(fitsdir)
+        fitsname = os.path.join(fitsdir, imgstr +'.fits')
+        return fitsname
+
     def save_to_fits(self, imgname, fitsname = ""):
         """
         Turns img file from imageClient into FITS file.
@@ -801,10 +842,7 @@ class Bench(object):
 
         # Writing file
         if not fitsname:  # structure for specific tests
-            fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.localtime()))
-            if not os.path.isdir(fitsdir):
-                os.mkdir(fitsdir)
-            fitsname = os.path.join(fitsdir, imgstr +'.fits')
+            fitsname = self.make_fits_name(imgstr)
         # else: using LSST scheme for directory and image name, already built in fitsname
 
         primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
@@ -842,7 +880,7 @@ def PTC(b):
     """
     b.select_source("Laser", 635)
     b.lamp.on()
-    ptclog = open(os.path.join(self.fitstopdir,"PTClog.txt"), mode='a')
+    ptclog = open(os.path.join(b.fitstopdir,"PTClog.txt"), mode='a')
     for exptime in range(0.25, 5, 0.25):
         first = b.imgtag
         b.execute_sequence('Acquisition',exposuretime=exptime)
@@ -859,7 +897,7 @@ def timing_ramp(b):
     """
     b.select_source("Laser", 635)
 
-    ramplog = open(os.path.join(self.fitstopdir,"ramplog.txt"), mode='a')
+    ramplog = open(os.path.join(b.fitstopdir,"ramplog.txt"), mode='a')
     func1 = 2
     slice1 = 6  # TBC depending on which slice and which function we test
 
@@ -875,6 +913,28 @@ def timing_ramp(b):
             b.execute_sequence(imtype)
     ramplog.close()
     b.lamp.off()
+
+
+def scan_pixel(b):
+    """
+    Acquiring an image with ADC sampling scanning the pixel readouts.
+    :param b: Bench
+    """
+    # new dimensions for the fits files
+    savecols = b.imgcols
+    savelines = b.imglines
+    b.imgcols = 256
+    b.imglines = (savecols*savelines)/(b.imgcols+1)
+
+    b.select_source("Laser", 635)
+    b.lamp.on()
+    b.reb.fpga.increment()
+    hextag = generate_tag(b.imgtag)
+    fitsname = b.make_fits_name('scan_%d.fits' % hextag)
+    b.primeheader["IMGTYPE"] = "SCAN"
+    b.execute_sequence('Acquisition', exposuretime=0.5, fitsname=fitsname)
+    b.reb.fpga.stop_increment()
+    del(b.primeheader["IMGTYPE"])
 
 if __name__ == '__main__':
     b = start()
