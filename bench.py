@@ -135,6 +135,7 @@ class BackSubstrate(XMLRPC):
     Managing back-substrate voltage controlled by Keithley 6487
     """
     setvoltbss = 0  # desired voltage setting (independent of actual value)
+    count = 1  # number of measures for monitoring
 
     def __init__(self):
         XMLRPC.__init__(self, server="http://lpnlsst:8088/", idstr="6487", name="Keithley 6487")
@@ -196,6 +197,42 @@ class BackSubstrate(XMLRPC):
         if ena != 0:
             raise IOError("Error on back-substrate voltage: not disabled.")
 
+    def get_current(self):
+        """
+        Get a single current reading.
+        :return: double
+        """
+        self.count = 1
+        self.startSequence(1)
+        while self.status() == 3:  # TBC
+            time.sleep(1)
+
+        return self.getSequence()[0]
+
+    def start_monitor(self, exptime):
+        """
+        Configures back-substrate current monitoring for an exposure
+        :param exptime: double
+        """
+        rate = 1.0
+        if exptime> 60 :
+            rate = 10.0  # for long exposures, more stable
+        self.setRate(rate)
+        self.count = int(exptime/rate)+ 1
+        self.startSequence(self.count)
+
+    def read_monitor(self):
+        """
+        Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
+        :return: double
+        """
+        # TODO: check that it is finished reading
+        readarray = np.array(self.getSequence())
+        # TODO: need to correct the sequence we get currently
+        av_read = readarray.mean()  # TODO: remove outliers (dark)
+
+        return av_read
+
     def get_operating_header(self):
         """
         Gets voltage and current on back substrate in header dictionary format.
@@ -203,10 +240,13 @@ class BackSubstrate(XMLRPC):
         """
         vss = "0.0"
         if self.voltageStatus():
-            vss = "{:.2f}".format(self.bss.getVoltage())
-        # gives only current at this time, could implement continuous measures elsewhere
-        self.startSequence(1)
-        iss = "{:.2f}".format(self.bss.getSequence()[0])
+            vss = "{:.2f}".format(self.getVoltage())
+        # otherwise back-substrate voltage is off
+        if self.count > 1:
+            imon = self.read_monitor()
+        else :
+            imon = self.get_current()
+        iss = "{:.2f}".format(imon)
 
         return {"V_BSS": vss, "I_BSS": iss}
 
@@ -350,8 +390,10 @@ class Source(object):
         """
         if self.multi:
             if exptime> 60 :
-                self.rate = 10.0
-                self.multi.setRate(self.rate)  # for long exposures, more stable
+                self.rate = 10.0  # for long exposures, more stable
+            else:
+                self.rate = 1.0
+            self.multi.setRate(self.rate)
 
             num = int(exptime/self.rate)+ 1
             self.multi.startSequence(num)
@@ -777,6 +819,7 @@ class Bench(object):
 
         self.reb.run_subroutine(name)
 
+        self.bss.start_monitor(exposuretime)
         self.lamp.start_monitor(exposuretime)
         time.sleep(exposuretime + waittime)
         self.primeheader["MONDIODE"] = self.lamp.read_monitor()
