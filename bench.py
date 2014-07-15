@@ -15,6 +15,8 @@ import xml
 import numpy as np
 import pyfits
 
+stand_alone = True
+
 def wait_for_action(action):
     """
     Pause the execution until the specified action has been recorded as 'done' by the user.
@@ -103,7 +105,11 @@ class XMLRPC(xmlrpclib.ServerProxy):
         self.connect()
         checkstr = self.checkConnection()
         if checkstr != self.idstr:
-            raise ValueError("Incorrect connection to %s, returns %s " % (self.name, checkstr))
+            errorstr = "Incorrect connection to %s, returns %s " % (self.name, checkstr)
+            if stand_alone:
+                print(errorstr)
+            else:
+                raise ValueError(errorstr)
 
 
 class TempController(XMLRPC):
@@ -112,9 +118,10 @@ class TempController(XMLRPC):
     """
     temp_target = -100
     rampPID = (35,0,0)
+    temp = -100
 
     def __init__(self, logger=None):  # TODO
-        XMLRPC.__init__(self, server="http://lpnlsst:/", idstr="", name="")
+        #XMLRPC.__init__(self, server="http://lpnlsst:/", idstr="", name="")
         self.logger = logger
 
     def setTemp(self, temp):
@@ -122,10 +129,11 @@ class TempController(XMLRPC):
 
         :param temp: float
         """
-        pass
+        self.temp = temp
 
     def getTemp(self):
-        pass
+        # to be changed when XMLRPC is available
+        return self.temp
 
     def setPID(self, p, i, d):
         pass
@@ -173,7 +181,11 @@ class BackSubstrate(XMLRPC):
             self.setVoltage(float(voltage))
             self.setvoltbss = voltage
         else:
-            raise ValueError("Asked for a positive back-substrate voltage (%f), not doing it. " % voltage)
+            errorstr = "Asked for a positive back-substrate voltage (%f), not doing it. " % voltage
+            if stand_alone:
+                print(errorstr)
+            else:
+                raise ValueError(errorstr)
 
     def enable(self):
 
@@ -526,7 +538,12 @@ class Monochromator(object):
             time.sleep(1.0)
             new_wl = self.getWavelength()  # will wait
             if abs(wl-new_wl) > 1:
-                raise ValueError("Monochromator cannot reach wavelength %f" % wl)
+                errorstr = "Monochromator cannot reach wavelength %f" % wl
+                if stand_alone:
+                    print(errorstr)
+                else:
+                    raise ValueError(errorstr)
+
         log(self.triax.name, "Wavelength", wl)
 
     def getWavelength(self):
@@ -546,7 +563,11 @@ class Monochromator(object):
             self.triax.setGrating(self.grating)
             log(self.triax.name, "Grating", self.grating)
         else:
-            raise ValueError("Non-existent grating value %d" % value)
+            errorstr = "Non-existent grating value %d" % value
+            if stand_alone:
+                print(errorstr)
+            else:
+                raise ValueError(errorstr)
 
 
 class Bench(object):
@@ -578,7 +599,7 @@ class Bench(object):
         self.bss = BackSubstrate()  # logged in higher-level class k6487
         self.bss.connect()
         self.temp = TempController(logger)
-        self.temp.connect()
+        #self.temp.connect()
         self.lamp = Source(logger)
         self.monochromator = Monochromator(logger)
 
@@ -727,7 +748,7 @@ class Bench(object):
         self.primeheader["MONOWL"] = wavelength
 
         self.monochromator.testheader["MONOWL"] = wavelength
-        #TODO: temperature
+        self.primeheader["CCDTEMP"] = self.temp.getTemp()
 
     def get_extension_header(self, REBchannel, fitshdu, borders = False):
         """
@@ -1006,6 +1027,8 @@ def scan_pixel(b):
     del b.primeheader["IMGTYPE"]
 
 if __name__ == '__main__':
+    # needed as long as not implemented in XMLRPC
+    #b.temp.setTemp(-100)
     b = start()
     PTC(b)
 
