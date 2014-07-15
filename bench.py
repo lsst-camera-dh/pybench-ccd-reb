@@ -90,29 +90,22 @@ def get_sequencer_hdu(fpga):
     return exthdu
 
 
-class XMLRPC(xmlrpclib.ServerProxy):
-    """
-    Generic class to manage objects connected through XMLRPC
+def check_xmlrpc(server, idstr):
     """
 
-    def __init__(self, server, idstr, name):
-        self.name = name
-        self.server = server
-        self.idstr = idstr
-        xmlrpclib.ServerProxy.__init__(self,self.server)
-
-    def connect(self):
-        self.connect()
-        checkstr = self.checkConnection()
-        if checkstr != self.idstr:
-            errorstr = "Incorrect connection to %s, returns %s " % (self.name, checkstr)
-            if stand_alone:
-                print(errorstr)
-            else:
-                raise ValueError(errorstr)
+    :param server: xmlrpclib.ServerProxy
+    :param idstr:
+    """
+    checkstr = server.checkConnection()
+    if checkstr != self.idstr:
+        errorstr = "Incorrect connection: returns %s, expect %s " % (checkstr, idstr)
+        if stand_alone:
+            print(errorstr)
+        else:
+            raise ValueError(errorstr)
 
 
-class TempController(XMLRPC):
+class TempController():
     """
     Managing Lakeshore temperature controller.
     """
@@ -121,7 +114,9 @@ class TempController(XMLRPC):
     temp = -100
 
     def __init__(self, logger=None):  # TODO
-        #XMLRPC.__init__(self, server="http://lpnlsst:/", idstr="", name="")
+        #self.server = xmlrpclib.ServerProxy("http://lpnlsst:/")
+        #connect
+        #check
         self.logger = logger
 
     def setTemp(self, temp):
@@ -138,18 +133,18 @@ class TempController(XMLRPC):
     def setPID(self, p, i, d):
         pass
 
-class BackSubstrate(XMLRPC):
+class BackSubstrate():
     """
     Managing back-substrate voltage controlled by Keithley 6487
     """
     setvoltbss = 0  # desired voltage setting (independent of actual value)
     count = 1  # number of measures for monitoring
+    name = "Keithley 6487"
 
     def __init__(self):
-        XMLRPC.__init__(self, server="http://lpnlsst:8088/", idstr="6487", name="Keithley 6487")
-
-    def connect(self):
-        XMLRPC.connect(self)
+        self.server = xmlrpclib.ServerProxy("http://lpnlsst:8088/")
+        self.server.connect()
+        check_xmlrpc(self.server, "6487" )
 
     def config(self, voltage=0):
         """
@@ -160,15 +155,15 @@ class BackSubstrate(XMLRPC):
             range = 1
         else:
             range = 2  # 500 V
-        self.setVoltageRange(range)
+        self.server.setVoltageRange(range)
 
         self.set_volt(voltage)
         #self.selectCurrent(2e-5)  # selecting current range: not implemented yet
-        self.zeroCorrect()
-        self.setCurrentLimit(0)  # 25 uA
+        self.server.zeroCorrect()
+        self.server.setCurrentLimit(0)  # 25 uA
 
     def check_config(self):
-        inti = self.getCurrentLimit()
+        inti = self.server.getCurrentLimit()
         if inti != 0:
             raise IOError("Wrong current limit setting on bss: %d" % inti)
         # can add check on range (getVoltageRange) and setvoltbss (getVoltage)
@@ -178,7 +173,7 @@ class BackSubstrate(XMLRPC):
         Changes voltage without changing configuration
         """
         if voltage < 0:
-            self.setVoltage(float(voltage))
+            self.server.setVoltage(float(voltage))
             self.setvoltbss = voltage
         else:
             errorstr = "Asked for a positive back-substrate voltage (%f), not doing it. " % voltage
@@ -189,23 +184,23 @@ class BackSubstrate(XMLRPC):
 
     def enable(self):
 
-        self.sourceVoltage(1)
-        while abs(self.getVoltage() - self.setvoltbss) > 0.1:
+        self.server.sourceVoltage(1)
+        while abs(self.server.getVoltage() - self.setvoltbss) > 0.1:
             time.sleep(1)
 
         #check
-        ena = self.voltageStatus()
+        ena = self.server.voltageStatus()
         if ena != 1:
             raise IOError("Error on back-substrate voltage: not enabled.")
 
     def disable(self):
 
-        self.sourceVoltage(0)
-        while abs(self.getVoltage() - 0) > 0.1:
+        self.server.sourceVoltage(0)
+        while abs(self.server.getVoltage() - 0) > 0.1:
             time.sleep(1)
 
         #check
-        ena = self.voltageStatus()
+        ena = self.server.voltageStatus()
         if ena != 0:
             raise IOError("Error on back-substrate voltage: not disabled.")
 
@@ -215,11 +210,11 @@ class BackSubstrate(XMLRPC):
         :return: double
         """
         self.count = 1
-        self.startSequence(1)
-        while self.status() == 3:  # TBC
+        self.server.startSequence(1)
+        while self.server.status() == 3:  # TBC
             time.sleep(1)
 
-        return self.getSequence()[0]
+        return self.server.getSequence()[0]
 
     def start_monitor(self, exptime):
         """
@@ -229,9 +224,9 @@ class BackSubstrate(XMLRPC):
         rate = 1.0
         if exptime> 60 :
             rate = 10.0  # for long exposures, more stable
-        self.setRate(rate)
+        self.server.setRate(rate)
         self.count = int(exptime/rate)+ 1
-        self.startSequence(self.count)
+        self.server.startSequence(self.count)
 
     def read_monitor(self):
         """
@@ -239,7 +234,7 @@ class BackSubstrate(XMLRPC):
         :return: double
         """
         # TODO: check that it is finished reading
-        readarray = np.array(self.getSequence())
+        readarray = np.array(self.server.getSequence())
         # TODO: need to correct the sequence we get currently
         av_read = readarray.mean()  # TODO: remove outliers (dark)
 
@@ -251,8 +246,8 @@ class BackSubstrate(XMLRPC):
         : return : dict
         """
         vss = "0.0"
-        if self.voltageStatus():
-            vss = "{:.2f}".format(self.getVoltage())
+        if self.server.voltageStatus():
+            vss = "{:.2f}".format(self.server.getVoltage())
         # otherwise back-substrate voltage is off
         if self.count > 1:
             imon = self.read_monitor()
@@ -279,13 +274,14 @@ class Source(object):
 
     def __init__(self, logger=None):
         self.source_name = None
-        self.laser = XMLRPC("http://lpnlsst:8082/", "THORLABS MCLS vers 1.06", "Laser Thorlab")
-        self.ttl = XMLRPC("http://lpnlsst:8083/", True, "TTL")
+        self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")
+        self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")
         self.ttl.connect()
+        check_xmlrpc(self.ttl, True)
         # light sources: create objects here, does not try to connect
-        self.qth = XMLRPC("http://lpnlsst:8089/","69931", "QTH lamp")
-        self.xehg = XMLRPC("http://lpnlsst:8085/", "20", "XeHg lamp")
-        self.multi = XMLRPC("http://lpnlsst:8087/", "6514", "Keithley 6514")
+        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:8089/")
+        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8085/")
+        self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
         self.logger = logger
 
     def setChannel(self, channel):
@@ -319,6 +315,7 @@ class Source(object):
         # monitoring photodiode
         try:
             self.multi.connect()
+            check_xmlrpc(self.multi, "6514")
             self.multi.zeroCorrect()
             self.multi.setRate(self.rate)  # default choice: 1 reading/s
         except:
@@ -326,6 +323,7 @@ class Source(object):
 
         if sourcetype == "Laser":
             self.laser.connect()
+            check_xmlrpc(self.laser, "THORLABS MCLS vers 1.06")
             # default current values give approximately 1.5 mW of power
             if wl<500:
                 self.laser_channel = 1  # 406 nm
@@ -348,10 +346,12 @@ class Source(object):
         elif sourcetype == "QTH":
             self.ttl.selectQTH()
             self.qth.connect()
+            check_xmlrpc(self.qth, "69931")
             self.setWatts(self.QTH_power)
         elif sourcetype == "XeHg":
             self.ttl.selectXeHg()
             self.xehg.connect()
+            check_xmlrpc(self.xehg, "20")
             self.setWatts(self.XeHg_power)
 
         log(self.source_name, self.logger, "Selected")
@@ -483,14 +483,16 @@ class Monochromator(object):
     testheader = {"MONOTYPE":"Triax", "MONOMODL":"180"}
     slitsize = 30
     grating = 0
+    name = "Triax 180"
 
     def __init__(self, logger=None):
-        self.triax = XMLRPC("http://lpnlsst:8086/", "1", "Triax 180")
+        self.triax = xmlrpclib.ServerProxy("http://lpnlsst:8086/")
         # TODO: add filter management (when there will be filters)
         self.logger = logger
 
     def connect(self):
         self.triax.connect()
+        check_xmlrpc(self.triax, "1")
 
     def set_slit_size(self, slitsize):
         """
@@ -597,9 +599,7 @@ class Bench(object):
         self.seq = xml.fromxmlfile(self.xmlfile)
         self.primeheader["CTRLCFG"] = self.xmlfile
         self.bss = BackSubstrate()  # logged in higher-level class k6487
-        self.bss.connect()
         self.temp = TempController(logger)
-        #self.temp.connect()
         self.lamp = Source(logger)
         self.monochromator = Monochromator(logger)
 
@@ -897,7 +897,6 @@ class Bench(object):
         primaryhdu = pyfits.PrimaryHDU()
         imgstr = os.path.splitext(os.path.basename(imgname))[0]
         self.primeheader["IMAGETAG"] = imgstr
-        # more keywords ?
         dict_to_fitshdu(self.primeheader, primaryhdu)
         # also need info from 'localheader.txt'
         localheader = pyfits.Header.fromtextfile("camera/localheader.txt")
