@@ -97,7 +97,7 @@ def check_xmlrpc(server, idstr):
     :param idstr:
     """
     checkstr = server.checkConnection()
-    if checkstr != self.idstr:
+    if checkstr != idstr:
         errorstr = "Incorrect connection: returns %s, expect %s " % (checkstr, idstr)
         if stand_alone:
             print(errorstr)
@@ -919,7 +919,7 @@ class Bench(object):
         # More header HDUs
         exthdu = pyfits.BinTableHDU(name="TEST_COND")
         self.testheader.update(self.monochromator.testheader)
-        dict_to_fitshdu(self.testheader,exthdu)
+        dict_to_fitshdu(self.testheader, exthdu)
         hdulist.append(exthdu)
         exthdu = pyfits.BinTableHDU(name="CCD_COND")
         dict_to_fitshdu(self.opheader,exthdu)
@@ -1024,7 +1024,7 @@ def scan_pixel(b):
     b.primeheader["IMGTYPE"] = "SCAN"
     b.execute_sequence('Acquisition', exposuretime=0.5, fitsname=fitsname)
     b.reb.fpga.stop_increment()
-    del b.primeheader["IMGTYPE"]
+    #del b.primeheader["IMGTYPE"]
 
 if __name__ == '__main__':
     # needed as long as not implemented in XMLRPC
