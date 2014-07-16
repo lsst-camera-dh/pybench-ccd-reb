@@ -413,7 +413,7 @@ read_line_fake:
         self.ctrl_host = ctrl_host
         self.fpga = fpga.FPGA(ctrl_host = self.ctrl_host, 
                               reb_id = self.reb_id)
-    	self.strip_id = strip_id
+        self.strip_id = strip_id
 
         self.program = None
         self.functions = {}
@@ -657,6 +657,16 @@ read_line_fake:
     #     Set image size (in ADC count).
     #     """
     #     self.fpga.set_image_size(size)
+
+    # --------------------------------------------------------------------
+
+    def set_strip(self, strip_id=0):
+        """
+        Set which REB strip is read out. For now, does not accept more than one strip.
+        """
+        self.strip_id = strip_id
+        bitval = 1<<self.strip_id
+        self.write(0x400007, bitval)
 
     # --------------------------------------------------------------------
 

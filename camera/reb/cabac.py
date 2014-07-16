@@ -85,7 +85,7 @@ class CABAC(object):
 
     def set_OG(self, value_V):
     
-        if (self.OD0 * self.ODconv > value_V) and (self.OD1 * self.ODconv > value_V) :
+        if (self.OD0 * self.ODconv >= value_V) and (self.OD1 * self.ODconv >= value_V) :
             value_int = int(value_V // self.OGconv) & 0xff
             self.OG = value_int
         else :

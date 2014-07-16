@@ -66,26 +66,29 @@ def get_sequencer_hdu(fpga):
     prog = fpga.dump_program()
     progaddr = prog.instructions.keys()
     prognum = 256 + len(progaddr)
+
     slicenum = np.ndarray(shape=(prognum,), dtype=np.dtype('a4'))
     output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
     duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
+
     for ifunc in range(16):
+        seq = fpga.dump_function(ifunc)
         for islice in range(16):
-            seq = fpga.dump_function(ifunc)
             i = ifunc * 16 + islice
             slicenum[i] = hex(i)[2:]
             output[i] = bin(seq.outputs[islice])[2:]
-            duration = seq.timelengths[islice]
+            duration[i] = seq.timelengths[islice]
+
     for i, addr in enumerate(sorted(progaddr)):
         slicenum[i+256] = '30' + hex(addr)[2:]
         output[i+256] = prog.instructions[addr].__repr__()[:20]
         duration[i+256] = prog.instructions[addr].repeat
 
-    slicecol = pyfits.Column(name="Address", format='A2', array=slicenum)
-    outputcol = pyfits.Column(name="Output", format='A32', array=output)
-    durationcol = pyfits.Column(name="Time", format='I8', array=duration)
+    slicecol = pyfits.Column(name="Address", format='A4', array=slicenum, ascii=True)
+    outputcol = pyfits.Column(name="Output", format='A32', array=output, ascii=True)
+    durationcol = pyfits.Column(name="Time", format='I8', array=duration, ascii=True)
 
-    exthdu = pyfits.TableHDU(pyfits.FITS_rec.from_columns([slicecol, outputcol, durationcol]), name="SEQ_DUMP")
+    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
 
     return exthdu
 
@@ -580,6 +583,7 @@ class Bench(object):
     testheader = {}
     primeheader = {}
     reb_id = 2
+    strip_id = 0
     nchannels = 16
     imgtag = 0
     xmlfile = "camera/reb/sequencer-soi.xml"
@@ -614,6 +618,7 @@ class Bench(object):
             wait_for_action("Could not establish communication with DREB, try rebooting RCE.")
             self.reb.fpga.read(0, 5)
 
+        self.reb.set_strip(self.strip_id)
         self.reb.send_sequencer(self.seq)
         hextag = generate_tag(self.imgtag)
         self.reb.fpga.set_time(hextag)  # using time registers to store image tag (do not run clock in this case)
@@ -734,7 +739,7 @@ class Bench(object):
         #CCD operating conditions header
         self.opheader = self.reb.get_operating_header()
 
-        self.opheader.append(self.bss.get_operating_header())
+        self.opheader.update(self.bss.get_operating_header())
         # TODO: power supply currents and voltages
 
         #need to add instruments header, optional sequencer header
@@ -780,8 +785,8 @@ class Bench(object):
             sf = colwidth*REBchannel+1
         else :
             pdet = parstringhigh
-            si = colwidth*(self.nchannels-REBchannel)+1
-            sf = colwidth*(self.nchannels-REBchannel+1)
+            si = colwidth*(self.nchannels-1-REBchannel)+1
+            sf = colwidth*(self.nchannels-REBchannel)
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
@@ -910,18 +915,18 @@ class Bench(object):
             chan = buffer[0:length,num]
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
-            #creates extension to fits file
-            # exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            # create extension to fits file for each channel
+            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            #exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
         # More header HDUs
-        exthdu = pyfits.BinTableHDU(name="TEST_COND")
+        exthdu = pyfits.ImageHDU(name="TEST_COND")  # seems to have trouble with BinTableHDU with no data
         self.testheader.update(self.monochromator.testheader)
         dict_to_fitshdu(self.testheader, exthdu)
         hdulist.append(exthdu)
-        exthdu = pyfits.BinTableHDU(name="CCD_COND")
+        exthdu = pyfits.ImageHDU(name="CCD_COND")
         dict_to_fitshdu(self.opheader,exthdu)
         hdulist.append(exthdu)
 
