@@ -1074,11 +1074,11 @@ class FPGA(object):
 
         for key in iter(voltages):
             if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                self.dacs[key] = (voltages[key]/self.serial_conv)& 0xfff
+                self.dacs[key] = int(voltages[key]/self.serial_conv)& 0xfff
             elif key in ["V_PL", "V_PH"]:
-                self.dacs[key] = (voltages[key]/self.parallel_conv)& 0xfff
+                self.dacs[key] = int(voltages[key]/self.parallel_conv)& 0xfff
             elif key in ["HEAT1", "HEAT2"]:
-                self.dacs[key] = voltages[key] & 0xfff
+                self.dacs[key] = int(voltages[key]) & 0xfff
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
             

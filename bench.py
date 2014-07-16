@@ -196,13 +196,9 @@ class BackSubstrate():
     def disable(self):
 
         self.server.sourceVoltage(0)
-        while abs(self.server.getVoltage() - 0) > 0.1:
+        time.sleep(10)
+        while self.server.voltageStatus() != 0:
             time.sleep(1)
-
-        #check
-        ena = self.server.voltageStatus()
-        if ena != 0:
-            raise IOError("Error on back-substrate voltage: not disabled.")
 
     def get_current(self):
         """
@@ -281,7 +277,7 @@ class Source(object):
         # light sources: create objects here, does not try to connect
         self.qth = xmlrpclib.ServerProxy("http://lpnlsst:8089/")
         self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8085/")
-        self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
+        self.multi = None
         self.logger = logger
 
     def setChannel(self, channel):
@@ -314,6 +310,7 @@ class Source(object):
 
         # monitoring photodiode
         try:
+            self.multi = xmlrpclib.ServerProxy("http://lpnlsst:8087/")
             self.multi.connect()
             check_xmlrpc(self.multi, "6514")
             self.multi.zeroCorrect()
@@ -389,11 +386,14 @@ class Source(object):
         Gets a single instantaneous reading of the current in the monitoring photodiode.
 
         """
-        self.multi.startSequence(1)
-        while self.multi.status() == 3:
-            time.sleep(1)
-        reading = self.multi.getSequence()
-        return reading[0]
+        if self.multi:
+            self.multi.startSequence(1)
+            while self.multi.status() == 3:
+                time.sleep(1)
+            reading = self.multi.getSequence()
+            return reading[0]
+
+        return 0
 
     def start_monitor(self, exptime):
         """
@@ -710,7 +710,8 @@ class Bench(object):
         print("CCD shutdown complete")
 
     def bench_shutdown(self):
-        self.lamp.ttl.comm.closeShutter()
+        pass
+        #self.lamp.ttl.closeShutter()
 
     def select_source(self, sourcetype, wavelength=500.0):
         """
@@ -823,7 +824,7 @@ class Bench(object):
             newinstruction.repeat = newiter
             self.reb.fpga.send_program_instruction(darkadd, newinstruction)
 
-    def execute_sequence(self, name, exposuretime=2, waittime=15, fitsname=""):
+    def execute_sequence(self, name, exposuretime=2, waittime=20, fitsname=""):
         """
         Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
         :param self:
