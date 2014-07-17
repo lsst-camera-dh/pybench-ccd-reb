@@ -10,8 +10,6 @@ import os
 #import subprocess
 import xmlrpclib
 import lsst.camera.reb as reb
-import lsst.camera.fpga as fpga
-import lsst.camera.reb.xml as xml
 import numpy as np
 import pyfits
 
@@ -84,9 +82,9 @@ def get_sequencer_hdu(fpga):
         output[i+256] = prog.instructions[addr].__repr__()[:20]
         duration[i+256] = prog.instructions[addr].repeat
 
-    slicecol = pyfits.Column(name="Address", format='A4', array=slicenum, ascii=True)
-    outputcol = pyfits.Column(name="Output", format='A32', array=output, ascii=True)
-    durationcol = pyfits.Column(name="Time", format='I8', array=duration, ascii=True)
+    slicecol = pyfits.Column(name="Address", format='A4', array=slicenum)
+    outputcol = pyfits.Column(name="Output", format='A32', array=output)
+    durationcol = pyfits.Column(name="Time", format='I8', array=duration)
 
     exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
 
@@ -608,7 +606,7 @@ class Bench(object):
 
     def __init__(self, logger=None):
         self.reb = reb.REB(reb_id=self.reb_id)
-        self.seq = xml.fromxmlfile(self.xmlfile)
+        self.seq = reb.fromxmlfile(self.xmlfile)
         self.primeheader["CTRLCFG"] = self.xmlfile
         self.bss = BackSubstrate()  # logged in higher-level class k6487
         self.temp = TempController(logger)
@@ -621,15 +619,15 @@ class Bench(object):
         :return:
         """
         try:
-            self.reb.fpga.read(0, 5)
+            self.reb.read(0, 5)
         except:
             wait_for_action("Could not establish communication with DREB, try rebooting RCE.")
-            self.reb.fpga.read(0, 5)
+            self.reb.read(0, 5)
 
         self.reb.set_strip(self.strip_id)
         self.reb.send_sequencer(self.seq)
         hextag = generate_tag(self.imgtag)
-        self.reb.fpga.set_time(hextag)  # using time registers to store image tag (do not run clock in this case)
+        self.reb.set_time(hextag)  # using time registers to store image tag (do not run clock in this case)
         self.CCDshutdown()
 
         print("REB ready to connect to CCD")
@@ -642,9 +640,9 @@ class Bench(object):
         """
 
         #sets the default sequencer clock states to 0
-        self.reb.send_function(0, fpga.Function(name="default state",
+        self.reb.send_function(0, reb.Function( name="default state",
                                                 timelengths={0: 2, 1: 0},
-                                                outputs={0: 0, 1: 0}))
+                                                outputs={0: 0, 1: 0} ))
 
         #starting drain voltages on CABAC
         drains = {"OD": 29, "GD": 24, "RD": 18}
@@ -675,9 +673,9 @@ class Bench(object):
         self.reb.set_dacs(dacOS)
 
         #rewrite default state of sequencer (to avoid reloading functions)
-        self.reb.send_function(0, fpga.Function(name="default state",
-                                                timelengths={0: 2, 1: 0},
-                                                outputs={0: 0x6bc, 1: 0}))
+        self.reb.send_function(0, reb.Function( name="default state",
+                                            timelengths={0: 2, 1: 0},
+                                            outputs={0: 0x6bc, 1: 0} ))
 
         time.sleep(1)
 
@@ -701,10 +699,10 @@ class Bench(object):
 
         time.sleep(1)
 
-        #clock states to 0
-        self.reb.send_function(0, fpga.Function(name="default state",
+        #clock states to 0 
+        self.reb.send_function(0, reb.Function( name="default state",
                                                 timelengths={0: 2, 1: 0},
-                                                outputs={0: 0, 1: 0}))
+                                                outputs={0: 0, 1: 0} ))
         #currents on CABAC clocks to 0
         self.reb.set_cabac_config({"IC": 0})
         #clock rails to 0
@@ -854,14 +852,14 @@ class Bench(object):
 
         self.reb.run_subroutine(name)
 
-        self.bss.start_monitor(exposuretime)
-        self.lamp.start_monitor(exposuretime)
+        self.bss.start_monitor(exposuretime+4)  # time for clearing before exposure
+        self.lamp.start_monitor(exposuretime+4)
         time.sleep(exposuretime + waittime)
         self.primeheader["MONDIODE"] = self.lamp.read_monitor()
 
         # check for output image
         #getting tag from FPGA registers
-        hextag = self.reb.fpga.get_time()
+        hextag = self.reb.get_time()
         imgname = os.path.join(self.rawimgdir,'0x%016x.img' % hextag)
         if os.path.isfile(imgname):
             self.get_headers()
@@ -875,13 +873,13 @@ class Bench(object):
             self.save_to_fits(imgname, fitsname)
             self.imgtag = self.imgtag + 1
             hextag = generate_tag(self.imgtag)
-            self.reb.fpga.set_time(hextag)  # setting up tag for next image
+            self.reb.set_time(hextag)  # setting up tag for next image
 
     def wait_end_sequencer(self):
         """
         Waits until the sequencer is not running anymore.
         """
-        while self.reb.fpga.get_state() & 4:  # sequencer status bit in the register
+        while self.reb.get_state() & 4:  # sequencer status bit in the register
             time.sleep(1)
 
     def make_fits_name(self, imgstr):
@@ -1009,9 +1007,9 @@ def timing_ramp(b):
             b.lamp.on()
             time.sleep(10)
         for duration in range(150,450,20):
-            curfunc = b.reb.fpga.dump_function(func1)
+            curfunc = b.reb.dump_function(func1)
             curfunc.timelengths[slice1] = duration
-            b.reb.fpga.send_function(func1, curfunc)
+            b.reb.send_function(func1, curfunc)
             ramplog.write("%d\t%s\n" % (duration, b.imgtag))
             b.execute_sequence(imtype)
     ramplog.close()
