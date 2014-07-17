@@ -142,6 +142,7 @@ class BackSubstrate():
     """
     setvoltbss = 0  # desired voltage setting (independent of actual value)
     count = 1  # number of measures for monitoring
+    rate = 1.0  # monitoring rate
     name = "Keithley 6487"
 
     def __init__(self):
@@ -164,6 +165,7 @@ class BackSubstrate():
         #self.selectCurrent(2e-5)  # selecting current range: not implemented yet
         self.server.zeroCorrect()
         self.server.setCurrentLimit(0)  # 25 uA
+        self.server.setRate(self.rate)
 
     def check_config(self):
         inti = self.server.getCurrentLimit()
@@ -215,16 +217,22 @@ class BackSubstrate():
 
         return self.server.getSequence()[0]
 
+    def set_monitor_rate(self, rate):
+        """
+        Sets rate of monitoring to a new value.
+        Useful to do before long exposures.
+        :param rate:
+        :return:
+        """
+        self.rate = rate
+        self.server.setRate(self.rate)
+
     def start_monitor(self, exptime):
         """
         Configures back-substrate current monitoring for an exposure
         :param exptime: double
         """
-        rate = 1.0
-        if exptime> 60 :
-            rate = 10.0  # for long exposures, more stable
-        self.server.setRate(rate)
-        self.count = int(exptime/rate)+ 1
+        self.count = int(exptime * self.rate)+ 1
         self.server.startSequence(self.count)
 
     def read_monitor(self):
@@ -232,10 +240,10 @@ class BackSubstrate():
         Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
         :return: double
         """
-        # TODO: check that it is finished reading
+        while self.server.status() == 3:
+                time.sleep(1)
         readarray = np.array(self.server.getSequence())
-        # TODO: need to correct the sequence we get currently
-        av_read = readarray.mean()  # TODO: remove outliers (dark)
+        av_read = readarray.mean()
 
         return av_read
 
@@ -252,7 +260,7 @@ class BackSubstrate():
             imon = self.read_monitor()
         else :
             imon = self.get_current()
-        iss = "{:.2f}".format(imon)
+        iss = "{:.3E}".format(imon)
 
         return {"V_BSS": vss, "I_BSS": iss}
 
