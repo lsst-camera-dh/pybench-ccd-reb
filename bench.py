@@ -9,9 +9,9 @@ from datetime import date
 import os
 #import subprocess
 import xmlrpclib
-import reb
-import fpga
-import xml
+import lsst.camera.reb as reb
+import lsst.camera.fpga as fpga
+import lsst.camera.reb.xml as xml
 import numpy as np
 import pyfits
 
@@ -188,8 +188,8 @@ class BackSubstrate():
     def enable(self):
 
         self.server.sourceVoltage(1)
-        while abs(self.server.getVoltage() - self.setvoltbss) > 0.1:
-            time.sleep(1)
+        
+        time.sleep(30)
 
         #check
         ena = self.server.voltageStatus()
