@@ -18,9 +18,19 @@ if __name__ == '__main__':
     logger = open(logfile, 'a')
     logger.write(fitsfile)
 
-    for ichan in range(1,17):
-        hdulist.
-
+    print("Channel\t MeanLight SdevLight  MeanDark  SdevDark")
+    for ichan in range(16):
+        name = "CHAN_%d" % ichan
+        header = hdulist[name].header
+        img = hdulist[name].data
+        imgcols = 512
+        colstart = 10
+        imglines = 2002
+        light = img[:imglines, colstart:colstart+imgcols].flatten()
+        dark = np.concatenate((img[:imglines, colstart].flatten(),
+                               img[:imglines, colstart+imgcols:].flatten()),
+                              img[imglines:].flatten())
+        print("{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f}".format(name, light.mean(), light.std(), dark.mean(), dark.std()))
 
     logger.close()
     hdulist.close()
