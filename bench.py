@@ -791,8 +791,11 @@ class Bench(object):
             sf = colwidth*REBchannel+1
         else :
             pdet = parstringhigh
-            si = colwidth*(self.nchannels-1-REBchannel)+1
-            sf = colwidth*(self.nchannels-REBchannel)
+            # previous geometry
+            #si = colwidth*(self.nchannels-1-REBchannel)+1
+            #sf = colwidth*(self.nchannels-REBchannel)
+            si = colwidth*(REBchannel-self.nchannels/2)+1
+            sf = colwidth*(REBchannel-self.nchannels/2+1)
 
         extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
 
