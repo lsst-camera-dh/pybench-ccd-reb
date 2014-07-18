@@ -37,5 +37,9 @@ if __name__ == '__main__':
                                                                                  over.mean(), over.std())
         print(out)
         logger.write(out+'\n')
+
+    #correlated noise
+    #np.corrcoef(x,y)
+
     logger.close()
     hdulist.close()

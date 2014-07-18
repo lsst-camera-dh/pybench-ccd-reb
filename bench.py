@@ -838,7 +838,7 @@ class Bench(object):
             newinstruction.repeat = newiter
             self.reb.fpga.send_program_instruction(darkadd, newinstruction)
 
-    def execute_sequence(self, name, exposuretime=2, waittime=20, fitsname=""):
+    def execute_sequence(self, name, exposuretime=None, waittime=20, fitsname=""):
         """
         Executing a 'main' sequence from the XML file or a subroutine, when sequencer is ready
         :param self:
@@ -850,7 +850,9 @@ class Bench(object):
         self.wait_end_sequencer()
 
         # load new exposure time here (better: with XML parameter ?)
-        self.set_exposure_time(exposuretime)
+        if exposuretime:
+            self.set_exposure_time(exposuretime)
+        # else use preset exposure time
         self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
 
         self.reb.run_subroutine(name)
