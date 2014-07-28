@@ -96,7 +96,7 @@ class Pollux(object):
              self.serial_port.isOpen() ):
             self.serial_port.close()
 
-    # ---------- Define write command  ----------------------- 
+    # ----------------- write command  ----------------------- 
 
     def write(self, command):
         """
@@ -110,7 +110,7 @@ class Pollux(object):
                 "Sending command [" + command + "]"
         self.serial_port.write(command + self.EOL)
 
-    # ---------- Define read command  ----------------------- 
+    # ----------------- read command  ----------------------- 
 
     def read(self, timeout = None):
         """
@@ -142,7 +142,7 @@ class Pollux(object):
 
         return answer
 
-    # ---------- Define purge  ----------------------- 
+    # ----------------- Purge the serial port --------------- 
 
     def purge(self):
         """
@@ -152,7 +152,7 @@ class Pollux(object):
         self.serial_port.flushInput()
         self.serial_port.readlines()
 
-    # ---------- Define read command  ----------------------- 
+    # ---------- Echo test ---------------------------------- 
 
     def echotest(self):
         self.write(("%d" % self.axis) + " getserialno")
@@ -204,6 +204,24 @@ class Pollux(object):
             answer = answer[:-1]
 
         return answer
+
+    # ---------- Get the motor serial number -----------------
+
+    def get_serial(self):
+        """
+        Return the current axis position.
+        """
+        answer = self.send(("%d" % self.axis) + " getserialno")
+
+        if len(answer) < 1:
+            raise IOError(("Not responding to " + ("%d" % self.axis) + 
+                           " getserialno on serial port %s") % 
+                          self.port)
+        
+        serial = (answer[0]).strip()
+        return serial
+
+    serial = property(get_serial, doc="Axis serial number")
 
 
     # ---------- Setup the motors ----------------------------
@@ -308,7 +326,7 @@ class Pollux(object):
     
     # ---------- Detect limits (range) -------------------------- 
 
-    def find_limits(self):
+    def find_limits(self, upper = True, lower = True):
         """
         Pollux motors is supposed to find its limits on its own,
         using calibrate command (lower limit, set to zero after calibration) 
@@ -322,21 +340,25 @@ class Pollux(object):
 
         # first look for the lower limit (and set that position to zero)
 
-        command = ("%d" % self.axis) + " ncal"
-        answer = self.send(command)
-        while (self.is_moving()): 
-            pass
+        if lower:
+            command = ("%d" % self.axis) + " ncal"
+            answer = self.send(command)
+            while (self.is_moving()): 
+                pass
             
-        self.__limits['down'] = self.position  # zero in fact
+            self.__limits['down'] = self.position  # zero in fact
 
         # then look for the upper limit 
 
-        command = ("%d" % self.axis) + " nrm"
-        answer = self.send(command)
-        while (self.is_moving()): 
-            pass
+        if upper:
+            command = ("%d" % self.axis) + " nrm"
+            answer = self.send(command)
+            while (self.is_moving()): 
+                pass
             
-        self.__limits['up'] = self.position
+            self.__limits['up'] = self.position
+
+        #
 
         return self.__limits
 
