@@ -27,10 +27,10 @@ if __name__ == '__main__':
         colstart = 10
         imglines = 2002
         light = img[:imglines, colstart:colstart+imgcols].flatten()
-        dark = np.concatenate((img[:imglines, colstart].flatten(),
+        dark = np.concatenate((img[:imglines, :colstart].flatten(),
                                img[:imglines, colstart+imgcols:].flatten(),
                               img[imglines:].flatten()))
-        over = img[imglines+2:, colstart:]
+        over = img[imglines+2:, colstart:] ## why +2 ?
         out = "{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f}".format(name,
                                                                                  light.mean(), light.std(),
                                                                                  dark.mean(), dark.std(),
