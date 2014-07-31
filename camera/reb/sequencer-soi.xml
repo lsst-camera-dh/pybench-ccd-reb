@@ -564,7 +564,8 @@
             <subroutine id="Exposure">
                 <fullname>Full exposure time</fullname>
                 <call ref="Exposure1ms">
-                    <repeat>ExposureTime</repeat>
+                    <repeat>Exposure
+Time</repeat>
                 </call>
             </subroutine>
             <subroutine id="DarkExposure">
