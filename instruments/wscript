@@ -1,11 +1,20 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench'
-VERSION = '0.0.1'
+APPNAME = 'lsst.instruments'
+VERSION = '0.0.4'
 top = '.'
 build = 'build'
 
-submodules = []
+submodules = ['pollux', 
+              'keithley',
+              'rpc',
+              # 'digisense',
+              'laser',
+              'powersupply', 
+              'sp_dk240',
+              'dmk41au02as',
+              'picomotor',
+              'utils']
 
 def options(opt):
     opt.load('python')        
@@ -22,7 +31,7 @@ def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench')
+        install_path = '${PYTHONDIR}/lsst/instruments')
 
     bld.recurse(submodules)
 

@@ -8,7 +8,7 @@ def build(bld):
         includes = ['.'],
         lib = [],
         use = ['m'],
-        install_path = '${PYTHONDIR}/lsst/testbench/utils')
+        install_path = '${PYTHONDIR}/lsst/instruments/utils')
 
 
 

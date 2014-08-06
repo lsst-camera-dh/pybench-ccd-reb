@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench.laser'
+APPNAME = 'lsst.instruments.powersupply.TTiQL355TP'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -18,11 +18,8 @@ def build(ctx):
     ctx(features = 'py', 
         source = ctx.path.ant_glob('*.py'), 
         # source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/laser')
+        install_path = '${PYTHONDIR}/lsst/instruments/powersupply/TTiQL355TP')
 
-    # ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
-    #                'bench-lakeshore325-read', 
-    #                chmod=0755)
 
 
     

@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'dice.testbench.monochromator'
+APPNAME = 'dice.instruments.monochromator'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -19,7 +19,7 @@ def build(bld):
     bld(features = 'py', 
         source = bld.path.ant_glob('*.py'), 
         # source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/monochromator')
+        install_path = '${PYTHONDIR}/lsst/instruments/monochromator')
 
 
     

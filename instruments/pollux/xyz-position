@@ -4,8 +4,8 @@ import sys, os, os.path
 import getopt
 import time
 
-# import lsst.testbench.pollux as ltp
-import lsst.testbench.pollux.xyz as ltpxyz
+# import lsst.instruments.pollux as ltp
+import lsst.instruments.pollux.xyz as ltpxyz
 
 # --------- Parse command line arguments ------------------
 
@@ -15,7 +15,7 @@ def usage():
     print >>sys.stderr, "         [--y <port>]"
     print >>sys.stderr, "         [--z <port>]"
     print >>sys.stderr, "Returns the current (x,y,z) position of the XYZ" 
-    print >>sys.stderr, "on the LSST testbench (in mm)."
+    print >>sys.stderr, "on the LSST instruments (in mm)."
 
 try:
     opts, args = \

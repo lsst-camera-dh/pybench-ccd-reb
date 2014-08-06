@@ -4,8 +4,8 @@ import sys, os, os.path
 import getopt
 import time
 
-# import lsst.testbench.pollux as ltp
-import lsst.testbench.pollux.xyz as ltpxyz
+# import lsst.instruments.pollux as ltp
+import lsst.instruments.pollux.xyz as ltpxyz
 
 # --------- Parse command line arguments ------------------
 

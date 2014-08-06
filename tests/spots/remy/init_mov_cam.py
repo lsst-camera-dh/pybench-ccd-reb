@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 #from fonctions import *
 from math import *
 
-import lsst.testbench.pollux.xyz as xyz
-#import lsst.testbench.dmk41au02as as d
+import lsst.instruments.pollux.xyz as xyz
+#import lsst.instruments.dmk41au02as as d
 
 mov = INIT_MOV()
 mov.open()

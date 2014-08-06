@@ -3,8 +3,8 @@ import numpy as np
 import pylab as pb
 import pyfits
 import scipy.ndimage as scind
-import lsst.testbench.picomotor as pico
-import lsst.testbench.dmk41au02as as d
+import lsst.instruments.picomotor as pico
+import lsst.instruments.dmk41au02as as d
 #--------------------------------------
 #fonction calcul de la FFT 2D et rearrangement de la FFT  
 #option echelle log ,suppression moyenne et convolution gaussienne

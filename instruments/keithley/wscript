@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-testbench-keithley'
+APPNAME = 'lsst-instruments-keithley'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -21,7 +21,7 @@ def build(ctx):
     ctx(features = 'py', 
         source = ctx.path.ant_glob('*.py'), 
         # source = ['__init__.py', 'keithley2000.py', 'keithley6514.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/keithley')
+        install_path = '${PYTHONDIR}/lsst/instruments/keithley')
 
     # ctx.recurse(submodules)
 

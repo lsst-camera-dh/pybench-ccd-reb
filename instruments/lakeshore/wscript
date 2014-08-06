@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench.lakeshore'
+APPNAME = 'lsst.instruments.lakeshore'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -18,7 +18,7 @@ def build(ctx):
     ctx(features = 'py', 
         source = ctx.path.ant_glob('*.py'), 
         # source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/lakeshore')
+        install_path = '${PYTHONDIR}/lsst/instruments/lakeshore')
 
     ctx.install_as('${PREFIX}/bin/bench-lakeshore325-read', 
                    'bench-lakeshore325-read', 

@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench.pollux'
+APPNAME = 'lsst.instruments.pollux'
 VERSION = '0.0.2'
 top = '.'
 build = 'build'
@@ -19,7 +19,7 @@ def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py', 'pollux.py', 'xyz.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/pollux')
+        install_path = '${PYTHONDIR}/lsst/instruments/pollux')
 
     bld.install_as('${PREFIX}/bin/xyz-position', 
                    'xyz-position', 

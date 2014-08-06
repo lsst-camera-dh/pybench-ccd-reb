@@ -4,7 +4,7 @@ import sys, os, os.path, getopt
 import subprocess
 import time
 
-import lsst.testbench.keithley.keithley6514 as multi
+import lsst.instruments.keithley.keithley6514 as multi
 
 # --------- Parse command line arguments ------------------
 

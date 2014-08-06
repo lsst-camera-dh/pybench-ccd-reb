@@ -4,7 +4,7 @@ import sys, os, os.path, getopt
 import subprocess
 import time
 
-import dice.testbench.temperature.lakeshore325 as LK
+import dice.instruments.temperature.lakeshore325 as LK
 
 # --------- Parse command line arguments ------------------
 

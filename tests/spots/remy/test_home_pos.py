@@ -7,7 +7,7 @@ import pyfits as py
 
 from math import *
 
-import lsst.testbench.pollux.xyz as xyz
+import lsst.instruments.pollux.xyz as xyz
 
 mov = xyz.XYZ()
 mov.open()

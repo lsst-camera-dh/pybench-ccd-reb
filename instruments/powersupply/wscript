@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-testbench-powersupply'
+APPNAME = 'lsst-instruments-powersupply'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -20,7 +20,7 @@ def build(ctx):
     ctx(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/powersupply')
+        install_path = '${PYTHONDIR}/lsst/instruments/powersupply')
 
     ctx.recurse(submodules)
 

@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench.picomotor'
+APPNAME = 'lsst.instruments.utils'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -15,10 +15,4 @@ def configure(conf):
     conf.check_python_headers()
     
 def build(bld):
-    
-    bld(features = 'py', 
-        # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py', 'picomotor.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/picomotor')
-
-    
+    bld.recurse(['lib', 'src'])

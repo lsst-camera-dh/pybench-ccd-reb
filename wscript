@@ -47,7 +47,7 @@ def build(ctx):
         source = ['__init__.py'], 
         install_path = '${PYTHONDIR}/lsst')
 
-    ctx.recurse(['camera', 'testbench'])
+    ctx.recurse(['camera', 'instruments', 'testbench'])
     
 
 

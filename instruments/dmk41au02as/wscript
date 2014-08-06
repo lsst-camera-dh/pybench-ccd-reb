@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench.dmk41au02as'
+APPNAME = 'lsst.instruments.dmk41au02as'
 VERSION = '0.0.3'
 top = '.'
 build = 'build'
@@ -19,7 +19,7 @@ def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py', 'dmk41au02as.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/dmk41au02as')
+        install_path = '${PYTHONDIR}/lsst/instruments/dmk41au02as')
 
     # bld.install_as('${PREFIX}/bin/xyz-position', 
     #                'xyz-position', 
