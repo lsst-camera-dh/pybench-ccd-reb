@@ -63,7 +63,7 @@ class Grid(object):
              ((self.refi % self.reference['period']) == 0) ):
             # it is time to go back to the reference point
             self.refi += 1
-            nextpos = (self.reference['x'], self.reference['y'])
+            nextpos = (float(self.reference['x']), float(self.reference['y']))
             return nextpos
 
         if (self.ix > self.nx - 1):
@@ -79,7 +79,7 @@ class Grid(object):
             raise StopIteration("End of Loop")
 
         self.refi += 1
-        nextpos = self.xrange[self.ix], self.yrange[self.iy]
+        nextpos = float(self.xrange[self.ix]), float(self.yrange[self.iy])
         self.iy += 1
         
         return nextpos
