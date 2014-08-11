@@ -11,9 +11,6 @@ import lsst.instruments.pollux.xyz as ltpxyz
 
 def usage():
     print >>sys.stderr, "usage: xyz-move"
-    print >>sys.stderr, "         [--x <port>]"
-    print >>sys.stderr, "         [--y <port>]"
-    print >>sys.stderr, "         [--z <port>]"
     print >>sys.stderr, "         a=position | da=offset"
     print >>sys.stderr, "Move axis 'a' (X,Y,Z) to position 'position'" 
     print >>sys.stderr, "on the LSST test bench (unit is mm)."
@@ -21,7 +18,7 @@ def usage():
 try:
     opts, args = \
         getopt.getopt(sys.argv[1:], "hv", \
-                          ["help", "verbose", "x=", "y=", "z="])
+                          ["help", "verbose"])
 except getopt.GetoptError:
     # print help information and exit
     usage()
@@ -31,9 +28,6 @@ except getopt.GetoptError:
 # print args
 
 verbose = False
-x_port = ltpxyz.XYZ.default_x_port
-y_port = ltpxyz.XYZ.default_y_port
-z_port = ltpxyz.XYZ.default_z_port
 
 for option, arg in opts:
     if option in ("-h", "--help"):
@@ -41,21 +35,6 @@ for option, arg in opts:
         sys.exit(0)
     if option in ("-v", "--verbose"):
         verbose = True
-    if option in ("--x"):
-        if (arg == "") or (arg == "None"):
-            x_port = None
-        else:
-            x_port = arg
-    if option in ("--y"):
-        if (arg == "") or (arg == "None"):
-            y_port = None
-        else:
-            y_port = arg
-    if option in ("--z"):
-        if (arg == "") or (arg == "None"):
-            z_port = None
-        else:
-            z_port = arg
 
 if len(args) < 1:
     usage()
@@ -113,10 +92,7 @@ if verbose:
 
 # ----- Init testbench motors, send request, then close ---
 
-xyz = ltpxyz.XYZ(x_port = x_port,
-                 y_port = y_port,
-                 z_port = z_port,
-                 debug = verbose)
+xyz = ltpxyz.XYZ(debug = verbose)
 xyz.open()
 xyz.setup()
 

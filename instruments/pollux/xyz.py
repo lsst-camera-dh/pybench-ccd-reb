@@ -74,7 +74,7 @@ class XYZ(object):
                 print >>sys.stderr, "Opening axis on port %s done." % port 
 
             motor_serial = axis.get_serial()
-            print repr(motor_serial)
+            # print repr(motor_serial)
 
             if motor_serial == self.x_serial:
                 self.x_axis = axis
