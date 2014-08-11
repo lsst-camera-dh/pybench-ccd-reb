@@ -395,7 +395,7 @@ class Pollux(object):
         self.move_absolute(middle, wait = True, check = False)
         # self.set_zero() # bad idea: find_limits(lower = True)
 
-        self.__limits = dict(limits[k])
+        self.__limits = dict(limits)
 
 
     # ---------- Return limits ------------------------------- 
