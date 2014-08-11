@@ -167,16 +167,35 @@ class XYZ(object):
         Park the XYZ out of the light beam.
         """ 
 
-        park_position = {
-            'x' : self.x_axis.get_limits()['up']   - 1.0,
-            'y' : self.y_axis.get_limits()['up']   - 1.0,
-            'z' : self.x_axis.get_limits()['down'] + 1.0 }
+        # Even if no homing has been done, parking is OK
 
-        # order is important !!
-        self.move(z = park_position['z'])
+        if ( (self.x_axis == None) or 
+             (self.y_axis == None) or 
+             (self.z_axis == None) ):
+            # cannot park safely
+            raise pollux.MotorError("Some axes are missing (have you done a 'open' first): cannot park safely.")
 
-        self.move(x = park_position['x'])
-        self.move(y = park_position['y'])
+        # min pos for z axis first
+        self.z_axis.find_limits(upper = False, lower = True)
+        self.move(dz = +1.0) # to avoid blocking the motor
+
+        # Then, max pos for x and y axes
+        self.x_axis.find_limits(upper = True, lower = False)
+        self.move(dx = -1.0) # to avoid blocking the motor
+
+        self.y_axis.find_limits(upper = True, lower = False)
+        self.move(dy = -1.0) # to avoid blocking the motor
+
+        # park_position = {
+        #     'x' : self.x_axis.get_limits()['up']   - 1.0,
+        #     'y' : self.y_axis.get_limits()['up']   - 1.0,
+        #     'z' : self.x_axis.get_limits()['down'] + 1.0 }
+
+        # # order is important !!
+        # self.move(z = park_position['z'])
+
+        # self.move(x = park_position['x'])
+        # self.move(y = park_position['y'])
 
 
     # ---------- Current motor position ---------------------- 

@@ -147,7 +147,6 @@ class XYZremote(object):
         Park the XYZ out of the light beam.
         """ 
         logging.info("XYZ.park() called.")
-        print self.XYZ
         self.XYZ.park()
         logging.info("XYZ.park() done.")
         return True
@@ -178,7 +177,7 @@ class XYZremote(object):
         """
         logging.info("XYZ.get_position() called.")
         pos = self.XYZ.get_position()
-        print pos
+        logging.info("XYZ position is: %s" % str(pos))
         logging.info("XYZ.get_position() done.")
         return pos
 
