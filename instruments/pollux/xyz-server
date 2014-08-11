@@ -87,7 +87,7 @@ class XYZremote(object):
                  y_serial = xyz.XYZ.default_y_serial,
                  z_serial = xyz.XYZ.default_z_serial,
                  debug = True):
-        self.state = None
+        self.state = 1
         self.XYZ = xyz.XYZ(ports = ports,
                            x_serial = x_serial,
                            y_serial = y_serial,
@@ -147,6 +147,7 @@ class XYZremote(object):
         Park the XYZ out of the light beam.
         """ 
         logging.info("XYZ.park() called.")
+        print self.XYZ
         self.XYZ.park()
         logging.info("XYZ.park() done.")
         return True
@@ -177,6 +178,7 @@ class XYZremote(object):
         """
         logging.info("XYZ.get_position() called.")
         pos = self.XYZ.get_position()
+        print pos
         logging.info("XYZ.get_position() done.")
         return pos
 
