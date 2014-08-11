@@ -27,5 +27,8 @@ def build(bld):
     bld.install_as('${PREFIX}/bin/xyz-move', 
                    'xyz-move', 
                    chmod=0755)
+    bld.install_as('${PREFIX}/bin/xyz-server', 
+                   'xyz-server', 
+                   chmod=0755)
 
     
