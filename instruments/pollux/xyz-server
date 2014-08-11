@@ -43,7 +43,7 @@ class MotorError(Exception): pass
 
 # ==================================================================
 
-DEFAULT_HOSTNAME = "localhost"
+DEFAULT_HOSTNAME = "lpnlsst"
 DEFAULT_PORT     = 8101
 SERVER_HOSTNAME = os.getenv("XYZ_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
 SERVER_PORT = int(os.getenv("XYZ_SERVER_PORT", DEFAULT_PORT))
