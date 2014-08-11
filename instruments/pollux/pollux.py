@@ -334,6 +334,10 @@ class Pollux(object):
 
         When power-on for the first time, the actual position
         is thought to be zero, whatever the position is.
+
+        !!! warning: find_limits(lower = True) will reset the zero!
+        as it uses the ncal command...
+
         """
 
         limits = {}
@@ -389,10 +393,9 @@ class Pollux(object):
         # use the middle point as zero
         middle = (limits['up'] + limits['down'])/2.0
         self.move_absolute(middle, wait = True, check = False)
-        self.set_zero()
+        # self.set_zero() # bad idea: find_limits(lower = True)
 
-        for k in ['up', 'down']:
-            self.__limits[k] = limits[k] - middle # remove the offset
+        self.__limits = dict(limits[k])
 
 
     # ---------- Return limits ------------------------------- 
