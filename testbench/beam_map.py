@@ -38,8 +38,8 @@ output = open("map.data", "w")
 
 xyz.move({'z': 0.0})
 
-G = grid.Grid(xmin = 10.0, xmax = 90.0, dx = 10.0,
-              ymin = 10.0, ymax = 90.0, dy = 10.0)
+G = grid.Grid(xmin = 0.0, xmax = 100.0, dx = 10.0,
+              ymin = 0.0, ymax = 100.0, dy = 10.0)
 
 for (x,y) in G:
     # x = float(x)
