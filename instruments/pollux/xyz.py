@@ -52,6 +52,8 @@ class XYZ(object):
         self.y_axis = None
         self.z_axis = None
 
+        self.homed = False
+
         self.debug = debug
 
     # ---------- Open the various devices --------------------
@@ -139,11 +141,14 @@ class XYZ(object):
 
     # ---------- Home procedure for the motors ---------------
 
-    def home(self):
+    def home(self, force = False):
         """
         Find the limits for all motors 
         and define the zero positions in middle range.
         """ 
+
+        if self.homed and not(force):
+            return
 
         # To avoid breaking the objective, we first go backward
         # on the z axis, then initialize the x and y axes, and at
@@ -158,6 +163,9 @@ class XYZ(object):
         # at last init of z axis
 
         self.z_axis.home()
+
+        self.homed = True
+
 
     # ---------- Park position -------------------------------
 

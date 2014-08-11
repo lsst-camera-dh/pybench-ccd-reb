@@ -38,15 +38,15 @@ output = open("map.data", "w")
 
 xyz.move({'z': 0.0})
 
-G = grid.Grid(xmin = 10.0, xmax = 90.0, dx = 20.0,
-              ymin = 10.0, ymax = 90.0, dy = 20.0)
+G = grid.Grid(xmin = 10.0, xmax = 90.0, dx = 10.0,
+              ymin = 10.0, ymax = 90.0, dy = 10.0)
 
 for (x,y) in G:
     # x = float(x)
     # y = float(y)
     print "X,Y = ", x,y
     xyz.move({'x': x, 'y': y})
-    time.sleep(1)
+    time.sleep(.5)
     mesure = k.getLastReading()
     print mesure
     print >>output, x,y,mesure
