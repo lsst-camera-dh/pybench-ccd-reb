@@ -336,7 +336,7 @@ class Pollux(object):
         is thought to be zero, whatever the position is.
         """
 
-        self.__limits = {}
+        limits = {}
 
         # first look for the lower limit (and set that position to zero)
 
@@ -346,7 +346,7 @@ class Pollux(object):
             while (self.is_moving()): 
                 pass
             
-            self.__limits['down'] = self.position  # zero in fact
+            limits['down'] = self.position  # zero in fact
 
         # then look for the upper limit 
 
@@ -356,11 +356,11 @@ class Pollux(object):
             while (self.is_moving()): 
                 pass
             
-            self.__limits['up'] = self.position
+            limits['up'] = self.position
 
         #
 
-        return self.__limits
+        return limits
 
     # ---------- Set zero at the current position ------------ 
 
@@ -392,8 +392,7 @@ class Pollux(object):
         self.set_zero()
 
         for k in ['up', 'down']:
-            if self.__limits.has_key(k):
-                self.__limits[k] -= middle # subtract the offset
+            self.__limits[k] = limits[k] - middle # remove the offset
 
 
     # ---------- Return limits ------------------------------- 

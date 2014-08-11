@@ -87,7 +87,7 @@ class XYZremote(object):
                  y_serial = xyz.XYZ.default_y_serial,
                  z_serial = xyz.XYZ.default_z_serial,
                  debug = True):
-        self.state = None
+        self.state = 1
         self.XYZ = xyz.XYZ(ports = ports,
                            x_serial = x_serial,
                            y_serial = y_serial,
@@ -177,15 +177,19 @@ class XYZremote(object):
         """
         logging.info("XYZ.get_position() called.")
         pos = self.XYZ.get_position()
+        logging.info("XYZ position is: %s" % str(pos))
         logging.info("XYZ.get_position() done.")
         return pos
 
-    position = property(get_position, doc = "XYZ current position")
+    # position = property(get_position, doc = "XYZ current position")
 
     # ----------------------- Introspection ------------------------
 
     def _listMethods(self):
-        return list_public_methods(self)
+        logging.info("XYZ._listMethods() called.")
+        methods = list_public_methods(self)
+        logging.info("XYZ._listMethods() done.")
+        return methods
         # return [ "status",
         #          "open",
         #          "close",
