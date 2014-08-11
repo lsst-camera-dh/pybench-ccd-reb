@@ -18,7 +18,7 @@ def build(bld):
     
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py'], 
+        source = ['__init__.py', 'grid.py'], 
         install_path = '${PYTHONDIR}/lsst/instruments/utils')
 
     bld.install_as('${PREFIX}/bin/livegraph', 
