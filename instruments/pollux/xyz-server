@@ -180,12 +180,15 @@ class XYZremote(object):
         logging.info("XYZ.get_position() done.")
         return pos
 
-    position = property(get_position, doc = "XYZ current position")
+    # position = property(get_position, doc = "XYZ current position")
 
     # ----------------------- Introspection ------------------------
 
     def _listMethods(self):
-        return list_public_methods(self)
+        logging.info("XYZ._listMethods() called.")
+        methods = list_public_methods(self)
+        logging.info("XYZ._listMethods() done.")
+        return methods
         # return [ "status",
         #          "open",
         #          "close",
