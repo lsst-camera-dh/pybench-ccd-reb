@@ -2,8 +2,12 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 from matplotlib.mlab import griddata
-filename = "/home/karkar/fromXPS/LSST/dataTestCCD/beamMaps/map-pos-01-map-01.data"
+if len(sys.argv)>1:
+    filename = sys.argv[1]
+else:
+    filename = "/home/karkar/fromXPS/LSST/dataTestCCD/beamMaps/map-pos-01-map-01.data"
 a = np.fromfile(filename, sep =' ')
 b = a.reshape(a.shape[0]/3, 3)
 c = np.transpose(b)

@@ -1,8 +1,11 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-
-filename = "/home/karkar/fromXPS/LSST/dataTestCCD/beamMaps/map-pos-01-map-01.data"
+import sys
+if len(sys.argv)>1:
+    filename = sys.argv[1]
+else:
+    filename = "/home/karkar/fromXPS/LSST/dataTestCCD/beamMaps/map-pos-01-map-01.data"
 
 a = np.fromfile(filename, sep =' ')
 b = a.reshape(a.shape[0]/3, 3)
