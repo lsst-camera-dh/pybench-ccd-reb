@@ -1,4 +1,4 @@
-from mpl_toolkits.mplot3d import Axes3D
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -8,11 +8,11 @@ a = np.fromfile(filename, sep =' ')
 b = a.reshape(a.shape[0]/3, 3)
 c = np.transpose(b)
 fig = plt.figure()
-ax = fig.gca(projection='3d')
-im = ax.scatter(c[0],c[1],c[2])
+ax = plt.subplot(111)
+im = ax.scatter(c[0],c[1],c =c[2], cmap=mpl.cm.rainbow, s = 400)
 ax.set_xlabel("X")
 ax.set_ylabel("Y")
-ax.set_zlabel("Photodiode current")
-
+bar = fig.colorbar(im)
+bar.set_label("photodiode current")
 # plt.show()
-fig.savefig(filename[:-5]+"_Scatter3d.png")
+fig.savefig(filename[:-5]+"_Scatter2d.png")

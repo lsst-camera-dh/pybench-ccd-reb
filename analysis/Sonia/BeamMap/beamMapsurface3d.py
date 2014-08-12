@@ -23,5 +23,5 @@ ax.set_xlabel("X")
 ax.set_ylabel("Y")
 ax.set_zlabel("Photodiode current")
 fig.colorbar(surf, shrink=0.5, aspect=5)
-plt.show()
-
+# plt.show()
+fig.savefig(filename[:-5]+"_Surf3d.png")
