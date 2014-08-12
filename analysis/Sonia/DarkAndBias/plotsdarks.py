@@ -9,6 +9,7 @@ import time
 import numpy as np
 import pyfits
 from matplotlib import pyplot as plt
+
 import colorsys
 from itertools import cycle
  
@@ -21,7 +22,7 @@ def get_color(color):
 if __name__ == '__main__':
     firstplot = True
     setleg = False
-    filelist = ["/home/karkar/fromXPS/LSST/dataTestCCD/20140731/0x00020140731000{:0>2d}.fits".format(i) for i in range(7,77)]
+    filelist = ["/home/karkar/fromXPS/LSST/dataTestCCD/20140731/0x00020140731000{:0>2d}.fits".format(i) for i in range(44,77)]
 #    filearray = np.array(filelist)
 #    nfile, nblocs = filearray.shape
     nfile = len(filelist)
@@ -37,18 +38,19 @@ if __name__ == '__main__':
     exptime = np.zeros(nfile)
 #    for ifile in range(nfile):
     for ifile, filename in enumerate(filelist):
+        print "now using file : ", filename
         myfile = pyfits.open(filename)
         exptime[ifile] = myfile[0].header.get("EXPTIME")
         nblocs = len(myfile)
-#        print "nblocs = ",nblocs
+        # print "nblocs = ",nblocs
         mycolors = cycle(get_color(nblocs))
         for ibloc in range(1, nblocs):
             channel = myfile[ibloc].header.get("EXTNAME")
+            # print channel, exptime[ifile]
             if ((channel != None) and("CHAN" in channel) and (exptime[ifile] != 0.) ) :
                 if firstplot == True :
                      firstplot = False
                      setleg = True
-#                print channel
                 imgdark =  myfile[ibloc].data
                 lightzone = imgdark[:imglines, colstart:colstart+imgcols]
 #                print light.shape
@@ -59,11 +61,12 @@ if __name__ == '__main__':
 #                plt.plot(exptime[ifile], over.mean(), linewidth = 0., marker = "*", markersize = 10., label = channel)
         if setleg == True :
             setleg = False
+            print "doing the legend"
             plt.legend()
-    myfile.close()
-                
+        myfile.close()
     plt.show()
-#                  print        
+
+#                  print
 #    imgdarks = np.array([file[ibloc].data for ifile in range(nfile) for ibloc in range(nblocs)  for ichan in range(16) if ((myfile[ibloc].header.get("EXTNAME") == "CHAN_%d" % ichan) and (myfile[0].header.get("EXPTIME") != 0.) ) ])
 #    print imgdarks.shape
 #            dark.append(np.concatenate((img[:imglines, :colstart].flatten(),
