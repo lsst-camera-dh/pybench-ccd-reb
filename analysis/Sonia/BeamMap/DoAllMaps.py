@@ -34,4 +34,3 @@ for plotMethod in allmethods:
         Z = c[2]
         plotname = filename[:-5]+"_"+plotMethod.__name__+".png"
         plotMethod(X,Y,Z, plotname)
-#        subprocess.call(['python',plotMethod,filename])
