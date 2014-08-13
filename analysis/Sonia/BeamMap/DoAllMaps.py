@@ -1,10 +1,6 @@
 __author__ = 'karkar'
 import os, sys
-import subprocess
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.mlab import griddata
-from mpl_toolkits.mplot3d import Axes3D
 import BeamMap.beamMaps as BM
 
 if len(sys.argv)>1:
