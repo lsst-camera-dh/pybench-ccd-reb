@@ -22,21 +22,19 @@ def get_color(color):
 if __name__ == '__main__':
     firstplot = True
     setleg = False
-    filelist = ["/home/karkar/fromXPS/LSST/dataTestCCD/20140731/0x00020140731000{:0>2d}.fits".format(i) for i in range(44,77)]
-#    filearray = np.array(filelist)
-#    nfile, nblocs = filearray.shape
+    dataDir = "/home/karkar/fromXPS/LSST/dataTestCCD/20140731/"
+    filelist = [dataDir+"0x00020140731000{:0>2d}.fits".format(i) for i in range(45,77)]
     nfile = len(filelist)
     print "nfile" , nfile
-#    print "nfile, nblocs" , nfile, nblocs
-#    mycolors = cycle(get_color(nblocs))
     dark = []
     header = []
     imgcols = 512
     colstart = 10
     imglines = 2002
-#    print header.shape
     exptime = np.zeros(nfile)
-#    for ifile in range(nfile):
+
+    fig = plt.figure("Light")
+    fig2= plt.figure("Overscan")
     for ifile, filename in enumerate(filelist):
         print "now using file : ", filename
         myfile = pyfits.open(filename)
@@ -53,35 +51,25 @@ if __name__ == '__main__':
                      setleg = True
                 imgdark =  myfile[ibloc].data
                 lightzone = imgdark[:imglines, colstart:colstart+imgcols]
-#                print light.shape
-#                over  = imgdark[imglines+2:, colstart:] ## why +2 ?
-#                print over.shape
-                
+                plt.figure(fig.number)
                 plt.plot(exptime[ifile], lightzone.mean(), linewidth = 0., color = next(mycolors), marker = "*", markersize = 10., label = channel)
-#                plt.plot(exptime[ifile], over.mean(), linewidth = 0., marker = "*", markersize = 10., label = channel)
+                over  = imgdark[imglines+2:, colstart:]
+                plt.figure(fig2.number)
+                plt.plot(exptime[ifile], over.mean(), linewidth = 0.,color = next(mycolors), marker = "d", markersize = 8., label = channel)
         if setleg == True :
             setleg = False
             print "doing the legend"
-            plt.legend()
+            plt.figure(fig.number)
+            plt.xlim(-20., 520)
+            plt.ylim(-70000,-45000)
+            plt.legend(loc=10,prop={'size':8})
+            plt.grid(True)
+            plt.figure(fig2.number)
+            plt.xlim(-20., 520)
+            plt.ylim(-70000,-45000)
+            plt.grid(True)
+            plt.legend(loc=10,prop={'size':8})
         myfile.close()
-    plt.show()
-
-#                  print
-#    imgdarks = np.array([file[ibloc].data for ifile in range(nfile) for ibloc in range(nblocs)  for ichan in range(16) if ((myfile[ibloc].header.get("EXTNAME") == "CHAN_%d" % ichan) and (myfile[0].header.get("EXPTIME") != 0.) ) ])
-#    print imgdarks.shape
-#            dark.append(np.concatenate((img[:imglines, :colstart].flatten(),
-#                                   img[:imglines, colstart+imgcols:].flatten(),
-#                                   img[imglines:].flatten())))
-#    dark = np.array(dark)
-#    for ichan in range(16):
-#        out = "{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f}".format(name,
-#                                                                                 light[ichan].mean(), light[ichan].std(),
-#                                                                                 dark[ichan].mean(), dark[ichan].std(),
-#                                                                                 over[ichan].mean(), over[ichan].std())
-#        print(out)
-#        logger.write(out+'\n')
-
-    #correlated noise
-    #np.corrcoef(x,y)
-
-#    logger.close()
+    fig.savefig(dataDir+"./plots/lightVSexpTime.png")
+    fig2.savefig(dataDir+"./plots/overscanVSexpTime.png")
+    # plt.show()
