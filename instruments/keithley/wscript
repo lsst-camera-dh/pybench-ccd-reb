@@ -19,9 +19,15 @@ def configure(ctx):
     
 def build(ctx):
     ctx(features = 'py', 
-        source = ctx.path.ant_glob('*.py'), 
-        # source = ['__init__.py', 'keithley2000.py', 'keithley6514.py'], 
+        # source = ctx.path.ant_glob('*.py'), 
+        source = ['__init__.py', 
+                  'keithley2000.py', 'keithley6514.py',
+                  'keithley.py'], 
         install_path = '${PYTHONDIR}/lsst/instruments/keithley')
+
+    bld.install_as('${PREFIX}/bin/keithley-server', 
+                   'keithley-server', 
+                   chmod=0755)
 
     # ctx.recurse(submodules)
 

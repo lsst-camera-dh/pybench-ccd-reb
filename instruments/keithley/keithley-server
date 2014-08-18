@@ -1,0 +1,345 @@
+#! /usr/bin/env python
+#
+# ==================================================================
+#
+# LSST
+#
+# Remote control (XPL-RPC) of the Keithley for the LSST testbench
+# XML-RPC server to control it remotely
+# default port: 8102
+#
+# Authors: Laurent Le Guillou 
+# (recycled from DICE control system code)
+#
+# ==================================================================
+
+import sys
+import os, os.path
+import time
+import subprocess
+import sys, os 
+import signal
+import shutil
+import socket # to get the hostname
+import datetime
+
+# ==================================================================
+
+import logging
+#logging.basicConfig(level=logging.DEBUG,format='%(asctime)s: %(message)s')
+
+# ==================================================================
+
+import inspect
+import xmlrpclib
+from SimpleXMLRPCServer import SimpleXMLRPCServer, list_public_methods
+
+# ==================================================================
+
+from exceptions import Exception
+
+class MotorError(Exception): pass
+
+# ==================================================================
+
+DEFAULT_HOSTNAME = "lpnlsst"
+DEFAULT_PORT     = 8102
+SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
+SERVER_PORT = int(os.getenv("KEITHLEY_SERVER_PORT", DEFAULT_PORT))
+
+# ==================================================================
+
+class KeithleyServer(SimpleXMLRPCServer):
+    def serve_forever(self):
+	self.quit = 0
+	while not self.quit:
+	    self.handle_request()
+
+    # def __getattr__(self, name):
+    #     if name == '__doc__':
+    #         return 'sub special'
+    #     else:  
+    #         raise AttributeError, name
+
+# ==================================================================
+
+import lsst.instruments.keithley as keithley
+
+# ==================================================================
+
+class KeithleyRemote(object):
+    
+    instance = None
+
+    # --------------------------------------------------------------
+
+    def __new__(cls, *args, **kargs):
+        if cls.instance is None: 
+            cls.instance = object.__new__(cls, *args, **kargs)
+        return cls.instance
+    
+    def __init__(self,
+                 ports = [ keithley.Keithley.default_x_port, 
+                           keithley.KEITHLEY.default_y_port, 
+                           keithley.KEITHLEY.default_z_port ],
+                 x_serial = keithley.KEITHLEY.default_x_serial,
+                 y_serial = keithley.KEITHLEY.default_y_serial,
+                 z_serial = keithley.KEITHLEY.default_z_serial,
+                 debug = True):
+        self.state = 1
+        self.KEITHLEY = keithley.KEITHLEY(ports = ports,
+                           x_serial = x_serial,
+                           y_serial = y_serial,
+                           z_serial = z_serial,
+                           debug = debug)
+
+    # --------------------------------------------------------------
+
+    def status(self):
+        """
+        Return the status of the system.
+        """
+        return self.state 
+
+    # --------------------------------------------------------------
+
+    def open(self):
+        """
+        Open the connection with the KEITHLEY motors.
+        """
+        logging.info("Keithley.open() called.")
+        self.keithley.open()
+        logging.info("Keithley.open() done.")
+        return True
+
+    def close(self):
+        """
+        Close the connection with the KEITHLEY motors.
+        """ 
+        logging.info("Keithley.close() called.")
+        self.Keithley.close()
+        logging.info("Keithley.close() done.")
+        return True
+
+    
+    # ----------------------- KEITHLEY homing procedure -----------------
+
+    def home(self):
+        """
+        Home the three motors, move up and down each of the 3 motors,
+        to test the mechanical motor stops and reset the motor zeros.  
+        Should be called once at the begining of a run.
+        
+        WARNING: blocking call. Takes about 20s.
+        
+        see: KEITHLEY.home()
+        """
+        logging.info("Keithley.home() called.")
+        self.Keithley.home()
+        logging.info("Keithley.home() done.")
+        return True
+
+    # ----------------------- KEITHLEY movements ------------------------
+
+    def move(self, moves, wait = True, check = True):
+        """
+        Move the KEITHLEY to the given position (or offset).
+        'moves' is a dictionary of the following format:
+              {'x': 12.34, 'y': -23.1, 'dz' : -45.0 }
+        This function can do relative (dx,dy,dz) 
+        and absolute (x,y,z) movements.
+        """
+
+        logging.info("KEITHLEY.move() called.")
+        self.KEITHLEY.move(wait=wait,check=check, **moves)
+        logging.info("KEITHLEY.move() done.")
+        return True
+
+    # ----------------------- KEITHLEY movements ------------------------
+
+    def get_position(self):
+        """
+        Return the current position on the three motors 
+        (as a dictionary).
+        It is then possible to do move(**get_position())
+        """
+        logging.info("KEITHLEY.get_position() called.")
+        pos = self.KEITHLEY.get_position()
+        logging.info("KEITHLEY position is: %s" % str(pos))
+        logging.info("KEITHLEY.get_position() done.")
+        return pos
+
+    # position = property(get_position, doc = "KEITHLEY current position")
+
+    # ----------------------- Introspection ------------------------
+
+    def _listMethods(self):
+        logging.info("KEITHLEY._listMethods() called.")
+        methods = list_public_methods(self)
+        logging.info("KEITHLEY._listMethods() done.")
+        return methods
+        # return [ "status",
+        #          "open",
+        #          "close",
+        #          "home",
+        #          "get_position",
+        #          "move",
+        #          "park",
+        #          "quit",
+        #          "__dir__",
+        #          "system.listMethods",
+        #          "system.methodHelp" ]
+
+    def _methodHelp(self, method):
+        f = getattr(self, method)
+        return inspect.getdoc(f)
+
+# ==================================================================
+
+# ------------- Missing functions and tests ------------------------
+
+def server_quit():
+    logging.info("Server going down.")
+    server.quit = 1
+    return 1
+
+# ==================================================================
+
+# ------------- Daemonization ---------------------------------------
+# Default working directory for the daemon.
+WORKDIR = "/"
+
+def redirect_stream(system_stream, target_stream):
+    """ 
+    Redirect a system stream to a specified file.
+    
+    'system_stream' is a standard system stream such as
+    ''sys.stdout''. 'target_stream' is an open file object that
+    should replace the corresponding system stream object.
+
+    If 'target_stream' is ''None'', defaults to opening the
+    operating system's null device and using its file descriptor.
+    
+    """
+
+    if target_stream is None:
+        target_fd = os.open(os.devnull, os.O_RDWR)
+    else:
+        target_fd = target_stream.fileno()
+    os.dup2(target_fd, system_stream.fileno())
+
+
+def daemonize(options, args):
+    try: 
+        pid = os.fork() 
+        if pid > 0:
+            # exit first parent
+            sys.exit(0) 
+    except OSError, e: 
+        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(1)
+
+    # Become leader of a new session to decouple from the controlling tty
+    os.setsid() 
+    # We stay with the same umask
+    # os.umask(0) 
+
+    # do second fork and kill session leader to ensure one will never get attach to a TTY.
+    try: 
+        pid = os.fork() 
+        if pid > 0:
+            # exit from second parent, print eventual PID before
+            print "Starting server as daemon with PID %d ..." % pid 
+            sys.exit(0) 
+    except OSError, e: 
+        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(1) 
+    
+
+    # start the daemon main
+    main(options, args) 
+
+
+def main(options, args):
+
+    logging.basicConfig(filename=options.log_file, 
+                        level=logging.DEBUG, format='%(asctime)s: %(message)s')
+
+    # Now that logging is set up decouple from parent environnement
+    redirect_stream(sys.stdin, None)
+    redirect_stream(sys.stdout, None)
+    redirect_stream(sys.stderr, None)    
+
+    # General Control Functions 
+    server.register_function(KEITHLEY.status,       "status")
+    server.register_function(KEITHLEY.open,         "open")
+    server.register_function(KEITHLEY.close,        "close")
+
+    # KEITHLEY motion
+    server.register_function(KEITHLEY.home,         "home")
+    server.register_function(KEITHLEY.get_position, "get_position")
+    # server.register_function(KEITHLEY.position,     "position")
+    server.register_function(KEITHLEY.move,         "move")
+    server.register_function(KEITHLEY.park,         "park")
+
+    # misc 
+    server.register_function(server_quit,      "quit")
+
+    # for remote introspection (tab completion with ipython)
+    server.register_function(KEITHLEY._listMethods,  "__dir__")
+    server.register_function(KEITHLEY._listMethods,  "system.listMethods")
+    # TODO: implement: system.methodSignature
+    server.register_function(KEITHLEY._methodHelp,   "system.methodHelp")
+
+    logging.info("Server going up.")
+    server.serve_forever()
+
+# ------------------------------------------------------------------
+
+# ==================================================================
+
+if __name__ == '__main__':
+    now = datetime.datetime.now()
+    logname = "keithley-server-%s.log" % now.isoformat().split('T')[0]
+
+    import optparse
+    parser = optparse.OptionParser(usage="""
+%prog [-l log-file] [-d] 
+
+Start the dice2 control server. 
+""")
+    parser.add_option('-d', '--daemon', default=False, action='store_true',
+                      help='Run as a background daemon')
+    parser.add_option('-p', '--port', default=SERVER_PORT, action='store', type='int',
+                      help='Listen on port')
+    parser.add_option('-H', '--hostname', default=SERVER_HOSTNAME, action='store',
+                      help='Listen adress')
+    parser.add_option('-l', '--log-file', default=logname, action='store',
+                      help='Specify a file for daemon logs.')
+
+    (options, args) = parser.parse_args()
+
+    # ------------- Initialize Head ---------------
+
+    KEITHLEY = KEITHLEYremote()
+
+    # ------------- LEDHEAD Server ----------------
+    # HOSTNAME = DEFAULT_HOSTNAME
+    # PORT = DEFAULT_PORT
+
+    SERVER_HOSTNAME = options.hostname
+    SERVER_PORT = options.port
+    
+    server = KEITHLEYServer((SERVER_HOSTNAME, SERVER_PORT))
+    server.register_introspection_functions()
+
+    # server = SimpleXMLRPCServer(("dicehead", 8001))
+    print "KEITHLEY: Listening on port %s:%d. Waiting for commands." % (SERVER_HOSTNAME, SERVER_PORT)
+    
+    if options.daemon:
+        daemonize(options, args)
+    else:
+        main(options, args)
+
+
+# ==================================================================

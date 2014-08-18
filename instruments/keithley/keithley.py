@@ -3,9 +3,9 @@
 
 # ==================================================================
 #
-# SkyDice
+# LSST (recycled from DICE)
 #
-# Low level control for the Multimeter - Keithley6514
+# Low level control for the Multimeter - Keithley (6514, 2000)
 #
 # Authors: Laurent Le Guillou
 #
@@ -29,7 +29,6 @@ class MultimeterError(Exception):
 # ==================================================================
 
 class Multimeter:
-
 # ------------------------------------------------------------------
 
     def __init__(self, 
@@ -145,7 +144,7 @@ class Multimeter:
         Reopen the serial port if needed.
         """
         if not(self.serial_port):
-            raise IOError("Keithley6514: " +
+            raise IOError("Keithley: " +
                           "Multimeter serial port should be opened first.")
 
         if not(self.serial_port.isOpen()): # open if port is closed
@@ -169,7 +168,7 @@ class Multimeter:
         Send a command through the serial port.
         """
         if self.debug: print >>sys.stderr, \
-                "Keithley6514: Sending command [" + command + "]"
+                "Keithley: Sending command [" + command + "]"
         self.serial_port.write(command + self.EOL)
 
 
@@ -182,12 +181,12 @@ class Multimeter:
         for data with the specified timeout (instead of the default one). 
         """
         
-        if self.debug: print >>sys.stderr, "Keithley6514: " + \
+        if self.debug: print >>sys.stderr, "Keithley: " + \
                 "Reading serial port buffer"
 
         if timeout != None:
             self.serial_port.timeout = timeout
-            if self.debug: print >>sys.stderr, "Keithley6514: " + \
+            if self.debug: print >>sys.stderr, "Keithley: " + \
                     "Timeout specified: ", timeout
             
         answer = self.serial_port.readline() # return buffer
@@ -197,7 +196,7 @@ class Multimeter:
         
         # remove end of line
         answer = answer.strip()
-        if self.debug: print >>sys.stderr, "Keithley6514: " + \
+        if self.debug: print >>sys.stderr, "Keithley: " + \
                 "Received [" + answer + "]"
 
         return answer
@@ -234,7 +233,7 @@ class Multimeter:
         self.purge()
 
         if self.debug: print >>sys.stderr, \
-                "Keithley6514: Reset"
+                "Keithley: Reset"
         command = "*RST"
         self.write(command)
 
@@ -248,7 +247,7 @@ class Multimeter:
         self.purge()
 
         if self.debug: print >>sys.stderr, \
-                "Keithley6514: Clear Status registers"
+                "Keithley: Clear Status registers"
         command = "*CLS"
         self.write(command)
 
@@ -271,11 +270,11 @@ class Multimeter:
         self.write(command)
         answer = self.read()
         if not(answer):
-            raise IOError("Keithley6514: *ESR? command failed (no answer).")
+            raise IOError("Keithley: *ESR? command failed (no answer).")
         try:
             esr = int(answer)
         except ValueError:
-            raise IOError("Keithley6514: " +
+            raise IOError("Keithley: " +
                           "*ESR? command failed (invalid answer [1]).")
 
 
@@ -285,7 +284,7 @@ class Multimeter:
             # Command Error. Set when a syntax type error is detected
             # in a command from the bus. The parser is reset and parsing
             # continues at the next byte in the input stream.
-            raise MultimeterError("Keithley6514: PowerSupply Command Error. " +
+            raise MultimeterError("Keithley: PowerSupply Command Error. " +
                           "A syntax type error has been detected " +
                           "in a command from the bus. " +
                           "The parser has been reset and parsing " +
@@ -303,40 +302,40 @@ class Multimeter:
             self.write(command)
             answer = self.read()
             if not(answer):
-                raise IOError("Keithley6514: EER? command failed (no answer).")
+                raise IOError("Keithley: EER? command failed (no answer).")
             try:
                 eer = int(answer)
             except ValueError:
-                raise IOError("Keithley6514: " +
+                raise IOError("Keithley: " +
                               "EER? command failed (invalid answer [1]).")
 
             if (eer >= 1) and (eer <= 99):
-                raise MultimeterError("Keithley6514: Hardware error.")
+                raise MultimeterError("Keithley: Hardware error.")
 
             if eer == 116:
-                raise MultimeterError("Keithley6514: Invalid recall of data.")
+                raise MultimeterError("Keithley: Invalid recall of data.")
 
             if eer == 117:
-                raise MultimeterError("Keithley6514: Corrupted internal data.")
+                raise MultimeterError("Keithley: Corrupted internal data.")
 
             if eer == 120:
-                raise MultimeterError("Keithley6514: " +
+                raise MultimeterError("Keithley: " +
                               "Numerical specified value was too big " + 
                               "or too small.")
 
             if eer == 123:
-                raise MultimeterError("Keithley6514: " +
+                raise MultimeterError("Keithley: " +
                               "Illegal recall requested.")
 
             if eer == 124:
-                raise MultimeterError("Keithley6514: " +
+                raise MultimeterError("Keithley: " +
                               "Illegal range change requested.")
 
 
         if (esr & 0x08):
             # Verify Timeout Error. Set when a parameter is set with 'verify'
             # specified and the value is not reached within 5 secs.
-            raise MultimeterError("Keithley6514: Verify Timeout Error. " +
+            raise MultimeterError("Keithley: Verify Timeout Error. " +
                           "Set when a parameter is set with 'verify' " +
                           "specified and the value is not reached " +
                           "within 5 secs.")
@@ -344,7 +343,11 @@ class Multimeter:
         if (esr & 0x04):
             # Query Error. Appropriate number is reported in 
             # the Query Error register
-            raise MultimeterError("Keithley6514: Query Error.")
+            raise MultimeterError("Keithley: Query Error.")
+
+# ------------------------------------------------------------------ 
+
+
 
 # ------------------------------------------------------------------ 
 
@@ -366,10 +369,10 @@ class Multimeter:
         """
 
         if not(mode in self.modes_names):
-            raise ValueError("Keithley6514: unknown measurement mode.")
+            raise ValueError("Keithley: unknown measurement mode.")
 
         if (cycles < 0.01) or (cycles > 10):
-            raise ValueError("Keithley6514: <cycles> out of [0.01-10] range.")
+            raise ValueError("Keithley: <cycles> out of [0.01-10] range.")
 
 
         self.reopen_if_needed()
@@ -434,7 +437,7 @@ class Multimeter:
         answer = self.read(5)
 
         if not(answer):
-            raise IOError("Keithley6514: Measurement: no data returned.")
+            raise IOError("Keithley: Measurement: no data returned.")
 
         self.check_error_status()
 
