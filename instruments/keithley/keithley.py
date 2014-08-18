@@ -28,18 +28,19 @@ class MultimeterError(Exception):
 
 # ==================================================================
 
-class Multimeter:
+class Multimeter(object):
+
 # ------------------------------------------------------------------
 
     def __init__(self, 
-                 port = '/dev/ttyS0',
+                 device = '/dev/ttyS0',
                  debug = True):
         """
         Create a Multimeter instance.
         """
         
-        # ---- Serial port configuration ------
-        self.port = port
+        # ---- Serial device configuration ------
+        self.device = device
         self.baudrate = 9600
         self.echo = 0
         self.rtscts = 0
@@ -49,7 +50,7 @@ class Multimeter:
         self.parity = serial.PARITY_NONE
         self.bytesize = serial.EIGHTBITS
         self.stopbits = serial.STOPBITS_ONE
-        self.serial_port = None
+        self.serial_device = None
         self.EOL = '\r'              # '\r' = 'CR'
         # end of line EOL = '\r' (confirmed & tested)
 
@@ -88,13 +89,13 @@ class Multimeter:
 
     def open(self):
         """
-        Open and initialize the serial port to communicate
+        Open and initialize the serial device to communicate
         with the instrument.
         """
 
-        if self.debug: print >>sys.stderr, "Keithley6514: Opening port %s ..." % self.port
+        if self.debug: print >>sys.stderr, "Keithley: Opening device %s ..." % self.device
         
-        self.serial_port = serial.Serial(port = self.port, 
+        self.serial_device = serial.Serial(device = self.device, 
                                          baudrate = self.baudrate,
                                          rtscts = self.rtscts, 
                                          xonxoff = self.xonxoff,
@@ -103,22 +104,22 @@ class Multimeter:
                                          stopbits = self.stopbits, 
                                          timeout = self.timeout)
         
-        if ( (self.serial_port == None) or
-             not(self.serial_port.isOpen()) ):
-            raise IOError("Keithley6514: " + 
-                          "Failed to open serial port %s" % self.port)
+        if ( (self.serial_device == None) or
+             not(self.serial_device.isOpen()) ):
+            raise IOError("Keithley: " + 
+                          "Failed to open serial device %s" % self.device)
         
-        self.serial_port.flushOutput()
+        self.serial_device.flushOutput()
         
         if not(self.echotest()):
-            raise IOError(("Keithley6514: " + 
-                           "Multimeter is not echoing on serial port %s") % 
-                          self.port)
+            raise IOError(("Keithley: " + 
+                           "Multimeter is not echoing on serial device %s") % 
+                          self.device)
         
         
         if self.debug: 
-            print >>sys.stderr, ( "Keithley6514: Opening port %s done." % 
-                                  self.port )
+            print >>sys.stderr, ( "Keithley: Opening device %s done." % 
+                                  self.device )
 
         self.clear()
 
@@ -126,11 +127,11 @@ class Multimeter:
 
     def close(self):
         """
-        Close the serial port.
+        Close the serial device.
         """
-        if ( self.serial_port and
-             self.serial_port.isOpen() ):
-            self.serial_port.close()
+        if ( self.serial_device and
+             self.serial_device.isOpen() ):
+            self.serial_device.close()
 
 # ------------------------------------------------------------------ 
             
@@ -141,23 +142,23 @@ class Multimeter:
 
     def reopen_if_needed(self):
         """
-        Reopen the serial port if needed.
+        Reopen the serial device if needed.
         """
-        if not(self.serial_port):
+        if not(self.serial_device):
             raise IOError("Keithley: " +
-                          "Multimeter serial port should be opened first.")
+                          "Multimeter serial device should be opened first.")
 
-        if not(self.serial_port.isOpen()): # open if port is closed
+        if not(self.serial_device.isOpen()): # open if device is closed
             self.open()
 
 
     def purge(self):
         """
-        Purge the serial port to avoid framing errors.
+        Purge the serial device to avoid framing errors.
         """
-        self.serial_port.flushOutput()
-        self.serial_port.flushInput()
-        self.serial_port.readline() # To purge remaining bytes (???)
+        self.serial_device.flushOutput()
+        self.serial_device.flushInput()
+        self.serial_device.readline() # To purge remaining bytes (???)
 
 # ------------------------------------------------------------------ 
 #
@@ -165,16 +166,16 @@ class Multimeter:
 
     def write(self, command):
         """
-        Send a command through the serial port.
+        Send a command through the serial device.
         """
         if self.debug: print >>sys.stderr, \
                 "Keithley: Sending command [" + command + "]"
-        self.serial_port.write(command + self.EOL)
+        self.serial_device.write(command + self.EOL)
 
 
     def read(self, timeout = None):
         """
-        Read the answer from the serial port.
+        Read the answer from the serial device.
         Return it as a string.
 
         If <timeout> is specified, the function will wait
@@ -182,17 +183,17 @@ class Multimeter:
         """
         
         if self.debug: print >>sys.stderr, "Keithley: " + \
-                "Reading serial port buffer"
+                "Reading serial device buffer"
 
         if timeout != None:
-            self.serial_port.timeout = timeout
+            self.serial_device.timeout = timeout
             if self.debug: print >>sys.stderr, "Keithley: " + \
                     "Timeout specified: ", timeout
             
-        answer = self.serial_port.readline() # return buffer
+        answer = self.serial_device.readline() # return buffer
         
         # Restoring timeout to default one
-        self.serial_port.timeout = self.timeout
+        self.serial_device.timeout = self.timeout
         
         # remove end of line
         answer = answer.strip()
@@ -200,6 +201,21 @@ class Multimeter:
                 "Received [" + answer + "]"
 
         return answer
+
+# ------------------------------------------------------------------ 
+
+    def send(self, command, timeout = None):
+        """
+        Send a command through the serial device.
+        Read the answer from the serial device.
+        Return it as a string.
+
+        If <timeout> is specified, the function will wait
+        for data with the specified timeout (instead of the default one). 
+        """
+
+        self.write(command)
+        return self.read(timeout = timeout)
 
 # ------------------------------------------------------------------ 
 
@@ -293,7 +309,7 @@ class Multimeter:
         if (esr & 0x10):
             # Execution Error. Set when an error is encountered while
             # attempting to execute a completely parsed command.
-            # The appropriate error number will be reported in 
+            # The appropriate error number will be redeviceed in 
             # the Execution Error Register
 
             # Now reading (and clearing) the Execution Error Register
@@ -341,13 +357,14 @@ class Multimeter:
                           "within 5 secs.")
 
         if (esr & 0x04):
-            # Query Error. Appropriate number is reported in 
+            # Query Error. Appropriate number is redeviceed in 
             # the Query Error register
             raise MultimeterError("Keithley: Query Error.")
 
 # ------------------------------------------------------------------ 
 
-
+    def get_serial(self):
+        return self.send("*IDN?")
 
 # ------------------------------------------------------------------ 
 
@@ -410,7 +427,7 @@ class Multimeter:
         self.purge()
 
         #TODO check the command TRIG:COUN and TRAC:FEED:CONT
-        #to understand the timing of I/O with serial port.
+        #to understand the timing of I/O with serial device.
 
         self.write(":ABOR")
 

@@ -25,7 +25,7 @@ def build(ctx):
                   'keithley.py'], 
         install_path = '${PYTHONDIR}/lsst/instruments/keithley')
 
-    bld.install_as('${PREFIX}/bin/keithley-server', 
+    ctx.install_as('${PREFIX}/bin/keithley-server', 
                    'keithley-server', 
                    chmod=0755)
 
