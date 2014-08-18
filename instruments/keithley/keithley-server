@@ -1,0 +1,355 @@
+#! /usr/bin/env python
+#
+# ==================================================================
+#
+# LSST
+#
+# Remote control (XPL-RPC) of the Keithley for the LSST testbench
+# XML-RPC server to control it remotely
+# default port: 8102
+#
+# Authors: Laurent Le Guillou 
+# (recycled from DICE control system code)
+#
+# ==================================================================
+
+import sys
+import os, os.path
+import time
+import subprocess
+import sys, os 
+import signal
+import shutil
+import socket # to get the hostname
+import datetime
+
+# ==================================================================
+
+import logging
+# logging.basicConfig(level=logging.DEBUG,format='%(asctime)s: %(message)s')
+
+# ==================================================================
+
+import inspect
+import xmlrpclib
+from SimpleXMLRPCServer import SimpleXMLRPCServer, list_public_methods
+
+# ==================================================================
+
+from exceptions import Exception
+
+# class MotorError(Exception): pass
+
+# ==================================================================
+
+DEFAULT_HOSTNAME = "lpnlsst"
+DEFAULT_PORT     = 8102
+DEFAULT_DEVICE   = "/dev/ttyS0"
+
+SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
+SERVER_PORT     = int(os.getenv("KEITHLEY_SERVER_PORT", DEFAULT_PORT))
+SERVER_DEVICE   = os.getenv("KEITHLEY_SERVER_DEVICE", DEFAULT_DEVICE)
+
+# ==================================================================
+
+class KeithleyServer(SimpleXMLRPCServer):
+    def serve_forever(self):
+	self.quit = 0
+	while not self.quit:
+	    self.handle_request()
+
+    # def __getattr__(self, name):
+    #     if name == '__doc__':
+    #         return 'sub special'
+    #     else:  
+    #         raise AttributeError, name
+
+# ==================================================================
+
+import lsst.instruments.keithley as keithley
+
+# ==================================================================
+
+class KeithleyRemote(object):
+    
+    instance = None
+
+    # --------------------------------------------------------------
+
+    def __new__(cls, *args, **kargs):
+        if cls.instance is None: 
+            cls.instance = object.__new__(cls, *args, **kargs)
+        return cls.instance
+    
+    def __init__(self,
+                 device = '/dev/ttyS0',
+                 debug = True):
+        self.state = 1
+        self.device = device
+        self.keithley = keithley.Multimeter(device = device,
+                                            debug = debug)
+
+    # --------------------------------------------------------------
+
+    def status(self):
+        """
+        Return the status of the system.
+        """
+        return self.state 
+
+    # --------------------------------------------------------------
+
+    def open(self):
+        """
+        Open the connection with the Keithley multimeter.
+        """
+        logging.info("Keithley.open() called.")
+        self.keithley.open()
+        logging.info("Keithley.open() done.")
+        return True
+
+    def close(self):
+        """
+        Close the connection with the Keithley multimeter.
+        """ 
+        logging.info("Keithley.close() called.")
+        self.keithley.close()
+        logging.info("Keithley.close() done.")
+        return True
+
+    def reset(self):
+        """
+        Reset the instrument to the factory default settings
+        (with the exception of all remote interface settings).
+        """
+        logging.info("Keithley.reset() called.")
+        self.keithley.reset()
+        logging.info("Keithley.reset() done.")
+        return True
+
+    def clear(self):
+        """
+        Clear the instrument status.
+        """ 
+        logging.info("Keithley.clear() called.")
+        self.keithley.clear()
+        logging.info("Keithley.clear() done.")
+        return True
+
+    
+    # ----------------------- Keithley generic command ------------------
+
+    def send(self, command, timeout = None):
+        """
+        Send a command through the serial port.
+        Read the answer from the serial port.
+        Return it as a string.
+
+        If <timeout> is specified, the function will wait
+        for data with the specified timeout (instead of the default one). 
+        """
+
+        logging.info("Keithley.send() called.")
+        logging.info("  command = [%s]" % command)
+        answer = self.keithley.send(command, timeout = timeout)
+        logging.info("  answer = [%s]" % answer)
+        logging.info("Keithley.send() done.")
+        return answer
+
+    # ----------------------- Keithley identification -------------------
+
+    def get_serial(self):
+        """
+        Return the identification string of the Keithley.
+        """
+        logging.info("Keithley.get_serial() called.")
+        serial = self.keithley.get_serial()
+        logging.info("  serial = [%s]" % serial)
+        logging.info("Keithley.get_serial() done.")
+        return serial
+
+    # ----------------------- Various methods ---------------------------
+
+    def scroll_text(self, msg):
+        """
+        Scroll text 'msg' on the Multimeter display.
+        For debug purpose only.
+        """
+        logging.info("Keithley.scroll_text() called.")
+        self.keithley.scroll_text(msg)
+        logging.info("Keithley.scroll_text() done.")
+        return True
+
+    # ----------------------- Introspection -----------------------------
+
+    def _listMethods(self):
+        logging.info("Keithley._listMethods() called.")
+        methods = list_public_methods(self)
+        logging.info("Keithley._listMethods() done.")
+        return methods
+
+    def _methodHelp(self, method):
+        f = getattr(self, method)
+        return inspect.getdoc(f)
+
+# ==================================================================
+
+# ------------- Missing functions and tests ------------------------
+
+def server_quit():
+    logging.info("Server going down.")
+    server.quit = 1
+    return 1
+
+# ==================================================================
+
+# ------------- Daemonization ---------------------------------------
+# Default working directory for the daemon.
+WORKDIR = "/"
+
+def redirect_stream(system_stream, target_stream):
+    """ 
+    Redirect a system stream to a specified file.
+    
+    'system_stream' is a standard system stream such as
+    ''sys.stdout''. 'target_stream' is an open file object that
+    should replace the corresponding system stream object.
+
+    If 'target_stream' is ''None'', defaults to opening the
+    operating system's null device and using its file descriptor.
+    
+    """
+
+    if target_stream is None:
+        target_fd = os.open(os.devnull, os.O_RDWR)
+    else:
+        target_fd = target_stream.fileno()
+    os.dup2(target_fd, system_stream.fileno())
+
+
+def daemonize(options, args):
+    try: 
+        pid = os.fork() 
+        if pid > 0:
+            # exit first parent
+            sys.exit(0) 
+    except OSError, e: 
+        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(1)
+
+    # Become leader of a new session to decouple from the controlling tty
+    os.setsid() 
+    # We stay with the same umask
+    # os.umask(0) 
+
+    # do second fork and kill session leader to ensure one will never get attach to a TTY.
+    try: 
+        pid = os.fork() 
+        if pid > 0:
+            # exit from second parent, print eventual PID before
+            print "Starting server as daemon with PID %d ..." % pid 
+            sys.exit(0) 
+    except OSError, e: 
+        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(1) 
+    
+
+    # start the daemon main
+    main(options, args) 
+
+
+def main(options, args):
+
+    logging.basicConfig(filename=options.log_file, 
+                        level=logging.DEBUG, format='%(asctime)s: %(message)s')
+
+    # Now that logging is set up decouple from parent environnement
+    redirect_stream(sys.stdin,  None)
+    redirect_stream(sys.stdout, None)
+    redirect_stream(sys.stderr, None)    
+
+    # General Control Functions 
+    server.register_function(keithley.status,       "status")
+    server.register_function(keithley.open,         "open")
+    server.register_function(keithley.close,        "close")
+    server.register_function(keithley.reset,        "reset")
+    server.register_function(keithley.clear,        "clear")
+    server.register_function(keithley.get_serial,   "get_serial")
+
+    # Keithley generic command
+    server.register_function(keithley.send,         "send")
+
+    # misc 
+    server.register_function(keithley.scroll_text,  "scroll_text")
+    server.register_function(server_quit,           "quit")
+
+    # for remote introspection (tab completion with ipython)
+    server.register_function(keithley._listMethods, "__dir__")
+    server.register_function(keithley._listMethods, "system.listMethods")
+    # TODO: implement: system.methodSignature
+    server.register_function(keithley._methodHelp,  "system.methodHelp")
+
+    logging.info("Server going up.")
+    server.serve_forever()
+
+# ------------------------------------------------------------------
+
+# ==================================================================
+
+if __name__ == '__main__':
+
+    # ------------- log file ----------------------
+
+    now = datetime.datetime.now()
+    # logname = ( "keithley-server-%s-%d-%s.log" % 
+    #             ( SERVER_DEVICE, SERVER_PORT,
+    #               now.isoformat().split('T')[0] ) )
+    logname = ( "keithley-server-%s.log" % 
+                now.isoformat().split('T')[0] )
+                
+    # ------------- parsing command line ----------
+
+    import optparse
+    parser = optparse.OptionParser(usage="""
+%prog [-d] 
+
+Start the dice2 control server. 
+""")
+    parser.add_option('-d', '--daemon', default=False, action='store_true',
+                      help='Run as a background daemon')
+    parser.add_option('-H', '--hostname', default=SERVER_HOSTNAME, action='store',
+                      help='Listen adress')
+    parser.add_option('-p', '--port', default=SERVER_PORT, action='store', type='int',
+                      help='Listen on port')
+    parser.add_option('-D', '--device', default=SERVER_DEVICE, action='store',
+                      help='Serial port device')
+    parser.add_option('-l', '--log-file', default=logname, action='store',
+                      help='Specify a file for daemon logs.')
+
+    (options, args) = parser.parse_args()
+
+    # ------------- XML-RPC Server ----------------
+
+    SERVER_HOSTNAME = options.hostname
+    SERVER_PORT = int(options.port)
+    SERVER_DEVICE = options.device
+    
+    # ------------- Initialize Instrument ---------
+
+    keithley = KeithleyRemote(device = SERVER_DEVICE)
+
+    # server = SimpleXMLRPCServer(("dicehead", 8001))
+    server = KeithleyServer((SERVER_HOSTNAME, SERVER_PORT))
+    server.register_introspection_functions()
+
+    # ---------------------------------------------
+
+    print "Keithley: Listening on port %s:%d. Waiting for commands." % (SERVER_HOSTNAME, SERVER_PORT)
+    
+    if options.daemon:
+        daemonize(options, args)
+    else:
+        main(options, args)
+
+
+# ==================================================================
