@@ -26,7 +26,7 @@ import datetime
 # ==================================================================
 
 import logging
-#logging.basicConfig(level=logging.DEBUG,format='%(asctime)s: %(message)s')
+# logging.basicConfig(level=logging.DEBUG,format='%(asctime)s: %(message)s')
 
 # ==================================================================
 
@@ -113,8 +113,27 @@ class KeithleyRemote(object):
         Close the connection with the Keithley multimeter.
         """ 
         logging.info("Keithley.close() called.")
-        self.Keithley.close()
+        self.keithley.close()
         logging.info("Keithley.close() done.")
+        return True
+
+    def reset(self):
+        """
+        Reset the instrument to the factory default settings
+        (with the exception of all remote interface settings).
+        """
+        logging.info("Keithley.reset() called.")
+        self.keithley.reset()
+        logging.info("Keithley.reset() done.")
+        return True
+
+    def clear(self):
+        """
+        Clear the instrument status.
+        """ 
+        logging.info("Keithley.clear() called.")
+        self.keithley.clear()
+        logging.info("Keithley.clear() done.")
         return True
 
     
@@ -157,7 +176,7 @@ class KeithleyRemote(object):
         For debug purpose only.
         """
         logging.info("Keithley.scroll_text() called.")
-        self.scroll_text(msg)
+        self.keithley.scroll_text(msg)
         logging.info("Keithley.scroll_text() done.")
         return True
 
@@ -253,6 +272,8 @@ def main(options, args):
     server.register_function(keithley.status,       "status")
     server.register_function(keithley.open,         "open")
     server.register_function(keithley.close,        "close")
+    server.register_function(keithley.reset,        "reset")
+    server.register_function(keithley.clear,        "clear")
     server.register_function(keithley.get_serial,   "get_serial")
 
     # Keithley generic command
@@ -277,6 +298,17 @@ def main(options, args):
 
 if __name__ == '__main__':
 
+    # ------------- log file ----------------------
+
+    now = datetime.datetime.now()
+    # logname = ( "keithley-server-%s-%d-%s.log" % 
+    #             ( SERVER_DEVICE, SERVER_PORT,
+    #               now.isoformat().split('T')[0] ) )
+    logname = ( "keithley-server-%s.log" % 
+                now.isoformat().split('T')[0] )
+                
+    # ------------- parsing command line ----------
+
     import optparse
     parser = optparse.OptionParser(usage="""
 %prog [-d] 
@@ -291,8 +323,8 @@ Start the dice2 control server.
                       help='Listen on port')
     parser.add_option('-D', '--device', default=SERVER_DEVICE, action='store',
                       help='Serial port device')
-    # parser.add_option('-l', '--log-file', default=logname, action='store',
-    #                   help='Specify a file for daemon logs.')
+    parser.add_option('-l', '--log-file', default=logname, action='store',
+                      help='Specify a file for daemon logs.')
 
     (options, args) = parser.parse_args()
 
@@ -310,13 +342,6 @@ Start the dice2 control server.
     server = KeithleyServer((SERVER_HOSTNAME, SERVER_PORT))
     server.register_introspection_functions()
 
-    # ------------- log file ----------------------
-
-    now = datetime.datetime.now()
-    logname = ( "keithley-server-%s-%d-%s.log" % 
-                ( SERVER_DEVICE, SERVER_PORT,
-                  now.isoformat().split('T')[0] ) )
-                  
     # ---------------------------------------------
 
     print "Keithley: Listening on port %s:%d. Waiting for commands." % (SERVER_HOSTNAME, SERVER_PORT)

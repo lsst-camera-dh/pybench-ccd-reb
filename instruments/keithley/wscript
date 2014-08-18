@@ -1,12 +1,9 @@
 # -*- mode: python; -*- 
 
 APPNAME = 'lsst-instruments-keithley'
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 top = '.'
 build = 'build'
-
-# submodules = ['keithley2000']
-# submodules = ['keithley2000', 'keithley6514']
 
 def options(ctx):
     ctx.load('python')        
@@ -21,7 +18,7 @@ def build(ctx):
     ctx(features = 'py', 
         # source = ctx.path.ant_glob('*.py'), 
         source = ['__init__.py', 
-                  'keithley2000.py', 'keithley6514.py',
+                  # 'keithley2000.py', 'keithley6514.py',
                   'keithley.py'], 
         install_path = '${PYTHONDIR}/lsst/instruments/keithley')
 

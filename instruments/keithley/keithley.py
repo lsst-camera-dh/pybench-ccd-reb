@@ -95,14 +95,14 @@ class Multimeter(object):
 
         if self.debug: print >>sys.stderr, "Keithley: Opening device %s ..." % self.device
         
-        self.serial_device = serial.Serial(device = self.device, 
-                                         baudrate = self.baudrate,
-                                         rtscts = self.rtscts, 
-                                         xonxoff = self.xonxoff,
-                                         bytesize = self.bytesize, 
-                                         parity = self.parity,
-                                         stopbits = self.stopbits, 
-                                         timeout = self.timeout)
+        self.serial_device = serial.Serial(port = self.device, 
+                                           baudrate = self.baudrate,
+                                           rtscts = self.rtscts, 
+                                           xonxoff = self.xonxoff,
+                                           bytesize = self.bytesize, 
+                                           parity = self.parity,
+                                           stopbits = self.stopbits, 
+                                           timeout = self.timeout)
         
         if ( (self.serial_device == None) or
              not(self.serial_device.isOpen()) ):
@@ -129,6 +129,7 @@ class Multimeter(object):
         """
         Close the serial device.
         """
+
         if ( self.serial_device and
              self.serial_device.isOpen() ):
             self.serial_device.close()
