@@ -188,7 +188,7 @@ class BackSubstrate():
     def enable(self):
 
         self.server.sourceVoltage(1)
-        
+
         time.sleep(30)
 
         #check
@@ -430,7 +430,7 @@ class Source(object):
             av_read = readarray.mean()  # TODO: remove outliers (dark)
         else:
             av_read = 0
-            
+
         return av_read
 
     def getAlim(self):
@@ -724,6 +724,16 @@ class Bench(object):
         pass
         #self.lamp.ttl.closeShutter()
 
+    def update_tag(self, num = 1):
+        """
+        Updates the clock tag to current date and given sequence number
+        :param num: int
+        :return:
+        """
+        self.imgtag = num
+        hextag = generate_tag(self.imgtag)
+        self.reb.set_time(hextag)
+
     def select_source(self, sourcetype, wavelength=500.0):
         """
             Connects and starts whichever light source is going to be used
@@ -813,6 +823,26 @@ class Bench(object):
             except KeyboardInterrupt:
                 keepwaiting = False
 
+    def get_exposure_time(self, darktime=False):
+        """
+        Gets the exposure time from the subroutines in memory.
+        (input in seconds). If darktime is set to true, gives the dark 'exposure' time instead.
+        :param darktime: boolean
+        """
+
+        # look up address of exposure subroutine
+        # then get current instruction
+        if darktime:
+            darkadd = self.seq.program.subroutines[self.darksub]
+            instruction = self.seq.program.instructions[darkadd]
+        else:
+            exposureadd = self.seq.program.subroutines[self.exposuresub]
+            instruction = self.seq.program.instructions[exposureadd]
+        iter = instruction.repeat
+
+        return float(iter)/1000  # in seconds
+
+
     def set_exposure_time(self, exptime, lighttime=True, darktime=True):
         """
         Modifies exposure subroutines to last the given exposure time
@@ -852,13 +882,18 @@ class Bench(object):
         # load new exposure time here (better: with XML parameter ?)
         if exposuretime:
             self.set_exposure_time(exposuretime)
+            exptime = exposuretime
         # else use preset exposure time
+        else:
+            darktime = (name == "Dark")
+            exptime = self.get_exposure_time(darktime)
+
         self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
 
         self.reb.run_subroutine(name)
 
-        self.bss.start_monitor(exposuretime+4)  # time for clearing before exposure
-        self.lamp.start_monitor(exposuretime+4)
+        self.bss.start_monitor(exptime+4)  # time for clearing before exposure
+        self.lamp.start_monitor(exptime+4)
         time.sleep(exposuretime + waittime)
         self.primeheader["MONDIODE"] = self.lamp.read_monitor()
 
@@ -874,11 +909,10 @@ class Bench(object):
             else:
                 self.primeheader["SHUT_DEL"] = 100
             self.primeheader["IMGTYPE"] = name
-            self.primeheader["EXPTIME"] = exposuretime
+            self.primeheader["EXPTIME"] = exptime
             self.save_to_fits(imgname, fitsname)
-            self.imgtag = self.imgtag + 1
-            hextag = generate_tag(self.imgtag)
-            self.reb.set_time(hextag)  # setting up tag for next image
+            # setting up tag for next image
+            self.update_tag(self.imgtag + 1)
 
     def wait_end_sequencer(self):
         """
