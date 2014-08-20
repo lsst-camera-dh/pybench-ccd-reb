@@ -6,6 +6,7 @@
 #
 # Remote control (XPL-RPC) of the Keithley for the LSST testbench
 # XML-RPC server to control it remotely
+# default device: /dev/ttyUSB1
 # default port: 8102
 #
 # Authors: Laurent Le Guillou 
@@ -44,7 +45,7 @@ from exceptions import Exception
 
 DEFAULT_HOSTNAME = "lpnlsst"
 DEFAULT_PORT     = 8102
-DEFAULT_DEVICE   = "/dev/ttyS0"
+DEFAULT_DEVICE   = "/dev/ttyUSB1"
 
 SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
 SERVER_PORT     = int(os.getenv("KEITHLEY_SERVER_PORT", DEFAULT_PORT))
@@ -344,7 +345,7 @@ Start the dice2 control server.
 
     # ---------------------------------------------
 
-    print "Keithley: Listening on port %s:%d. Waiting for commands." % (SERVER_HOSTNAME, SERVER_PORT)
+    print "Keithley: talking to device %s: listening on port %s:%d. Waiting for commands." % (SERVER_DEVICE, SERVER_HOSTNAME, SERVER_PORT)
     
     if options.daemon:
         daemonize(options, args)
