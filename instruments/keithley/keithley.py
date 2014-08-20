@@ -41,7 +41,8 @@ class Multimeter(object):
         
         # ---- Serial device configuration ------
         self.device = device
-        self.baudrate = 9600
+        # self.baudrate = 9600
+        self.baudrate = 19200
         self.echo = 0
         self.rtscts = 0
         self.xonxoff = 0
