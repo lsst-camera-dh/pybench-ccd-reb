@@ -35,8 +35,8 @@
                 <value>38</value>
             </parameter>
             <parameter id="ExposureTime">
-                <fullname>Duration of exposure in ms</fullname>
-                <value>2000</value>
+                <fullname>Duration of exposure in unit of 20 ms</fullname>
+                <value>100</value>
             </parameter>
             <parameter id="clockperiod">
                 <fullname>Clock period</fullname>
@@ -549,27 +549,27 @@
                     <repeat>ReadColumns</repeat>
                 </call>
             </subroutine>
-            <subroutine id="Exposure1ms">
-                <fullname>Repeat exposure function for 1 ms</fullname>
+            <subroutine id="Exposure20ms">
+                <fullname>Repeat exposure function for 20 ms</fullname>
                 <call ref="ExposureFlush">
-                    <repeat>500</repeat>
+                    <repeat>10000</repeat>
                 </call>
             </subroutine>
-            <subroutine id="Dark1ms">
-                <fullname>Repeat dark flushing function for 1 ms</fullname>
+            <subroutine id="Dark20ms">
+                <fullname>Repeat dark flushing function for 20 ms</fullname>
                 <call ref="FlushSerial">
-                    <repeat>500</repeat>
+                    <repeat>10000</repeat>
                 </call>
             </subroutine>
             <subroutine id="Exposure">
                 <fullname>Full exposure time</fullname>
-                <call ref="Exposure1ms">
+                <call ref="Exposure20ms">
                     <repeat>ExposureTime</repeat>
                 </call>
             </subroutine>
             <subroutine id="DarkExposure">
                 <fullname>Full dark time</fullname>
-                <call ref="Dark1ms">
+                <call ref="Dark20ms">
                     <repeat>ExposureTime</repeat>
                 </call>
             </subroutine>

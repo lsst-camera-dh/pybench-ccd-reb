@@ -601,6 +601,7 @@ class Bench(object):
     imgcols = 550
     exposuresub = "Exposure"
     darksub = "DarkExposure"
+    exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
     testtype = "Test"
 
     def __init__(self, logger=None):
@@ -839,7 +840,7 @@ class Bench(object):
             instruction = self.seq.program.instructions[exposureadd]
         iter = instruction.repeat
 
-        return float(iter)/1000  # in seconds
+        return float(iter)*self.exposure_unit  # in seconds
 
 
     def set_exposure_time(self, exptime, lighttime=True, darktime=True):
@@ -852,7 +853,7 @@ class Bench(object):
         :param lighttime:
         :param darktime:
         """
-        newiter = int(exptime * 1000)  # Exposures iterate over 1ms subroutines
+        newiter = int(exptime/ self.exposure_unit)
         # look up address of exposure subroutine
         # then get current instruction and rewrite the number of iterations only
         if lighttime:
@@ -893,7 +894,7 @@ class Bench(object):
 
         self.bss.start_monitor(exptime+4)  # time for clearing before exposure
         self.lamp.start_monitor(exptime+4)
-        time.sleep(exposuretime + waittime)
+        time.sleep(exptime + waittime)
         self.primeheader["MONDIODE"] = self.lamp.read_monitor()
 
         # check for output image
