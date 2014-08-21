@@ -28,8 +28,8 @@ def wait_for_action(action):
 
 
 def generate_tag(number):
-    today = date.today()
-    tagstr = today.strftime('%Y%m%d')+'%05d' % number
+    today = time.gmtime()
+    tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
     tag = int(tagstr,16)
     return tag
 
@@ -602,7 +602,6 @@ class Bench(object):
     exposuresub = "Exposure"
     darksub = "DarkExposure"
     testtype = "Test"
-    teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
     def __init__(self, logger=None):
         self.reb = reb.REB(reb_id=self.reb_id)
@@ -888,7 +887,7 @@ class Bench(object):
             darktime = (name == "Dark")
             exptime = self.get_exposure_time(darktime)
 
-        self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
+        self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # acquisition date
 
         self.reb.run_subroutine(name)
 
@@ -922,7 +921,7 @@ class Bench(object):
             time.sleep(1)
 
     def make_fits_name(self, imgstr):
-        fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.localtime()))
+        fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.gmtime()))
         if not os.path.isdir(fitsdir):
             os.mkdir(fitsdir)
         fitsname = os.path.join(fitsdir, imgstr +'.fits')
@@ -985,7 +984,7 @@ class Bench(object):
         # else: using LSST scheme for directory and image name, already built in fitsname
 
         primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
-        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # FITS file creation date
         hdulist.writeto(fitsname, clobber=True)
 
         print("Wrote FITS file "+fitsname)
