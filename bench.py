@@ -87,6 +87,8 @@ def get_sequencer_hdu(fpga):
     durationcol = pyfits.Column(name="Time", format='I8', array=duration)
 
     exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+    # add name to extension here
+    exthdu.header["EXTNAME"] = "SEQ_CFG"
 
     return exthdu
 
@@ -938,7 +940,10 @@ class Bench(object):
         # negative numbers still need to be translated
         #buffer = np.vectorize(lambda i: i - 0x40000 if i & (1 << 17) else i )(buff)
         # also invert sign on all data
-        buffer = np.vectorize(lambda i: 0x3FFFF-i if i & (1 << 17) else -i-1 )(buff)
+        #buffer = np.vectorize(lambda i: 0x3FFFF-i if i & (1 << 17) else -i-1 )(buff)
+        # also make all values positive (to be tested)
+        # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
+        buffer = np.vectorize(lambda i: 0x5FFFF-i if i & (1 << 17) else 0x1FFFF-i)(buff)
         # reshape by channel
         length = self.imglines * self.imgcols
         buffer = buffer.reshape(length, self.nchannels)
@@ -961,8 +966,8 @@ class Bench(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             # create extension to fits file for each channel
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            #exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
