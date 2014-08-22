@@ -11,6 +11,7 @@ from itertools import cycle
 firstplot = True
 setleg = False
 dataDir = "/home/karkar/fromXPS/LSST/data/dataTestCCD/20140806/"
+dataDir2 = "/home/karkar/fromXPS/LSST/data/dataTestCCD/20140807/"
 allsets = []
 #laser fiber in front of the CCD (distance ~30 cm)
 #  laser 635 nm I_laser = 40 (mA ?)  P_laser = 0.06 - 0.07 mW (not that stable)
@@ -37,6 +38,11 @@ allsets.append( ("laser406_I26mA", [dataDir+"0x0002014080600{:0>3d}.fits".format
 #  same optical setup
 #  see file 'laser-power-635.data'
 #allsets.append( ("laser635_variousI",[dataDir+"0x0002014080600{:0>3d}.fits".format(i) for i in range(126,142)]))
+
+#4 images have been taken with the red laser sent into the integrating sphere.
+#various exposure times.
+#allsets.append( ("laser635_integratingSphere", [dataDir2+"0x0002014080700{:0>3d}.fits".format(i) for i in range(142,147)]))
+
 
 badfillist = [dataDir+"0x0002014080600023.fits", dataDir+"0x0002014080600066.fits"]
 
