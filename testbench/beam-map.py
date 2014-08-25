@@ -35,10 +35,13 @@ if 'KEITHLEY' not in k.get_serial():
     sys.exit(2)  
 
 k.send("*RST")
+k.send("SYST:ZCH ON")
 
-k.send("CURR:RANG 2e-4")
 k.send("FUNC 'CURR:DC'")
+k.send("CURR:RANG 2e-8")
+k.send("SYST:ZCOR ON")
 k.send("SYST:ZCH OFF")
+
 
 # k.zeroCorrect()
 # k.readContinuous(1)

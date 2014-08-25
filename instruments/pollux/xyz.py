@@ -141,13 +141,15 @@ class XYZ(object):
 
     # ---------- Home procedure for the motors ---------------
 
-    def home(self, force = False):
+    def home(self, force = False, park = True):
         """
-        Find the limits for all motors 
-        and define the zero positions in middle range.
+        Find the limits for all motors.
+        Then park it.
         """ 
 
         if self.homed and not(force):
+            # put the 3 motors half-range ?
+            self.park()
             return
 
         # To avoid breaking the objective, we first go backward
@@ -157,12 +159,16 @@ class XYZ(object):
         # First send the Z motor backward
         self.z_axis.find_limits(lower=True, upper=False)
 
+        # Then find the limits for X and Y axes
+        # and put the motor half range (critical)
         self.x_axis.home()
         self.y_axis.home()
 
-        # at last init of z axis
-
+        # at last init of z axis (find limits and put motor half range)
         self.z_axis.home()
+
+        # then park it
+        self.park()
 
         self.homed = True
 
@@ -173,6 +179,7 @@ class XYZ(object):
     def park(self):
         """
         Park the XYZ out of the light beam.
+        Even if no homing has been done, parking should work properly.
         """ 
 
         # Even if no homing has been done, parking is OK
