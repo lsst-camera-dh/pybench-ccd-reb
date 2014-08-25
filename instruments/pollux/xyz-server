@@ -300,6 +300,8 @@ def main(options, args):
     # for remote introspection (tab completion with ipython)
     server.register_function(XYZ._listMethods,  "__dir__")
     server.register_function(XYZ._listMethods,  "system.listMethods")
+    server.register_function(XYZ._listMethods,  "trait_names")
+    server.register_function(XYZ._listMethods,  "_getAttributeNames")
     # TODO: implement: system.methodSignature
     server.register_function(XYZ._methodHelp,   "system.methodHelp")
 
