@@ -38,7 +38,8 @@ k.send("*RST")
 k.send("SYST:ZCH ON")
 
 k.send("FUNC 'CURR:DC'")
-k.send("CURR:RANG 2e-8")
+# k.send("CURR:RANG 2e-8")
+k.send("CURR:RANG 2e-6")
 k.send("SYST:ZCOR ON")
 k.send("SYST:ZCH OFF")
 
@@ -55,11 +56,11 @@ output = open("sphere-map-z=%f-%s.data" % (z, now.isoformat()), "w")
 
 xyz.move({'z': 0.0})
 
-# G = grid.Grid(xmin = 0.0, xmax = 100.0, dx = 10.0,
-#               ymin = 0.0, ymax = 100.0, dy = 10.0)
-
-G = grid.Grid(xmin = 90.0, xmax = -10.0, dx = -10.0,
+G = grid.Grid(xmin = 0.0, xmax = 100.0, dx = 10.0,
               ymin = 0.0, ymax = 100.0, dy = 10.0)
+
+# G = grid.Grid(xmin = 90.0, xmax = -10.0, dx = -10.0,
+#               ymin = 0.0, ymax = 100.0, dy = 10.0)
 
 for (x,y) in G:
     # x = float(x)
