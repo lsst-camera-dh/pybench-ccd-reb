@@ -28,8 +28,8 @@ def wait_for_action(action):
 
 
 def generate_tag(number):
-    today = date.today()
-    tagstr = today.strftime('%Y%m%d')+'%05d' % number
+    today = time.gmtime()
+    tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
     tag = int(tagstr,16)
     return tag
 
@@ -87,6 +87,8 @@ def get_sequencer_hdu(fpga):
     durationcol = pyfits.Column(name="Time", format='I8', array=duration)
 
     exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+    # add name to extension here
+    exthdu.header["EXTNAME"] = "SEQ_CFG"
 
     return exthdu
 
@@ -601,8 +603,8 @@ class Bench(object):
     imgcols = 550
     exposuresub = "Exposure"
     darksub = "DarkExposure"
+    exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
     testtype = "Test"
-    teststamp = time.strftime("%Y%m%d-%H%M%S",time.localtime())  # to be renewed at each test series
 
     def __init__(self, logger=None):
         self.reb = reb.REB(reb_id=self.reb_id)
@@ -840,7 +842,7 @@ class Bench(object):
             instruction = self.seq.program.instructions[exposureadd]
         iter = instruction.repeat
 
-        return float(iter)/1000  # in seconds
+        return float(iter)*self.exposure_unit  # in seconds
 
 
     def set_exposure_time(self, exptime, lighttime=True, darktime=True):
@@ -853,7 +855,7 @@ class Bench(object):
         :param lighttime:
         :param darktime:
         """
-        newiter = int(exptime * 1000)  # Exposures iterate over 1ms subroutines
+        newiter = int(exptime/ self.exposure_unit)
         # look up address of exposure subroutine
         # then get current instruction and rewrite the number of iterations only
         if lighttime:
@@ -888,13 +890,13 @@ class Bench(object):
             darktime = (name == "Dark")
             exptime = self.get_exposure_time(darktime)
 
-        self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # acquisition date
+        self.primeheader["DATE-OBS"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # acquisition date
 
         self.reb.run_subroutine(name)
 
         self.bss.start_monitor(exptime+4)  # time for clearing before exposure
         self.lamp.start_monitor(exptime+4)
-        time.sleep(exposuretime + waittime)
+        time.sleep(exptime + waittime)
         self.primeheader["MONDIODE"] = self.lamp.read_monitor()
 
         # check for output image
@@ -922,7 +924,7 @@ class Bench(object):
             time.sleep(1)
 
     def make_fits_name(self, imgstr):
-        fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.localtime()))
+        fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.gmtime()))
         if not os.path.isdir(fitsdir):
             os.mkdir(fitsdir)
         fitsname = os.path.join(fitsdir, imgstr +'.fits')
@@ -938,7 +940,10 @@ class Bench(object):
         # negative numbers still need to be translated
         #buffer = np.vectorize(lambda i: i - 0x40000 if i & (1 << 17) else i )(buff)
         # also invert sign on all data
-        buffer = np.vectorize(lambda i: 0x3FFFF-i if i & (1 << 17) else -i-1 )(buff)
+        #buffer = np.vectorize(lambda i: 0x3FFFF-i if i & (1 << 17) else -i-1 )(buff)
+        # also make all values positive (to be tested)
+        # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
+        buffer = np.vectorize(lambda i: 0x5FFFF-i if i & (1 << 17) else 0x1FFFF-i)(buff)
         # reshape by channel
         length = self.imglines * self.imgcols
         buffer = buffer.reshape(length, self.nchannels)
@@ -961,8 +966,8 @@ class Bench(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             # create extension to fits file for each channel
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            #exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
@@ -985,7 +990,7 @@ class Bench(object):
         # else: using LSST scheme for directory and image name, already built in fitsname
 
         primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
-        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())  # FITS file creation date
+        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # FITS file creation date
         hdulist.writeto(fitsname, clobber=True)
 
         print("Wrote FITS file "+fitsname)
