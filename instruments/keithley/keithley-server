@@ -287,6 +287,8 @@ def main(options, args):
     # for remote introspection (tab completion with ipython)
     server.register_function(keithley._listMethods, "__dir__")
     server.register_function(keithley._listMethods, "system.listMethods")
+    server.register_function(keithley._listMethods,  "trait_names")
+    server.register_function(keithley._listMethods,  "_getAttributeNames")
     # TODO: implement: system.methodSignature
     server.register_function(keithley._methodHelp,  "system.methodHelp")
 
