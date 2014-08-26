@@ -15,12 +15,12 @@ if "THORLABS" not in lasername:
     print >>sys.stderr, "No connection to the laser. Stop."
     sys.exit(3)
 
-lasercurrents = { 1: 45.0,
-                  2: 30.0,
+lasercurrents = { 1: 30.0,
+                  2: 45.0,
                   3: 25.0,
                   4: 30.0 }
 
-laser.select(0)
+for i in [1,2,3,4]: laser.select(-i)
 laser.disable()
 
 xyz = xmlrpclib.ServerProxy("http://lpnlsst:8101/")
@@ -53,17 +53,12 @@ laserchannels = [1, 2, 3, 4]
 
 for laserchannel in laserchannels:
 
-    laser.select(laserchannel)
-    lasercurrent = lasercurrents[laserchannel]
-    laser.setCurrent(laserchannel, lasercurrent)
-    laser.enable()
-
     k.send("*RST")
     k.send("SYST:ZCH ON")
     
     k.send("FUNC 'CURR:DC'")
     # k.send("CURR:RANG 2e-8")
-    k.send("CURR:RANG 2e-6")
+    k.send("CURR:RANG 2e-8")
     k.send("SYST:ZCOR ON")
     k.send("SYST:ZCH OFF")
 
@@ -86,11 +81,21 @@ for laserchannel in laserchannels:
         if len(elts) < 3:
             print >>sys.stderr, "error: no data from the Keithley, stop."
             sys.exit(3)
-        mesure = float(elts[0])
-        print mesure
+        measure = float(elts[0])
+        print measure
+        print "dark current =", measure
         print >>output, "# dark current =", measure
         output.flush()
         
+    # Turn on the laser
+
+    laser.select(laserchannel)
+    lasercurrent = lasercurrents[laserchannel]
+    laser.setCurrent(laserchannel, lasercurrent)
+    laser.enable()
+    print "Waiting for the laser to turn On..."
+    time.sleep(7)
+
 
     print >>output, "# laser channel = ", laserchannel
     print >>output, "# laser current (mA) = ", lasercurrent
@@ -118,10 +123,17 @@ for laserchannel in laserchannels:
         if len(elts) < 3:
             print >>sys.stderr, "error: no data from the Keithley, stop."
             sys.exit(3)
-        mesure = float(elts[0])
-        print mesure
-        print >>output, x,y,mesure
+        measure = float(elts[0])
+        print measure
+        print >>output, x, y, measure
         output.flush()
+
+    # shutdown the laser
+
+    laser.disable()
+    for i in [1,2,3,4]: laser.select(-i)
+    print "Waiting for the laser to turn Off..."
+    time.sleep(2)
 
     # measure the dark current
 
@@ -131,8 +143,8 @@ for laserchannel in laserchannels:
         if len(elts) < 3:
             print >>sys.stderr, "error: no data from the Keithley, stop."
             sys.exit(3)
-        mesure = float(elts[0])
-        print mesure
+        measure = float(elts[0])
+        print "dark current =", measure
         print >>output, "# dark current =", measure
         output.flush()
 

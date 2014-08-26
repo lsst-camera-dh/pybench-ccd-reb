@@ -23,9 +23,9 @@ class XYZ(object):
     """
     High level class representing the XYZ motorized support.
     """
-    default_x_port = "/dev/ttyUSB8"
-    default_y_port = "/dev/ttyUSB10"
-    default_z_port = "/dev/ttyUSB9"
+    default_x_port = "/dev/ttyUSB9"
+    default_y_port = "/dev/ttyUSB11"
+    default_z_port = "/dev/ttyUSB10"
 
     default_x_serial =  '9050719'
     default_y_serial = '10050833'
