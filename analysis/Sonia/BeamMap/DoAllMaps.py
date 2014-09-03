@@ -6,7 +6,7 @@ import BeamMap.beamMaps as BM
 if len(sys.argv)>1:
     dataDir = sys.argv[1]
 else:
-    dataDir = "/home/karkar/fromXPS/LSST/dataTestCCD/beamMaps/"
+    dataDir = "/home/karkar/SyncLPNHE/LSST/20140826"
 
 allfiles=[]
 maxdepth = 0
@@ -24,15 +24,16 @@ print "will plot maps from files :", allfiles
 allmethods = [BM.beamMap2d,BM.beamMapScatter2d, BM.beamMapScatter3d, BM.beamMapSurface3d]
 print "using methods :", [method.__name__  for method in allmethods]
 
-for plotMethod in allmethods:
-    print "now using method: ", plotMethod.__name__
-    for filename in allfiles:
-        print 'now using file', filename
-        b = np.genfromtxt(filename,  delimiter = ' ', skip_header = 4, usecols = (0,1,3))
-        c = np.transpose(b)
+for filename in allfiles:
+    print 'now using file', filename
+    for plotMethod in allmethods:
+        c = np.loadtxt(filename, comments='#', delimiter= ' ',  usecols=(0,1,2) , unpack=True, ndmin=0)
         print c.shape
         X = c[0]
         Y = c[1]
         Z = c[2]
         plotname = filename[:-5]+"_"+plotMethod.__name__+".png"
+        print "now using method: ", plotMethod.__name__
+#         b = np.genfromtxt(filename,  delimiter = ' ', skip_header = 4, usecols = (0,1,3))
+#         c = np.transpose(b)
         plotMethod(X,Y,Z, plotname)
