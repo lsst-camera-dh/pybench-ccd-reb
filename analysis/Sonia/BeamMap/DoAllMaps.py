@@ -26,14 +26,14 @@ print "using methods :", [method.__name__  for method in allmethods]
 
 for filename in allfiles:
     print 'now using file', filename
-    for plotMethod in allmethods:
-        c = np.loadtxt(filename, comments='#', delimiter= ' ',  usecols=(0,1,2) , unpack=True, ndmin=0)
-        print c.shape
-        X = c[0]
-        Y = c[1]
-        Z = c[2]
-        plotname = filename[:-5]+"_"+plotMethod.__name__+".png"
-        print "now using method: ", plotMethod.__name__
 #         b = np.genfromtxt(filename,  delimiter = ' ', skip_header = 4, usecols = (0,1,3))
 #         c = np.transpose(b)
+    c = np.loadtxt(filename, comments='#', delimiter= ' ',  usecols=(0,1,2) , unpack=True, ndmin=0)
+    print c.shape
+    X = c[0]
+    Y = c[1]
+    Z = c[2]
+    for plotMethod in allmethods:
+        print "now using method: ", plotMethod.__name__
+        plotname = filename[:-5]+"_"+plotMethod.__name__+".png"
         plotMethod(X,Y,Z, plotname)
