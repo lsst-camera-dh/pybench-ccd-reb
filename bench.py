@@ -967,8 +967,8 @@ class Bench(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             # create extension to fits file for each channel
-            #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
             hdulist.append(exthdu)
 
