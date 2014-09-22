@@ -241,7 +241,7 @@ class BackSubstrate():
         Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
         :return: double
         """
-        while self.server.status() == 3:
+        while self.server.status() == 3
                 time.sleep(1)
         readarray = np.array(self.server.getSequence())
         av_read = readarray.mean()
