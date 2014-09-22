@@ -285,7 +285,7 @@ class Source(object):
         self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")
         self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")
         self.ttl.connect()
-        check_xmlrpc(self.ttl, True)
+        # check_xmlrpc(self.ttl, True)
         # light sources: create objects here, does not try to connect
         self.qth = xmlrpclib.ServerProxy("http://lpnlsst:8089/")
         self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8085/")
