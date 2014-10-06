@@ -149,7 +149,7 @@ class BackSubstrate():
     def __init__(self):
         self.server = xmlrpclib.ServerProxy("http://lpnlsst:8088/")
         self.server.connect()
-        check_xmlrpc(self.server, "6487" )
+        check_xmlrpc(self.server, "6487")
 
     def config(self, voltage=0):
         """
@@ -241,7 +241,7 @@ class BackSubstrate():
         Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
         :return: double
         """
-        while self.server.status() == 3
+        while self.server.status() == 3:
                 time.sleep(1)
         readarray = np.array(self.server.getSequence())
         av_read = readarray.mean()
