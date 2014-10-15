@@ -4,7 +4,7 @@ import numpy as np
 import pyfits
 
 def subpix(bench, xyz, exposuretime=5.0,
-           dx=0.001, dy=0.001, nx=20, ny=20, rep=5):
+           dx=0.001, dy=0.001, nx=20, ny=20, rep=2):
 
     print "Starting subpixel imaging of the spot..."
 
@@ -18,11 +18,19 @@ def subpix(bench, xyz, exposuretime=5.0,
                 bench.execute_sequence('Acquisition',
                                        exposuretime=exposuretime)
                 time.sleep(5)
-                fitsname = '/home/lsst/test_frames/20141006/' + bench.primeheader['IMAGETAG'] + '.fits'
+                fitsname = '/home/lsst/test_frames/20141008/' + bench.primeheader['IMAGETAG'] + '.fits'
                 hdulist = pyfits.open(fitsname, mode = 'update')
                 hdulist[0].header['XYZ_X'] = pos['x']
                 hdulist[0].header['XYZ_Y'] = pos['y']
                 hdulist[0].header['XYZ_Z'] = pos['z']
+                # keep only CHAN_12
+                for ext in [0,1,2,3,4,5,6,7,8,9,10,11,13,14,15]:
+                    k = 'CHAN_%d' % ext
+                    try:
+                        del hdulist[k]
+                    except KeyError:
+                        pass
+
                 hdulist.writeto(fitsname, clobber=True)
                 
             xyz.move({'dy': dy})
