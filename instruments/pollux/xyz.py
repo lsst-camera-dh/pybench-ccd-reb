@@ -247,6 +247,54 @@ class XYZ(object):
 
     position = property(get_position, doc = "XYZ current position")
 
+    # ---------- Compute the target position -----------------
+
+    def compute_target(x  = None, y  = None, z  = None,
+                       dx = None, dy = None, dz = None):
+
+        xc, yc, zc = self.get_position()
+        xt, yt, zt = xc, yc, zc
+        
+        if x != None:  xt = x
+        if dx != None: xt += dx
+        
+        if y != None:  yt = y
+        if dy != None: yt += dy
+        
+        if z != None:  zt = z
+        if dz != None: zt += dz
+        
+        return xt, yt, zt
+
+    # ---------- Check if a given position is allowed --------
+
+    def check_target(x, y, z):
+        """
+        Check the target position.
+        Permitted volume for the "orange cryostat"
+        -- LLG & RLB - 20141017
+        """
+
+        if (x < 0.0) or (x > 101.7):
+            raise ValueError("XYZ coordinate x out of allowed range.")
+
+        if (y < 0.0) or (y > 101.7):
+            raise ValueError("XYZ coordinate y out of allowed range.")
+
+        if (z < 0.0) or (z > 101.7):
+            raise ValueError("XYZ coordinate z out of allowed range.")
+
+        # Extra restriction to avoid crashing against the wall ;-)
+
+        xcenter = 33.42
+        ycenter = 44.52
+        radius = 25.0
+
+        if z > 81.8:
+            dist = ((x-xcenter)**2 + (y-ycenter)**2)**.5
+            if dist > radius:
+                raise ValueError("XYZ target not allowed: will hit the window mount!!!")
+
 
     # ---------- Move absolute and relative ------------------ 
 
@@ -257,6 +305,12 @@ class XYZ(object):
         Move the XYZ to the given position (or offset).
         This function can do relative and absolute movements.
         """
+
+        ## First, check the geometric limits
+
+        if check:
+            xt,yt,zt = compute_target(x,y,z,dx,dy,dz)
+            check_target(xt, yt, zt)
 
         # -------- X axis ------------------------------------
 
