@@ -160,6 +160,8 @@ class XYZremote(object):
               {'x': 12.34, 'y': -23.1, 'dz' : -45.0 }
         This function can do relative (dx,dy,dz) 
         and absolute (x,y,z) movements.
+
+        By default, check is and *MUST* be left to True.
         """
 
         logging.info("XYZ.move() called.")
