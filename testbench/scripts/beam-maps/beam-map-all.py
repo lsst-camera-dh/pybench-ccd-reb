@@ -33,9 +33,18 @@ for option, arg in opts:
           #  sys.exit(1)
         #else:
         option_channel = True
-        nb_channel = arg
+        try:
+            nb_channel = int(arg)
+        except ValueError:
+            print >>sys.stderr, "error: invalid channel (should be an integer in [1,2,3,4])"
+            sys.exit(1)
+
+        if nb_channel not in [1,2,3,4]:
+            print >>sys.stderr, "error: invalid channel (should be in [1,2,3,4])"
+            sys.exit(1)
+
     if option in ("-t", "--turn"):
-        nb_turn = arg
+        nb_turn = int(arg)
 
 
 laser = xmlrpclib.ServerProxy("http://lpnlsst:8082")
@@ -85,9 +94,9 @@ else:
 
 print "Nb of turn in the loop : " + str(nb_turn)
 
-for turn_in_loops in range(nb_turn):
+for turn_in_loops in xrange(nb_turn):
 
-    print "Turn : " + str(turn_in_loop)
+    print "Turn : " + str(turn_in_loops)
 
     for laserchannel in laserchannels:
         
