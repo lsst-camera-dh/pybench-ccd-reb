@@ -316,7 +316,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage="""
 %prog [-d] 
 
-Start the dice2 control server. 
+Start the Keithley Electrometer remote control server. 
 """)
     parser.add_option('-d', '--daemon', default=False, action='store_true',
                       help='Run as a background daemon')
