@@ -55,7 +55,8 @@ if "THORLABS" not in lasername:
     sys.exit(3)
 
 lasercurrents = { 1: 30.0,
-                  2: 45.0,
+                  #2: 45.0,
+                  2: 60.0,
                   3: 25.0,
                   4: 30.0 }
 
@@ -105,7 +106,7 @@ for turn_in_loops in xrange(nb_turn):
         
         k.send("FUNC 'CURR:DC'")
         # k.send("CURR:RANG 2e-8")
-        k.send("CURR:RANG 2e-8")
+        k.send("CURR:RANG 2e-7")
         k.send("SYST:ZCOR ON")
         k.send("SYST:ZCH OFF")
 
@@ -118,7 +119,7 @@ for turn_in_loops in xrange(nb_turn):
         now = datetime.datetime.utcnow()
         z = 0.0
 
-        output = open("sphere-map-z=%f-%s.data" % (z, now.isoformat()), "w")
+        output = open("sphere-map-channel=" + str(laserchannel) + "-z=%f-%s.data" % (z, now.isoformat()), "w")
 
         # measure the dark current
 
