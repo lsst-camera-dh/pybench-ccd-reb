@@ -88,33 +88,43 @@ if 'KEITHLEY' not in k.get_serial():
     print >>sys.stderr, "No connection to the photodiode Keithley 6514. Stop."
     sys.exit(2)  
 
-if option_channel == True:
-    laserchannels = [nb_channel]
-else:
-    laserchannels = [1, 2, 3, 4]
+laserchannel = [nb_channel]
 
 print "Nb of turn in the loop : " + str(nb_turn)
 
-for turn_in_loops in xrange(nb_turn):
-
-    print "Turn : " + str(turn_in_loops)
-
-    for laserchannel in laserchannels:
-        
-        k.send("*RST")
-        k.send("SYST:ZCH ON")
-        
-        k.send("FUNC 'CURR:DC'")
-        # k.send("CURR:RANG 2e-8")
-        k.send("CURR:RANG 2e-7")
-        k.send("SYST:ZCOR ON")
-        k.send("SYST:ZCH OFF")
+if option_channel = True:
+    
+    
+    k.send("*RST")
+    k.send("SYST:ZCH ON")
+    k.send("FUNC 'CURR:DC'")
+    # k.send("CURR:RANG 2e-8")
+    k.send("CURR:RANG 2e-7")
+    k.send("SYST:ZCOR ON")
+    k.send("SYST:ZCH OFF")
 
 
-        # k.zeroCorrect()
-        # k.readContinuous(1)
+    # Turn on the laser
 
-        # print "Current value ", k.getLastReading()
+    laser.select(laserchannel)
+    lasercurrent = lasercurrents[laserchannel]
+    laser.setCurrent(laserchannel, lasercurrent)
+    laser.enable()
+    print "Waiting for the laser to turn On..."
+    time.sleep(7)
+
+
+    print >>output, "# laser channel = ", laserchannel
+    print >>output, "# laser current (mA) = ", lasercurrent
+    laserpower = laser.getPower(laserchannel)
+    print >>output, "# laser power (mW) = ", laserpower
+    print >>output, "# z (mm) = ", z
+
+    # Loop
+
+    for turn_in_loops in xrange(nb_turn):
+
+        print "Turn : " + str(turn_in_loops)
 
         now = datetime.datetime.utcnow()
         z = 0.0
@@ -134,22 +144,6 @@ for turn_in_loops in xrange(nb_turn):
             print "dark current =", measure
             print >>output, "# dark current =", measure
             output.flush()
-
-        # Turn on the laser
-
-        laser.select(laserchannel)
-        lasercurrent = lasercurrents[laserchannel]
-        laser.setCurrent(laserchannel, lasercurrent)
-        laser.enable()
-        print "Waiting for the laser to turn On..."
-        time.sleep(7)
-
-
-        print >>output, "# laser channel = ", laserchannel
-        print >>output, "# laser current (mA) = ", lasercurrent
-        laserpower = laser.getPower(laserchannel)
-        print >>output, "# laser power (mW) = ", laserpower
-        print >>output, "# z (mm) = ", z
 
         xyz.move({'z': z})
 
@@ -199,6 +193,7 @@ for turn_in_loops in xrange(nb_turn):
 
         output.close()
 
-
+else:
+    print "A single channel must be specified"
 
 
