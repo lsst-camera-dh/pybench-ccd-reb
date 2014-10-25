@@ -2,7 +2,7 @@
 from singleton import Borg
 
 from config import config
-# from drivers import * # is it a good idea ?
+from drivers import * # is it a good idea ?
 
 
 class Bench(Borg):
@@ -49,12 +49,18 @@ class Bench(Borg):
 
         # Create an instance of the instrument
 
-        instrument_module = 'drivers' + '.' + params['driver']
-        eval('import %s' % instrument_module)
+        instrument_module   = getattr('drivers', params['driver'])
+        instrument_class    = getattr(instrument_module, 'Instrument')
+        instrument_instance = instrument_class(identifier, **params)
+        
+        # eval('import %s' % instrument_module)
 
         self.registry[identifier] = dict(params)
 
         self.__dict__[identifier] = self.registry[identifier]
+
+        self.__dict__[identifier].register()
+
 
 
 
