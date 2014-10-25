@@ -173,7 +173,7 @@ config = {
         'driver'      : 'xyz_pollux',
         'port'        : 8101,
         'commandline' : 'xyz-server -d'
-        }
+        },
 
 
     #

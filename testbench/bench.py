@@ -2,7 +2,7 @@
 from singleton import Borg
 
 from config import config
-from drivers import * # is it a good idea ?
+# from drivers import * # is it a good idea ?
 
 
 class Bench(Borg):
@@ -27,16 +27,35 @@ class Bench(Borg):
         A first call to this method will open and check the connection
         to the instrument. Subsequent calls will do nothing, except
         if 'force_reload' is set to True.
+
+        Instrument configuration will be taken from the default
+        configuration file (config.py) if any. All parameters may be
+        overridden.
         """
 
         if self.registry.has_key(identifier):
             print "Instrument", identifier, "is already registered"
             return
 
-        self.registry[identifier] = 
 
-        self.registry[identifier] = "OK"
+        params = {}
 
-        self.__dict__[identifier] = "toto"
+        if config.has_key(identifier):
+            # take the parameters from there
+            params.update(**config[identifier])
+
+        # Now, overwrite parameters with the caller ones
+        params.update(**kargs)
+
+        # Create an instance of the instrument
+
+        instrument_module = 'drivers' + '.' + params['driver']
+        eval('import %s' % instrument_module)
+
+        self.registry[identifier] = dict(params)
+
+        self.__dict__[identifier] = self.registry[identifier]
+
+
 
 
