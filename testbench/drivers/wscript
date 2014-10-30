@@ -1,11 +1,11 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench'
+APPNAME = 'lsst.testbench.drivers'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['drivers']
+submodules = []
 
 def options(opt):
     opt.load('python')        
@@ -20,10 +20,10 @@ def configure(conf):
     
 def build(bld):
     bld(features = 'py', 
-        # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py',
-                  'borg.py', 'bench.py', 'config.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench')
+        source = bld.path.ant_glob('*.py'), 
+        # source = ['__init__.py',
+        #           'borg.py', 'bench.py', 'config.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/drivers')
 
     bld.recurse(submodules)
 

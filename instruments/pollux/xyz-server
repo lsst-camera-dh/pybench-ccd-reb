@@ -322,7 +322,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage="""
 %prog [-l log-file] [-d] 
 
-Start the dice2 control server. 
+Start the XYZ control server. 
 """)
     parser.add_option('-d', '--daemon', default=False, action='store_true',
                       help='Run as a background daemon')
