@@ -63,7 +63,8 @@ lasercurrents = { #1: 30.0,
                   #3: 25.0,
                   #3: 39.0,
                   3: 55.0,
-                  4: 30.0 }
+                  #4: 30.0,
+                  4: 45.0}
 
 for i in [1,2,3,4]: laser.select(-i)
 laser.disable()
