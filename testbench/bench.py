@@ -2,7 +2,8 @@
 from singleton import Borg
 
 from config import config
-from drivers import * # is it a good idea ?
+import drivers
+import drivers.laser_thorlabs
 
 
 class Bench(Borg):
@@ -49,17 +50,27 @@ class Bench(Borg):
 
         # Create an instance of the instrument
 
-        instrument_module   = getattr('drivers', params['driver'])
+        instrument_module   = getattr(drivers, params['driver'])
         instrument_class    = getattr(instrument_module, 'Instrument')
         instrument_instance = instrument_class(identifier, **params)
         
         # eval('import %s' % instrument_module)
 
+        # register actions: try to open and connect to the instrument
+        # will raise an exception if it fails
+        try:
+            instrument_instance.register()
+        except:
+            raise IOError("Failed to connect to instrument %s. Stop." %
+                          identifier)
+
+        # If (and only if) register() call is successful
+        # Add the instrument to the registry.
+
         self.registry[identifier] = dict(params)
+        self.registry[identifier]['instance'] = instrument_instance
+        self.__dict__[identifier] = instrument_instance
 
-        self.__dict__[identifier] = self.registry[identifier]
-
-        self.__dict__[identifier].register()
 
 
 
