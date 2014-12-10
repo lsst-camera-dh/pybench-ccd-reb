@@ -26,8 +26,18 @@ def beamMap2d(X,Y,Z,plotname):
     #plt.show()
     fig.savefig(plotname)
 
+def plotstab(A, B, n):
+    m, b = np.polyfit(A, B[n], 1)
 
-f = gl.glob("2014102324/*.data")
+    plt.plot(A, B[n], '.')
+    plt.plot(A, m*A + b, '-')
+    plt.title("STD:" + str(np.std(B[n])) + " & " + "coef:" + str(m))
+    plt.show()
+    print m
+
+
+f = gl.glob("*.data")
+f.sort()
 
 X = []
 Y = []
@@ -63,8 +73,13 @@ beamMap2d(X,Y,R, "std-mean-ratio")
 a =  xrange(len(Z))
 
 plt.clf()
+plt.axhline(y=np.mean(M[1]))
 plt.scatter(a,Si[1])
 plt.show()
+plt.clf()
+
+#for n in xrange(len(Si)):
+#    plotstab(a,Si,n)
 
 
 

@@ -54,11 +54,17 @@ if "THORLABS" not in lasername:
     print >>sys.stderr, "No connection to the laser. Stop."
     sys.exit(3)
 
-lasercurrents = { 1: 30.0,
+lasercurrents = { #1: 30.0,
+                  1: 32.0,
+                  #2: 42.0,
                   #2: 45.0,
+                  #2: 59.0
                   2: 60.0,
-                  3: 25.0,
-                  4: 30.0 }
+                  #3: 25.0,
+                  #3: 39.0,
+                  3: 55.0,
+                  #4: 30.0,
+                  4: 45.0}
 
 for i in [1,2,3,4]: laser.select(-i)
 laser.disable()
@@ -105,7 +111,7 @@ for turn_in_loops in xrange(nb_turn):
         k.send("SYST:ZCH ON")
         
         k.send("FUNC 'CURR:DC'")
-        # k.send("CURR:RANG 2e-8")
+        #k.send("CURR:RANG 2e-8")
         k.send("CURR:RANG 2e-7")
         k.send("SYST:ZCOR ON")
         k.send("SYST:ZCH OFF")
