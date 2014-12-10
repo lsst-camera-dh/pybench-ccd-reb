@@ -8,7 +8,12 @@ class BidiMap(object):
     """
     def __init__(self, channels, names):
         self.dictionary  = dict(zip(channels, names))
-        self.reverse = {v: k for k, v in self.dictionary.iteritems()}
+        # works only from python 2.7 
+        # self.reverse = {v: k for k, v in self.dictionary.iteritems()}
+        self.reverse = {}
+        for k,v in self.dictionary.iteritems():
+            self.reverse[v] = k
+        #
         self.dictionary.update(self.reverse)
     #
     def __getitem__(self, k):
