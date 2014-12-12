@@ -21,8 +21,13 @@ def configure(conf):
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py', 'driver.py',
-                  'laser_thorlabs.py'], 
+        source = ['__init__.py', 
+                  'driver.py',
+                  'laser_thorlabs.py',
+                  'xyz_pollux.py',
+                  'dummy_dummy.py', 
+                  'wallace_gromit.py'], 
+
         install_path = '${PYTHONDIR}/lsst/testbench/drivers')
 
     bld.recurse(submodules)

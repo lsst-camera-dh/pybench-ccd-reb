@@ -54,6 +54,10 @@ class Instrument(Driver):
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
 
+        # Available channels
+        self.allchannels = [1,2,3,4]
+
+
     def open(self):
         """
         Open the hardware connection.
@@ -85,10 +89,13 @@ class Instrument(Driver):
 
 
     def register(self):
+        Driver.register(self)
+
         self.open()
-        connected = self.checkConnection()
+        connected = self.is_connected()
         if not(connected):
             raise IOError("Laser Thorlabs not connected.")
+
 
     def close(self):
         """
@@ -107,9 +114,11 @@ class Instrument(Driver):
         Enable laser channel 'channel'. 'channel' should be in [1-4].
         If channel is negative, Turn the channel off.
         """
-        if abs(channel) not in [1,2,3,4]:
+
+        if abs(channel) not in self.allchannels:
             raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in [1-4]")
+                "Invalid Laser Thorlabs channel id. Should be in %s" % 
+                str(self.allchannels))
         self.xmlrpc.select(channel)
 
 
@@ -117,9 +126,10 @@ class Instrument(Driver):
         """
         Disable laser channel 'channel'. 'channel' should be in [1-4].
         """
-        if channel not in [1,2,3,4]:
+        if channel not in self.allchannels:
             raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in [1-4]")
+                "Invalid Laser Thorlabs channel id. Should be in %s" %
+                str(self.allchannels))
         self.xmlrpc.select(-channel)
 
 
@@ -128,9 +138,10 @@ class Instrument(Driver):
         Returns the current (in mA) set for channel 'channel'.  
         Channel should be in [1-4].
         """
-        if channel not in [1,2,3,4]:
+        if channel not in self.allchannels:
             raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in [1-4]")
+                "Invalid Laser Thorlabs channel id. Should be in %s" %
+                str(self.allchannels))
         
         return float(self.xmlrpc.getCurrent(channel))
 
@@ -140,9 +151,10 @@ class Instrument(Driver):
         Sets the current (in mA) for channel 'channel'.  
         Channel should be in [1-4].
         """
-        if channel not in [1,2,3,4]:
+        if channel not in self.allchannels:
             raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in [1-4]")
+                "Invalid Laser Thorlabs channel id. Should be in %s" % 
+                str(self.allchannels))
         
         return self.xmlrpc.setCurrent(channel, current)
 
@@ -152,9 +164,10 @@ class Instrument(Driver):
         Returns the actual output power (in mW) for channel 'channel'.  
         Channel should be in [1-4].
         """
-        if channel not in [1,2,3,4]:
+        if channel not in self.allchannels:
             raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in [1-4]")
+                "Invalid Laser Thorlabs channel id. Should be in %s" %
+                str(self.allchannels))
         
         return float(self.xmlrpc.getPower(channel))
 
@@ -200,7 +213,22 @@ class Instrument(Driver):
             'DRIVER' : 'laserthorlabs / pyBench' 
             }
 
-        
+        for channel in self.allchannels:
+            # current 
+            key = 'CH_CURR%d' % channel
+            comment = '[mA] Current in laser diode %d in mA' % channel
+            value = self.getCurrent(channel)
+            keys.append(key)
+            values[key] = value
+            comments[key] = comment
+
+            # current 
+            key = 'CH_POW%d' % channel
+            comment = '[mW] Output Power for laser diode %d in mW' % channel
+            value = self.getPower(channel)
+            keys.append(key)
+            values[key] = value
+            comments[key] = comment
 
         return keys, values, comments
 

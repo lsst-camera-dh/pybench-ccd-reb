@@ -122,7 +122,27 @@ class XYZremote(object):
         logging.info("XYZ.close() done.")
         return True
 
-    
+    def checkConnection(self):
+        """
+        Check the connection.
+        Returns a string with the serial numbers of the 3 motors.
+        """
+        logging.info("XYZ.checkConnection() called.")
+        x_serial = self.XYZ.x_axis.get_serial()
+        logging.info("  XYZ : X serial = %s" % x_serial)
+        y_serial = self.XYZ.y_axis.get_serial()
+        logging.info("  XYZ : Y serial = %s" % y_serial)
+        z_serial = self.XYZ.z_axis.get_serial()
+        logging.info("  XYZ : Z serial = %s" % z_serial)
+        serials = [ x_serial, y_serial, z_serial ]
+        result = ( "Pollux XYZ: " + # should contain "XYZ"
+                   " X: " + x_serial +
+                   " Y: " + y_serial +
+                   " Z: " + z_serial )
+        logging.info("  XYZ : serials = %s" % result)
+        logging.info("XYZ.checkConnection() done.")
+        return result
+
     # ----------------------- XYZ homing procedure -----------------
 
     def home(self):
@@ -288,6 +308,7 @@ def main(options, args):
     server.register_function(XYZ.status,       "status")
     server.register_function(XYZ.open,         "open")
     server.register_function(XYZ.close,        "close")
+    server.register_function(XYZ.checkConnection, "checkConnection")
 
     # XYZ motion
     server.register_function(XYZ.home,         "home")
