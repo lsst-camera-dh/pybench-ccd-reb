@@ -9,8 +9,9 @@ on the LPNHE LSST CCD testbench.
 
 class Driver(object):
 
-    def __init__(self, identifier):
+    def __init__(self, identifier, **kargs):
         self.identifier = identifier
+        self.__dict__.update(**kargs)
 
     def open(self):
         """

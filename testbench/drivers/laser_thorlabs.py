@@ -34,12 +34,22 @@ class Instrument(Driver):
     #  Generic methods (init, open, etc)
     # ===================================================================
 
-    def __init__(self, identifier, host, device, port):
+    def __init__(self, identifier, **kargs):
+        Driver.__init__(self, identifier, **kargs)
+        
+        # self.identifier = identifier
+        # self.host = host
+        # self.device = device
+        # self.port = port # XML-RPC port
 
-        self.identifier = identifier
-        self.host = host
-        self.device = device
-        self.port = port # XML-RPC port
+        if 'host' not in kargs.keys():
+            raise ValueError("host is requested")
+
+        if 'devices' not in kargs.keys():
+            raise ValueError("devices is requested")
+
+        if 'port' not in kargs.keys():
+            raise ValueError("port is requested")
 
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
@@ -73,6 +83,12 @@ class Instrument(Driver):
         """
         return self.xmlrpc.checkConnection()
 
+
+    def register(self):
+        self.open()
+        connected = self.checkConnection()
+        if not(connected):
+            raise IOError("Laser Thorlabs not connected.")
 
     def close(self):
         """
