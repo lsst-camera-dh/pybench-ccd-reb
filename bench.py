@@ -99,8 +99,10 @@ def check_xmlrpc(server, idstr):
     :param server: xmlrpclib.ServerProxy
     :param idstr:
     """
-    # checkstr = server.checkConnection()
-    checkstr = server.getModel()
+    try:
+        checkstr = server.checkConnection()
+    except:
+        checkstr = server.getModel()
     if checkstr != idstr:
         errorstr = "Incorrect connection: returns %s, expect %s " % (checkstr, idstr)
         if stand_alone:
