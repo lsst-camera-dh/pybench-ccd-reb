@@ -972,6 +972,8 @@ class Bench(object):
             exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
+            avchan = np.mean(y[11:522,1:2002])
+            exthdu["AVERAGE"] = avchan
             hdulist.append(exthdu)
 
         # More header HDUs
