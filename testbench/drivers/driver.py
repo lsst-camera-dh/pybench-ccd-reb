@@ -9,6 +9,9 @@ on the LPNHE LSST CCD testbench.
 
 class Driver(object):
 
+    # Minimal functions requested
+    # Methods should be overwritten
+
     def __init__(self, identifier, **kargs):
         self.identifier = identifier
         self.__dict__.update(**kargs)
@@ -23,8 +26,24 @@ class Driver(object):
         """
         Check if the connection is established with the hardware.
         """
+        return ""
+
+    def is_connected(self):
+        """
+        Check if the connection is established with the hardware.
+        """
         return True
 
+    def close(self):
+        """
+        Close the connection the hardware.
+        """
+        pass
 
+    def register(self):
+        """
+        Connect and check the connection to the device.
+        """
+        return True
 
     

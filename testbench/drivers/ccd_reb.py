@@ -1,0 +1,191 @@
+#
+# LSST / LPNHE
+# Author: Laurent Le Guillou
+#
+"""
+Testbench driver for REB (through direct calls to rriClient)
+"""
+
+from driver import Driver
+
+# =======================================================================
+
+class Instrument(Driver):
+
+    # ===================================================================
+    #  Generic methods (init, open, etc)
+    # ===================================================================
+
+    def __init__(self, identifier, **kargs):
+        Driver.__init__(self, identifier, **kargs)
+        
+        # self.identifier = identifier
+        # self.host = host
+        # self.device = device
+        # self.port = port # XML-RPC port
+
+        if 'host' not in kargs.keys():
+            raise ValueError("host is requested")
+
+        if 'devices' not in kargs.keys():
+            raise ValueError("devices is requested")
+
+        if 'port' not in kargs.keys():
+            raise ValueError("port is requested")
+
+
+    def open(self):
+        """
+        Open the hardware connection.
+        """
+
+
+
+    def is_connected(self):
+        """
+        Check if the connection is established with the hardware.
+        Returns True if the hardware answers, False otherwise.
+        """
+        answer = self.checkConnection()
+
+        if answer == "":
+            return False
+
+        if 'KEITHLEY' not in answer:
+            return False
+            
+        return True
+
+
+    def checkConnection(self):
+        """
+        Returns a NULL string or the instrument model name
+        """
+        return self.xmlrpc.checkConnection()
+
+
+    def register(self):
+        Driver.register(self)
+
+        self.open()
+        connected = self.is_connected()
+        if not(connected):
+            raise IOError("Keithley Multimeter not connected.")
+
+
+    def close(self):
+        """
+        Close the hardware connection.
+        """
+        self.xmlrpc.close()
+        # TODO: Check errors
+
+
+    # ===================================================================
+    #  Instrument specific methods
+    # ===================================================================
+
+
+    def status(self):
+        """
+        Return the status of the system.
+        """
+        return self.xmlrpc.status()
+
+    # --------------------------------------------------------------
+
+    def reset(self):
+        """
+        Reset the instrument to the factory default settings
+        (with the exception of all remote interface settings).
+        """
+        # logging.info("Keithley.reset() called.")
+        result = self.xmlrpc.reset()
+        # logging.info("Keithley.reset() done.")
+        return result
+
+
+    def clear(self):
+        """
+        Clear the instrument status.
+        """ 
+        # logging.info("Keithley.clear() called.")
+        result = self.xmlrpc.clear()
+        # logging.info("Keithley.clear() done.")
+        return result
+
+    
+    # ----------------------- Keithley generic command ------------------
+
+    def send(self, command, timeout = None):
+        """
+        Send a command through the serial port.
+        Read the answer from the serial port.
+        Return it as a string.
+
+        If <timeout> is specified, the function will wait
+        for data with the specified timeout (instead of the default one). 
+        """
+
+        # logging.info("Keithley.send() called.")
+        # logging.info("  command = [%s]" % command)
+        answer = self.xmlrpc.send(command, timeout = timeout)
+        # logging.info("  answer = [%s]" % answer)
+        # logging.info("Keithley.send() done.")
+        return answer
+
+    # ----------------------- Keithley identification -------------------
+
+    def get_serial(self):
+        """
+        Return the identification string of the Keithley.
+        """
+        # logging.info("Keithley.get_serial() called.")
+        serial = self.xmlrpc.get_serial()
+        # logging.info("  serial = [%s]" % serial)
+        # logging.info("Keithley.get_serial() done.")
+        return serial
+
+    # ----------------------- Various methods ---------------------------
+
+    def scroll_text(self, msg):
+        """
+        Scroll text 'msg' on the Multimeter display.
+        For debug purpose only.
+        """
+        # logging.info("Keithley.scroll_text() called.")
+        result = self.xmlrpc.scroll_text(msg)
+        # logging.info("Keithley.scroll_text() done.")
+        return result
+
+
+    # ===================================================================
+    #  Meta data / state of the instrument 
+    # ===================================================================
+
+
+    def get_meta(self):
+        """
+        Returns meta data describing the current state
+        of the instrument. 
+        Useful to fill the FITS headers.
+        """
+
+        # keys : specify the key order
+        keys = ['MODEL',
+                'DRIVER']
+
+        # comments : meaning of the keys
+        comments = {
+            'MODEL'  : 'Instrument model',
+            'DRIVER' : 'Instrument software driver' 
+            }
+
+        values = {
+            'MODEL'  : self.get_serial(),
+            'DRIVER' : 'keithley-server / keithley' 
+            }
+
+        return keys, values, comments
+
+    # ===================================================================

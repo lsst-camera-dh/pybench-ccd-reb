@@ -1163,7 +1163,7 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def set_cabac_config(self, s): # strip 's'
+    def send_cabac_config(self, s): # strip 's'
         """
         Writes the current CABAC objects to the FPGA registers
         """
@@ -1206,4 +1206,19 @@ class FPGA(object):
                     (param, prgmval, value) )
 
 
-    # ----------------------------------------------------------
+     # ----------------------------------------------------------
+
+    def reset_cabac(self, s): # strip 's'
+        """
+        Writes the current 0 to all the FPGA CABAC registers
+        """
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB strip (%d)" % s)
+
+        for regnum in range(0,5):
+            self.write(0x500010 + regnum, 0)
+            self.write(0x500020 + regnum, 0)
+
+        self.write(0x500000, s) # starts the CABAC configuration
+
+   # ----------------------------------------------------------
