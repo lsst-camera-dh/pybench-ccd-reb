@@ -215,7 +215,7 @@ class Instrument(Driver):
 
         for channel in self.allchannels:
             # current 
-            key = 'CH_CURR%d' % channel
+            key = 'CURR_CH%d' % channel
             comment = '[mA] Current in laser diode %d in mA' % channel
             value = self.getCurrent(channel)
             keys.append(key)
@@ -223,7 +223,7 @@ class Instrument(Driver):
             comments[key] = comment
 
             # current 
-            key = 'CH_POW%d' % channel
+            key = 'POW_CH%d' % channel
             comment = '[mW] Output Power for laser diode %d in mW' % channel
             value = self.getPower(channel)
             keys.append(key)
