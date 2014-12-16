@@ -1096,11 +1096,14 @@ class FPGA(object):
         fitsheader = {}
         for key in iter(self.dacs):
             if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
+                # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
+                fitsheader[key]= self.dacs[key]*self.serial_conv
             elif key in ["V_PL", "V_PH"]:
-                fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
+                # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
+                fitsheader[key]= self.dacs[key]*self.parallel_conv
             else:
-                fitsheader[key]= "{:d}".format(self.dacs[key])
+                # fitsheader[key]= "{:d}".format(self.dacs[key])
+                fitsheader[key]= self.dacs[key]
 
         return fitsheader
 

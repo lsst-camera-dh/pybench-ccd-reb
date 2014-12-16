@@ -241,8 +241,8 @@ class BackSubstrate():
         Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
         :return: double
         """
-        while self.server.status() == 3
-                time.sleep(1)
+        while self.server.status() == 3:
+            time.sleep(1)
         readarray = np.array(self.server.getSequence())
         av_read = readarray.mean()
 
@@ -255,13 +255,14 @@ class BackSubstrate():
         """
         vss = "0.0"
         if self.server.voltageStatus():
-            vss = "{:.2f}".format(self.server.getVoltage())
+            # vss = "{:.2f}".format(self.server.getVoltage())
+            vss = "%.2f" % self.server.getVoltage()
         # otherwise back-substrate voltage is off
         if self.count > 1:
             imon = self.read_monitor()
         else :
             imon = self.get_current()
-        iss = "{:.3E}".format(imon)
+        iss = ":%.3E" % imon
 
         return {"V_BSS": vss, "I_BSS": iss}
 
@@ -764,7 +765,7 @@ class Bench(object):
         #need to add instruments header, optional sequencer header
         self.primeheader["WIDTH"] = self.imgcols
         self.primeheader["HEIGHT"] = self.imglines
-        self.primeheader["DETSIZE"] = '[0:{},0:{}]'.format(self.imgcols*self.nchannels/2, 2*self.imglines)
+        self.primeheader["DETSIZE"] = '[0:%d,0:%d]' % (self.imgcols*self.nchannels/2, 2*self.imglines)
         self.primeheader["TESTTYPE"] = self.testtype
         try:
             wavelength = self.monochromator.getWavelength()
@@ -792,11 +793,11 @@ class Bench(object):
             extheader['DETSIZE'] = '[1:4096,1:4004]'
             extheader['DATASEC'] = '[11:522,1:2002]'
         else :
-            parstringlow = '1:{}'.format(self.imglines)
-            parstringhigh = '{}:{}'.format(2*self.imglines, self.imglines+1)
+            parstringlow = '1:%d' % self.imglines
+            parstringhigh = '%d:%d' % (2*self.imglines, self.imglines+1)
             colwidth = self.imgcols
             extheader['DETSIZE'] = self.primeheader["DETSIZE"]
-            extheader['DATASEC'] = '[1:{},1:{}]'.format(self.imgcols, self.imglines)
+            extheader['DATASEC'] = '[1:%d,1:%d]' % (self.imgcols, self.imglines)
 
         if REBchannel<self.nchannels/2:
             pdet = parstringlow
@@ -810,7 +811,7 @@ class Bench(object):
             si = colwidth*(REBchannel-self.nchannels/2)+1
             sf = colwidth*(REBchannel-self.nchannels/2+1)
 
-        extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
+        extheader['DETSEC'] = '[%d:%d,%s]' % (si,sf,pdet)
 
     def waiting_sequence(self, name="Wait"):
         """
