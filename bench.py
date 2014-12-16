@@ -99,8 +99,10 @@ def check_xmlrpc(server, idstr):
     :param server: xmlrpclib.ServerProxy
     :param idstr:
     """
-    # checkstr = server.checkConnection()
-    checkstr = server.getModel()
+    try:
+        checkstr = server.checkConnection()
+    except:
+        checkstr = server.getModel()
     if checkstr != idstr:
         errorstr = "Incorrect connection: returns %s, expect %s " % (checkstr, idstr)
         if stand_alone:
@@ -605,6 +607,7 @@ class Bench(object):
     exposuresub = "Exposure"
     darksub = "DarkExposure"
     exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
+    min_exposure = 0.1/exposure_unit  # minimal duration of an exposure to avoid blocking shutter (not used for darks)
     testtype = "Test"
 
     def __init__(self, logger=None):
@@ -628,10 +631,11 @@ class Bench(object):
             self.reb.read(0, 5)
 
         self.reb.set_strip(self.strip_id)
+        self.reb.cabac_reset()
         self.reb.send_sequencer(self.seq)
         hextag = generate_tag(self.imgtag)
         self.reb.set_time(hextag)  # using time registers to store image tag (do not run clock in this case)
-        self.CCDshutdown()
+        #self.CCDshutdown()
 
         print("REB ready to connect to CCD")
         #subprocess.Popen("imageClient %d" % self.reb_id, shell=True)  # hijacks the ipython shell
@@ -649,13 +653,13 @@ class Bench(object):
 
         #starting drain voltages on CABAC
         drains = {"OD": 29, "GD": 24, "RD": 18}
-        self.reb.set_cabac_config(drains)
+        self.reb.send_cabac_config(drains)
 
         time.sleep(1)
 
         #starting OG voltage on CABAC
         og = {"OG": 3.5}
-        self.reb.set_cabac_config(og)
+        self.reb.send_cabac_config(og)
 
         time.sleep(1)
 
@@ -667,7 +671,7 @@ class Bench(object):
 
         #sets clock currents on CABAC
         iclock = {"IC": 255}
-        self.reb.set_cabac_config(iclock)
+        self.reb.send_cabac_config(iclock)
 
         time.sleep(1)
 
@@ -707,19 +711,19 @@ class Bench(object):
                                                 timelengths={0: 2, 1: 0},
                                                 outputs={0: 0, 1: 0} ))
         #currents on CABAC clocks to 0
-        self.reb.set_cabac_config({"IC": 0})
+        self.reb.send_cabac_config({"IC": 0})
         #clock rails to 0
         self.reb.set_dacs({"V_SL": 0, "V_SH": 0, "V_RGL": 0, "V_RGH": 0, "V_PL": 0, "V_PH": 0})
 
         time.sleep(1)
 
         #currents on OG to 0
-        self.reb.set_cabac_config({"OG": 0})
+        self.reb.send_cabac_config({"OG": 0})
 
         time.sleep(1)
 
         #drains to 0
-        self.reb.set_cabac_config({"OD": 0, "GD": 0, "RD": 0})
+        self.reb.send_cabac_config({"OD": 0, "GD": 0, "RD": 0})
 
         print("CCD shutdown complete")
 
@@ -862,13 +866,13 @@ class Bench(object):
         if lighttime:
             exposureadd = self.seq.program.subroutines[self.exposuresub]
             newinstruction = self.seq.program.instructions[exposureadd]
-            newinstruction.repeat = newiter  # This does rewrite the seq.program too
+            newinstruction.repeat = max(newiter, self.min_exposure)  # This does rewrite the seq.program too
             self.reb.fpga.send_program_instruction(exposureadd, newinstruction)
         #same for dark subroutine
         if darktime:
             darkadd = self.seq.program.subroutines[self.darksub]
             newinstruction = self.seq.program.instructions[darkadd]
-            newinstruction.repeat = newiter
+            newinstruction.repeat = max(newiter, 1)  # must not be 0 or sequencer gets stuck
             self.reb.fpga.send_program_instruction(darkadd, newinstruction)
 
     def execute_sequence(self, name, exposuretime=None, waittime=20, fitsname=""):
@@ -970,10 +974,12 @@ class Bench(object):
             exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
+            avchan = np.mean(y[11:522,1:2002])
+            exthdu["AVERAGE"] = avchan
             hdulist.append(exthdu)
 
         # More header HDUs
-        exthdu = pyfits.ImageHDU(name="TEST_COND")  # seems to have trouble with BinTableHDU with no data
+        exthdu = pyfits.ImageHDU(name="TEST_COND")
         self.testheader.update(self.monochromator.testheader)
         dict_to_fitshdu(self.testheader, exthdu)
         hdulist.append(exthdu)

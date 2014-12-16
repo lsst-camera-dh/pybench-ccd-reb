@@ -700,7 +700,7 @@ read_line_fake:
     
     # --------------------------------------------------------------------
 
-    def set_cabac_config(self, params):
+    def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
         """
@@ -708,7 +708,7 @@ read_line_fake:
         for param in iter(params):
             self.fpga.set_cabac_value(param, params[param])
 
-        self.fpga.set_cabac_config(self.strip_id)
+        self.fpga.send_cabac_config(self.strip_id)
         
         time.sleep(0.5)
         
@@ -716,6 +716,18 @@ read_line_fake:
 
         for param in iter(params):
             self.fpga.check_cabac_value(param, params[param])
+
+    # --------------------------------------------------------------------
+
+    def cabac_reset(self):
+        """
+        Puts all CABAC values at 0, then checks the readback into the params dictionay.
+        """
+        self.fpga.reset_cabac(self.strip_id)
+
+        time.sleep(0.5)
+
+        self.fpga.get_cabac_config(self.strip_id)
 
     # ----------------------------------------------------------
     
