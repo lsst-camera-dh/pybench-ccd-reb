@@ -1,11 +1,11 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench'
+APPNAME = 'lsst.testbench.drivers'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['drivers']
+submodules = []
 
 def options(opt):
     opt.load('python')        
@@ -21,9 +21,14 @@ def configure(conf):
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py',
-                  'singleton.py', 'bench.py', 'config.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench')
+        source = ['__init__.py', 
+                  'driver.py',
+                  'laser_thorlabs.py',
+                  'xyz_pollux.py',
+                  'dummy_dummy.py', 
+                  'wallace_gromit.py'], 
+
+        install_path = '${PYTHONDIR}/lsst/testbench/drivers')
 
     bld.recurse(submodules)
 

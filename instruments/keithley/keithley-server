@@ -276,6 +276,7 @@ def main(options, args):
     server.register_function(keithley.reset,        "reset")
     server.register_function(keithley.clear,        "clear")
     server.register_function(keithley.get_serial,   "get_serial")
+    server.register_function(keithley.get_serial,   "checkConnection")
 
     # Keithley generic command
     server.register_function(keithley.send,         "send")
@@ -316,7 +317,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage="""
 %prog [-d] 
 
-Start the dice2 control server. 
+Start the Keithley Electrometer remote control server. 
 """)
     parser.add_option('-d', '--daemon', default=False, action='store_true',
                       help='Run as a background daemon')

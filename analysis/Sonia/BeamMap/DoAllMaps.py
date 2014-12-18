@@ -1,7 +1,7 @@
 __author__ = 'karkar'
 import os, sys
 import numpy as np
-import BeamMap.beamMaps as BM
+import beamMaps as BM
 
 if len(sys.argv)>1:
     dataDir = sys.argv[1]

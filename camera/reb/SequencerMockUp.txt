@@ -1,0 +1,26 @@
+MAINS
+Acquisition:	JSR	clear		repeat(2)
+		JSR	exposure	repeat(EXPTIME)
+		JSR	close_shutter	repeat(1)
+		JSR	read_frame	repeat(1)		
+		END
+
+SUBROUTINES
+clear:		JSR	flush_line	repeat(NLINES)
+		RTS
+
+flush_line:	CALL	transfer_line	repeat(1)
+		CALL	flush_pixel	repeat(NCOLS)
+		RTS
+
+exposure:	CALL	exposure_flush	repeat(25000)
+		RTS
+
+read_frame:	CALL	start_of_image	repeat(1)
+		JSR	read_line	repeat(NLINES)
+		CALL	end_of_image	repeat(1)
+		RTS
+
+read_line:	CALL	transfer_line	repeat(1)
+		CALL	read_pixel	repeat(NCOLS)
+		RTS

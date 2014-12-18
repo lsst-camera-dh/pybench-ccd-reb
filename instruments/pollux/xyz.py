@@ -247,6 +247,61 @@ class XYZ(object):
 
     position = property(get_position, doc = "XYZ current position")
 
+    # ---------- Compute the target position -----------------
+
+    def compute_target(self,
+                       x  = None, y  = None, z  = None,
+                       dx = None, dy = None, dz = None):
+
+        pos = self.get_position()
+        xc = pos['x']
+        yc = pos['y']
+        zc = pos['z']
+
+        xt, yt, zt = xc, yc, zc
+        
+        if x != None:  xt = x
+        if dx != None: xt += dx
+        
+        if y != None:  yt = y
+        if dy != None: yt += dy
+        
+        if z != None:  zt = z
+        if dz != None: zt += dz
+        
+        return xt, yt, zt
+
+    # ---------- Check if a given position is allowed --------
+
+    def check_target(self, x, y, z):
+        """
+        Check the target position.
+        Permitted volume for the "orange cryostat"
+        -- LLG & RLB - 20141017
+        """
+
+        if (x < 0.0) or (x > 101.7):
+            raise ValueError("XYZ coordinate x out of allowed range.")
+
+        if (y < 0.0) or (y > 101.7):
+            raise ValueError("XYZ coordinate y out of allowed range.")
+
+        if (z < 0.0) or (z > 101.7):
+            raise ValueError("XYZ coordinate z out of allowed range.")
+
+        # Extra restriction to avoid crashing against the wall ;-)
+
+        xcenter = 33.42
+        ycenter = 44.52
+        radius = 24.0
+
+        if z > 81.8:
+            dist = ((x-xcenter)**2 + (y-ycenter)**2)**.5
+            if dist > radius:
+                raise ValueError("XYZ target not allowed: will hit the window mount!!!")
+
+        return True
+
 
     # ---------- Move absolute and relative ------------------ 
 
@@ -258,13 +313,32 @@ class XYZ(object):
         This function can do relative and absolute movements.
         """
 
+        ## First, check the geometric limits
+        #
+        # Due to the complicated shape of the permitted volume,
+        # the limits *MUST* be checked before and after each 
+        # independant movement.
+        # Reason: it may happen that the target is allowed, 
+        # but the separate movements to go there are not!!!
+
         # -------- X axis ------------------------------------
 
         if (self.x_axis != None):
+
             if x != None:
+                if check:
+                    xt, yt, zt = self.compute_target(x=x)
+                    self.check_target(xt, yt, zt)
+
                 self.x_axis.move_absolute(position = x,  
                                           wait = wait, check = check)
+
             if dx != None:
+
+                if check:
+                    xt, yt, zt = self.compute_target(dx=dx)
+                    self.check_target(xt, yt, zt)
+
                 self.x_axis.move_relative(offset = dx, 
                                           wait = wait, check = check)
         else:
@@ -274,12 +348,25 @@ class XYZ(object):
         # -------- Y axis ------------------------------------
 
         if (self.y_axis != None):
+
             if y != None:
+
+                if check:
+                    xt, yt, zt = self.compute_target(y=y)
+                    self.check_target(xt, yt, zt)
+
                 self.y_axis.move_absolute(position = y,  
                                           wait = wait, check = check)
+
             if dy != None:
+
+                if check:
+                    xt, yt, zt = self.compute_target(dy=dy)
+                    self.check_target(xt, yt, zt)
+
                 self.y_axis.move_relative(offset = dy, 
                                           wait = wait, check = check)
+
         else:
             if self.debug: 
                 print >>sys.stderr,  "Y axis disabled."
@@ -288,10 +375,22 @@ class XYZ(object):
         # -------- Z axis ------------------------------------
 
         if (self.z_axis != None):
+
             if z != None:
+
+                if check:
+                    xt, yt, zt = self.compute_target(z=z)
+                    self.check_target(xt, yt, zt)
+
                 self.z_axis.move_absolute(position = z,  
                                           wait = wait, check = check)
+
             if dz != None:
+
+                if check:
+                    xt, yt, zt = self.compute_target(dz=dz)
+                    self.check_target(xt, yt, zt)
+
                 self.z_axis.move_relative(offset = dz, 
                                           wait = wait, check = check)
         else:

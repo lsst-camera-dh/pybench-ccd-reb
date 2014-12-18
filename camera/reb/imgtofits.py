@@ -41,8 +41,10 @@ def open_img(fp):
 
 def print_stats(num, chan):
     print "Channel : ", num
-    print "max = {}  min = {}".format(np.max(chan),np.min(chan))
-    print "average = {:.2f}  sigma = {:.2f}".format(np.mean(chan),np.std(chan))
+    print "max =", np.max(chan), " min =", np.min(chan)
+    # print "max = {}  min = {}".format(np.max(chan),np.min(chan))
+    print "average =%.2f, sigma = %.2f" % (np.mean(chan), np.std(chan))
+    # print "average = {:.2f}  sigma = {:.2f}".format(np.mean(chan),np.std(chan))
 
 def create_filename(fp):
     """Creates name for new fits file with full path. Also outputs date of last access to file
@@ -75,7 +77,8 @@ def create_filename(fp):
         if int(num) >= filenumber:
             filenumber = int(num)+1
 
-    newfilename = "{}{:05d}_{}.fits".format(datedir, filenumber, newfileID)
+    newfilename = datedir + "%05d_" % filenumber + newfileID + '.fits'
+    # newfilename = "{}{:05d}_{}.fits".format(datedir, filenumber, newfileID)
 
     return (newfilename, timeobs)
 
@@ -124,7 +127,8 @@ def extension_geometry(extheader, extnum, borders = False):
         si = colwidth*(iend-extnum)+1
         sf = colwidth*(iend-extnum+1)
 
-    extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
+    # extheader['DETSEC'] = '[{}:{},{}]'.format(si,sf,pdet)
+    extheader['DETSEC'] = '[%d:%d,%d]' % (si,sf,pdet)
 
 def create_image_extension(imagearray, extheadername, extnum):
     """Appends image data into an extension of the fits file"""
