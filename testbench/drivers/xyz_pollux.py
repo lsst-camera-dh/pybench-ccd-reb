@@ -167,9 +167,9 @@ class Instrument(Driver):
         By default, check is and *MUST* be left to True.
         """
 
-        logging.info("XYZ.move() called.")
+        # logging.info("XYZ.move() called.")
         result = self.XYZ.move(wait=wait,check=check, **moves)
-        logging.info("XYZ.move() done.")
+        # logging.info("XYZ.move() done.")
         return result
         
 
@@ -203,8 +203,9 @@ class Instrument(Driver):
         pos = self.get_position()
 
         for axis in ['x', 'y', 'z']:
-            key = '%sPOS' % upper(axis)
-            comment = '[mm] Current %s position of the XYZ mount in mm' % upper(axis)
+            key = '%sPOS' % axis.upper()
+            comment = ( '[mm] Current %s position of the XYZ mount in mm' 
+                        % axis.upper() )
             value = pos[axis]
             keys.append(key)
             values[key] = value

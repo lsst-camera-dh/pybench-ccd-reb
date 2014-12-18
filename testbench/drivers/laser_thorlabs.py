@@ -119,7 +119,7 @@ class Instrument(Driver):
             raise ValueError(
                 "Invalid Laser Thorlabs channel id. Should be in %s" % 
                 str(self.allchannels))
-        self.xmlrpc.select(channel)
+        return self.xmlrpc.select(channel)
 
 
     def unselect(self, channel):
@@ -130,7 +130,7 @@ class Instrument(Driver):
             raise ValueError(
                 "Invalid Laser Thorlabs channel id. Should be in %s" %
                 str(self.allchannels))
-        self.xmlrpc.select(-channel)
+        return self.xmlrpc.select(-channel)
 
 
     def getCurrent(self, channel):
@@ -156,7 +156,7 @@ class Instrument(Driver):
                 "Invalid Laser Thorlabs channel id. Should be in %s" % 
                 str(self.allchannels))
         
-        return self.xmlrpc.setCurrent(channel, current)
+        return self.xmlrpc.setCurrent(channel, float(current))
 
 
     def getPower(self, channel):
