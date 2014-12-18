@@ -48,6 +48,7 @@ def build(ctx):
         install_path = '${PYTHONDIR}/lsst')
 
     ctx.recurse(['camera', 'instruments', 'testbench'])
+    # ctx.recurse(['camera', 'instruments'])
     
 
 

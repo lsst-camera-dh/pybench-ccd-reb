@@ -53,7 +53,8 @@ class Multimeter(object):
         self.bytesize = serial.EIGHTBITS
         self.stopbits = serial.STOPBITS_ONE
         self.serial_device = None
-        self.EOL = '\r'              # '\r' = 'CR'
+        # self.EOL = '\r'              # '\r' = 'CR'
+        self.EOL = '\n'              # '\n' = 'LF'
         # end of line EOL = '\r' (confirmed & tested)
 
         # ---- debug mode
