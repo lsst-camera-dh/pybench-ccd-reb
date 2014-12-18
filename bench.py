@@ -608,7 +608,7 @@ class Bench(object):
     exposuresub = "Exposure"
     darksub = "DarkExposure"
     exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
-    min_exposure = 0.1/exposure_unit  # minimal duration of an exposure to avoid blocking shutter (not used for darks)
+    min_exposure = int(0.1 / exposure_unit)  # minimal duration of an exposure to avoid blocking shutter (not used for darks)
     testtype = "Test"
 
     def __init__(self, logger=None):
@@ -861,19 +861,19 @@ class Bench(object):
         :param lighttime:
         :param darktime:
         """
-        newiter = int(exptime/ self.exposure_unit)
+        newiter = int(exptime / self.exposure_unit)
         # look up address of exposure subroutine
         # then get current instruction and rewrite the number of iterations only
         if lighttime:
             exposureadd = self.seq.program.subroutines[self.exposuresub]
             newinstruction = self.seq.program.instructions[exposureadd]
-            newinstruction.repeat = max(newiter, self.min_exposure)  # This does rewrite the seq.program too
+            newinstruction.repeat = int(max(newiter, self.min_exposure))  # This does rewrite the seq.program too
             self.reb.fpga.send_program_instruction(exposureadd, newinstruction)
         #same for dark subroutine
         if darktime:
             darkadd = self.seq.program.subroutines[self.darksub]
             newinstruction = self.seq.program.instructions[darkadd]
-            newinstruction.repeat = max(newiter, 1)  # must not be 0 or sequencer gets stuck
+            newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
             self.reb.fpga.send_program_instruction(darkadd, newinstruction)
 
     def execute_sequence(self, name, exposuretime=None, waittime=20, fitsname=""):
