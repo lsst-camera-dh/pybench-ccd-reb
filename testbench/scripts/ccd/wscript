@@ -1,11 +1,11 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench'
+APPNAME = 'lsst.testbench.scripts.ccd'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['drivers', 'scripts']
+submodules = []
 
 def options(opt):
     opt.load('python')        
@@ -21,9 +21,8 @@ def configure(conf):
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py',
-                  'singleton.py', 'bench.py', 'config.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench')
+        source = ['functions.py'], 
+        install_path = '${PYTHONDIR}/lsst/testbench/scripts/ccd')
 
     bld.recurse(submodules)
 

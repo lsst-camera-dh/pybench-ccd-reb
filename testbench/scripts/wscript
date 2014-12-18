@@ -1,29 +1,29 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench'
+APPNAME = 'lsst.testbench.scripts'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['drivers', 'scripts']
+# submodules = ['ccd', 'spot', 'beam-maps']
+submodules = ['ccd']
 
 def options(opt):
     opt.load('python')        
-    opt.load('compiler_c')
+    # opt.load('compiler_c')
     # opt.sub_options(submodules)
 
 def configure(conf):
     conf.load('python')
-    conf.load('compiler_c')
+    # conf.load('compiler_c')
     conf.check_python_headers()
     # conf.sub_config(submodules)
     
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py',
-                  'singleton.py', 'bench.py', 'config.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench')
+        source = [], 
+        install_path = '${PYTHONDIR}/lsst/testbench/scripts')
 
     bld.recurse(submodules)
 
