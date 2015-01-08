@@ -25,5 +25,6 @@ laserthorlabs
 
 # pressure
 
-# XYZ pollux (8101) /dev/ttyUSB8, /dev/ttyUSB9, /dev/ttyUSB10
+# XYZ pollux (8101) old : /dev/ttyUSB8, /dev/ttyUSB9, /dev/ttyUSB10
+# XYZ pollux (8101) /dev/ttyS16, /dev/ttyS17, /dev/ttyS18
 xyz-server -d

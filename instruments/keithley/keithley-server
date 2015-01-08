@@ -6,7 +6,7 @@
 #
 # Remote control (XPL-RPC) of the Keithley for the LSST testbench
 # XML-RPC server to control it remotely
-# default device: /dev/ttyUSB1
+# default device: /dev/ttyS1
 # default port: 8102
 #
 # Authors: Laurent Le Guillou 
@@ -43,9 +43,10 @@ from exceptions import Exception
 
 # ==================================================================
 
-DEFAULT_HOSTNAME = "lpnlsst"
+# DEFAULT_HOSTNAME = "lpnlsst"
+DEFAULT_HOSTNAME = "lpnp190"
 DEFAULT_PORT     = 8102
-DEFAULT_DEVICE   = "/dev/ttyUSB1"
+DEFAULT_DEVICE   = "/dev/ttyS1"
 
 SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
 SERVER_PORT     = int(os.getenv("KEITHLEY_SERVER_PORT", DEFAULT_PORT))
