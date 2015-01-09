@@ -169,7 +169,7 @@ class Instrument(Driver):
         """
 
         # logging.info("XYZ.move() called.")
-        result = self.XYZ.move(wait=wait,check=check, **moves)
+        result = self.xmlrpc.move(moves, wait, check)
         # logging.info("XYZ.move() done.")
         return result
         

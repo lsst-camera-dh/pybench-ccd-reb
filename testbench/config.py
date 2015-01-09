@@ -97,7 +97,7 @@ config = {
     # laserthorlabs
     #
     'laser': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnp190',
         'devices'     : ['/dev/laser'],
         'driver'      : 'laser_thorlabs',
         'port'        : 8082,
@@ -184,12 +184,12 @@ config = {
     #  Optical bench motors
     # =====================================================================
     #
-    # XYZ pollux (8101) /dev/ttyUSB8, /dev/ttyUSB9, /dev/ttyUSB10
+    # XYZ pollux (8101) /dev/ttyS16, /dev/ttyS17, /dev/ttyS18
     # xyz-server -d
     #
     'xyz' : {
-        'host'        : 'lpnlsst',
-        'devices'     : ['/dev/ttyUSB8', '/dev/ttyUSB9', '/dev/ttyUSB10'],
+        'host'        : 'lpnp190',
+        'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
         'driver'      : 'xyz_pollux',
         'port'        : 8101,
         'commandline' : 'xyz-server -d'
@@ -206,7 +206,7 @@ config = {
     #
     'keithley' : {
         'host'        : 'lpnlsst',
-        'devices'     : ['/dev/ttyUSB1'],
+        'devices'     : ['/dev/ttyS1'],
         'driver'      : 'keithley',
         'port'        : 8102,
         'commandline' : 'keithley-server -d'
