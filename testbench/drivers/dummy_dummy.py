@@ -61,14 +61,13 @@ class Instrument(Driver):
         return self.xmlrpc.checkConnection()
         
 
-    def register(self):
-        Driver.register(self)
-
+    def register(self, bench):
         # self.open()
         connected = self.is_connected()
         if not(connected):
             raise IOError("Dummy device is not connected.")
 
+        Driver.register(self, bench)
 
     def close(self):
         """

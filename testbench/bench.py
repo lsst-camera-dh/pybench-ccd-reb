@@ -79,7 +79,7 @@ class Bench(Borg):
         # register actions: try to open and connect to the instrument
         # will raise an exception if it fails
         try:
-            instrument_instance.register()
+            instrument_instance.register(self)
         except:
             raise IOError("Failed to connect to instrument %s. Stop." %
                           identifier)

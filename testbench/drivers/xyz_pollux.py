@@ -97,12 +97,13 @@ class Instrument(Driver):
         return self.xmlrpc.checkConnection()
 
 
-    def register(self):
-        Driver.register(self)
+    def register(self, bench):
         self.open()
         connected = self.is_connected()
         if not(connected):
             raise IOError("XYZ mount is not connected.")
+
+        Driver.register(self, bench)
 
 
     def close(self):

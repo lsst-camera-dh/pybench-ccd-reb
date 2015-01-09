@@ -1,10 +1,3 @@
-# 2014/10/13 17:19:56.193 tx: "SOUR:VOLT:STAT OFF" rx: "0,"No error"" ( 26 ms)* 
-# 2014/10/14 16:16:23.606 tx: "CURR:DC:NPLC 1" rx: "0,"No error"" ( 24 ms)* 
-# 2014/10/14 16:16:23.633 tx: "SOUR:VOLT:RANG 50" rx: "0,"No error"" ( 26 ms)* 
-# 2014/10/14 16:16:23.662 tx: "SOUR:VOLT:ILIM 2.5e-05" rx: "0,"No error"" ( 29 ms)* 
-# 2014/10/14 16:16:23.688 tx: "SOUR:VOLT -40" rx: "0,"No error"" ( 25 ms)* 
-# 2014/10/14 16:16:23.715 tx: "SOUR:VOLT:STAT ON" rx: "0,"No error"" ( 26 ms)* 
-
 #
 # LSST / LPNHE
 # Author: Laurent Le Guillou
@@ -46,9 +39,6 @@ import xmlrpclib
 # =======================================================================
 
 class Instrument(Driver):
-    """
-    Managing back-substrate voltage controlled by Keithley 6487
-    """
 
     # ===================================================================
     #  Generic methods (init, open, etc)
@@ -105,13 +95,14 @@ class Instrument(Driver):
         return self.xmlrpc.checkConnection()
 
 
-    def register(self, bench):
+    def register(self):
+        Driver.register(self)
+
         self.open()
         connected = self.is_connected()
         if not(connected):
             raise IOError("Keithley Multimeter not connected.")
 
-        Driver.register(self, bench)
 
     def close(self):
         """
@@ -229,135 +220,3 @@ class Instrument(Driver):
         return keys, values, comments
 
     # ===================================================================
-
-
-
-class BackSubstrate():
-    """
-    Managing back-substrate voltage controlled by Keithley 6487
-    """
-    setvoltbss = 0  # desired voltage setting (independent of actual value)
-    count = 1  # number of measures for monitoring
-    rate = 1.0  # monitoring rate
-    name = "Keithley 6487"
-
-    def __init__(self):
-        self.server = xmlrpclib.ServerProxy("http://lpnlsst:8088/")
-        self.server.connect()
-        check_xmlrpc(self.server, "6487")
-
-    def config(self, voltage=0):
-        """
-        Configuration of voltage, current limits and current readout.
-        """
-
-        if abs(voltage) < 50:
-            range = 1
-        else:
-            range = 2  # 500 V
-        self.server.setVoltageRange(range)
-
-        self.set_volt(voltage)
-        #self.selectCurrent(2e-5)  # selecting current range: not implemented yet
-        self.server.zeroCorrect()
-        self.server.setCurrentLimit(0)  # 25 uA
-        self.server.setRate(self.rate)
-
-    def check_config(self):
-        inti = self.server.getCurrentLimit()
-        if inti != 0:
-            raise IOError("Wrong current limit setting on bss: %d" % inti)
-        # can add check on range (getVoltageRange) and setvoltbss (getVoltage)
-
-    def set_volt(self, voltage):
-        """
-        Changes voltage without changing configuration
-        """
-        if voltage < 0:
-            self.server.setVoltage(float(voltage))
-            self.setvoltbss = voltage
-        else:
-            errorstr = "Asked for a positive back-substrate voltage (%f), not doing it. " % voltage
-            if stand_alone:
-                print(errorstr)
-            else:
-                raise ValueError(errorstr)
-
-    def enable(self):
-
-        self.server.sourceVoltage(1)
-
-        time.sleep(30)
-
-        #check
-        ena = self.server.voltageStatus()
-        if ena != 1:
-            raise IOError("Error on back-substrate voltage: not enabled.")
-
-    def disable(self):
-
-        self.server.sourceVoltage(0)
-        time.sleep(10)
-        while self.server.voltageStatus() != 0:
-            time.sleep(1)
-
-    def get_current(self):
-        """
-        Get a single current reading.
-        :return: double
-        """
-        self.count = 1
-        self.server.startSequence(1)
-        while self.server.status() == 3:  # TBC
-            time.sleep(1)
-
-        return self.server.getSequence()[0]
-
-    def set_monitor_rate(self, rate):
-        """
-        Sets rate of monitoring to a new value.
-        Useful to do before long exposures.
-        :param rate:
-        :return:
-        """
-        self.rate = rate
-        self.server.setRate(self.rate)
-
-    def start_monitor(self, exptime):
-        """
-        Configures back-substrate current monitoring for an exposure
-        :param exptime: double
-        """
-        self.count = int(exptime * self.rate)+ 1
-        self.server.startSequence(self.count)
-
-    def read_monitor(self):
-        """
-        Reads the latest sequence from the monitoring photodiode. Averages the results after eliminating outliers.
-        :return: double
-        """
-        while self.server.status() == 3:
-            time.sleep(1)
-        readarray = np.array(self.server.getSequence())
-        av_read = readarray.mean()
-
-        return av_read
-
-    def get_operating_header(self):
-        """
-        Gets voltage and current on back substrate in header dictionary format.
-        : return : dict
-        """
-        vss = "0.0"
-        if self.server.voltageStatus():
-            # vss = "{:.2f}".format(self.server.getVoltage())
-            vss = "%.2f" % self.server.getVoltage()
-        # otherwise back-substrate voltage is off
-        if self.count > 1:
-            imon = self.read_monitor()
-        else :
-            imon = self.get_current()
-        iss = ":%.3E" % imon
-
-        return {"V_BSS": vss, "I_BSS": iss}
-

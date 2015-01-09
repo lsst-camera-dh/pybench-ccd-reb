@@ -40,10 +40,11 @@ class Driver(object):
         """
         pass
 
-    def register(self):
+    def register(self, bench):
         """
         Connect and check the connection to the device.
         """
+        self.bench = bench
         return True
 
     
