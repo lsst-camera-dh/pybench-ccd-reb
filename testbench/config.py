@@ -74,11 +74,11 @@ config = {
     # option 2: no-GUI ultra simple control with keithley-server
     #
     # 'bss': {
-    #     'host'        : 'lpnlsst',
-    #     'devices'     : ['/dev/ttyUSB4'],
+    #     'host'        : 'lpnp190',
+    #     'devices'     : ['/dev/ttyS11'],
     #     'driver'      : 'power_backsubstrate',
     #     'port'        : 8088,
-    #     'commandline' : 'keithley /dev/ttyUSB4 8088'
+    #     'commandline' : 'keithley /dev/ttyS11 8088'
     #     },
 
     'bss': {

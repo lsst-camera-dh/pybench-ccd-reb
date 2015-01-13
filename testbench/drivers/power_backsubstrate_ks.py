@@ -50,9 +50,11 @@ Testbench driver for the Keithley multimeter 6487 [power source] (through keithl
 # # TODO: implement: system.methodSignature
 # server.register_function(keithley._methodHelp,  "system.methodHelp")
 
+import xmlrpclib
+import time
+
 from driver import Driver
 
-import xmlrpclib
 
 # =======================================================================
 
@@ -314,12 +316,42 @@ class Instrument(Driver):
         answer = self.send(command)
         return answer
 
+    # ===================================================================
+    # High Level command for the BackSubstrate Power
+    # ===================================================================
+    
+
+    def setup(self, voltage = 0.0):
+        """
+        Setup the BackSubstrate power.
+        """
+
+        voltagerange = 50.0
+        if abs(voltage) >= 50.0:
+            voltagerange = 500.0
+
+        self.setVoltageRange(voltagerange)
+
+        currentlimit = 2.5e-5 # 25 uA
+        self.setCurrentLimit(currentlimit)  # 25 uA
+
+        self.setVoltage(voltage)
+
+        # self.set_volt(voltage)
+        # self.server.zeroCorrect()
+        # self.server.setCurrentLimit(0)  # 25 uA
+        # self.server.setRate(self.rate)
+
 
     def enable(self):
         """
         Enable the voltage source.
         """
         self.sourceVoltage(1)
+        time.sleep(30.0) # sleep 30s
+        on = self.voltageStatus()
+        if not(on):
+            raise IOError("Error on back-substrate voltage: failed to enable.")
 
 
     def disable(self):
@@ -327,13 +359,9 @@ class Instrument(Driver):
         Disable the voltage source.
         """
         self.sourceVoltage(0)
-
-
-    # ===================================================================
-    # High Level command for the BackSubstrate Power
-    # ===================================================================
-    
-
+        time.sleep(10)
+        while not(self.voltageStatus()):
+            time.sleep(1)
 
 
     # ===================================================================
