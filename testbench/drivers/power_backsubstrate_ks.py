@@ -343,24 +343,26 @@ class Instrument(Driver):
         # self.server.setRate(self.rate)
 
 
-    def enable(self):
+    def enable(self, delay = 10.0):
         """
         Enable the voltage source.
         """
         self.sourceVoltage(1)
-        time.sleep(30.0) # sleep 30s
+        # time.sleep(30.0) # sleep 30s
+        time.sleep(delay)
         on = self.voltageStatus()
         if not(on):
             raise IOError("Error on back-substrate voltage: failed to enable.")
 
 
-    def disable(self):
+    def disable(self, delay = 10.0):
         """
         Disable the voltage source.
         """
         self.sourceVoltage(0)
-        time.sleep(10)
-        while not(self.voltageStatus()):
+        # time.sleep(10)
+        time.sleep(delay)
+        while self.voltageStatus():
             time.sleep(1)
 
 
