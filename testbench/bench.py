@@ -5,8 +5,9 @@ from singleton import Borg
 
 from config import config
 
-# find a better way, to dynamically load the modules associated (from config.py)
 import drivers
+
+# find a better way, to dynamically load the modules associated (from config.py)
 # import drivers.laser_thorlabs  
 # import drivers.xyz_pollux
 # import drivers.dummy_dummy
@@ -72,14 +73,24 @@ class Bench(Borg):
         
         # Create an instance of the instrument
 
+        print "[A]"
         instrument_module   = getattr(drivers, params['driver'])
+        print instrument_module
+        print "[B]"
         instrument_class    = getattr(instrument_module, 'Instrument')
+        print instrument_class
+        print "[C]"
         instrument_instance = instrument_class(identifier, **params)
+        print instrument_instance
+        print dir(instrument_instance)
+        print "[D]"
         
         # register actions: try to open and connect to the instrument
         # will raise an exception if it fails
         try:
+            print "[EA]"
             instrument_instance.register(self)
+            print "[EE]"
         except:
             raise IOError("Failed to connect to instrument %s. Stop." %
                           identifier)

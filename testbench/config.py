@@ -10,7 +10,7 @@ config = {
     # =====================================================================
 
     'dummy': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnp190',
         'devices'     : ['/dev/null'],
         'driver'      : 'dummy_dummy',
         'port'        : 8666,
@@ -18,7 +18,7 @@ config = {
         },
 
     'wallace': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnp190',
         'devices'     : ['/dev/null'],
         'driver'      : 'wallace_gromit',
         'port'        : 8999,
@@ -73,12 +73,20 @@ config = {
     # option 1: keithley /dev/ttyUSB4 8088
     # option 2: no-GUI ultra simple control with keithley-server
     #
+    # 'bss': {
+    #     'host'        : 'lpnlsst',
+    #     'devices'     : ['/dev/ttyUSB4'],
+    #     'driver'      : 'power_backsubstrate',
+    #     'port'        : 8088,
+    #     'commandline' : 'keithley /dev/ttyUSB4 8088'
+    #     },
+
     'bss': {
-        'host'        : 'lpnlsst',
-        'devices'     : ['/dev/ttyUSB4'],
-        'driver'      : 'power_backsubstrate',
-        'port'        : 8088,
-        'commandline' : 'keithley /dev/ttyUSB4 8088'
+        'host'        : 'lpnp190',
+        'devices'     : ['/dev/ttyS11'],
+        'driver'      : 'power_backsubstrate_ks',
+        'port'        : 8201,
+        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=lpnp190 --port=8201'
         },
     #
     # ---------------------------------------------------------------------
@@ -205,9 +213,9 @@ config = {
     # keithley-server -d
     #
     'keithley' : {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnp190',
         'devices'     : ['/dev/ttyS1'],
-        'driver'      : 'keithley',
+        'driver'      : 'keithley_ks',
         'port'        : 8102,
         'commandline' : 'keithley-server -d'
         }

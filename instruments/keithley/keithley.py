@@ -272,6 +272,32 @@ class Multimeter(object):
         self.write(command)
 
 # ------------------------------------------------------------------ 
+
+    def get_error_status(self):
+        """
+        Get the various error status, clear them, and return them.
+        does not raise exception (see check_error_status below).
+        """
+
+        self.reopen_if_needed()
+        self.purge()
+
+        # First, get (and clear) the Standard Event Status Register
+
+        command = "*ESR?"
+        self.write(command)
+        answer = self.read()
+        if not(answer):
+            raise IOError("Keithley: *ESR? command failed (no answer).")
+        try:
+            esr = int(answer)
+        except ValueError:
+            raise IOError("Keithley: " +
+                          "*ESR? command failed (invalid answer [1]).")
+
+        return esr
+
+# ------------------------------------------------------------------ 
     
     def check_error_status(self):
         """
@@ -483,5 +509,12 @@ class Multimeter(object):
             time.sleep(.5)
 
         self.write(":DISP:TEXT:STAT 0")
+
+
+# ==================================================================
+# Voltage source commands
+# ------------------------------------------------------------------ 
+
+
 
 # ==================================================================

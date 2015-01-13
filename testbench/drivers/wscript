@@ -23,8 +23,12 @@ def build(bld):
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py', 
                   'driver.py',
+                  # 'power_backsubstrate.py',
+                  'power_backsubstrate_ks.py',
                   'laser_thorlabs.py',
                   'xyz_pollux.py',
+                  # 'keithley.py',
+                  'keithley_ks.py',
                   'dummy_dummy.py', 
                   'wallace_gromit.py'], 
 

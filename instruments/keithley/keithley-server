@@ -137,7 +137,6 @@ class KeithleyRemote(object):
         self.keithley.clear()
         logging.info("Keithley.clear() done.")
         return True
-
     
     # ----------------------- Keithley generic command ------------------
 
@@ -157,6 +156,17 @@ class KeithleyRemote(object):
         logging.info("  answer = [%s]" % answer)
         logging.info("Keithley.send() done.")
         return answer
+
+    def get_error_status(self):
+        """
+        Get (and clear) the Standard Event Status Register.
+        Return ESR value.
+        """
+        logging.info("Keithley.get_error_status() called.")
+        esr = self.keithley.get_error_status()
+        logging.info("  ESR = [%d]" % esr)
+        logging.info("Keithley.get_error_status() done.")
+        return esr
 
     # ----------------------- Keithley identification -------------------
 
@@ -281,6 +291,8 @@ def main(options, args):
 
     # Keithley generic command
     server.register_function(keithley.send,         "send")
+    # server.register_function(keithley.check_error_status,"check_error_status")
+    server.register_function(keithley.get_error_status,  "get_error_status")
 
     # misc 
     server.register_function(keithley.scroll_text,  "scroll_text")

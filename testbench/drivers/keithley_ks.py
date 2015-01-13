@@ -19,6 +19,7 @@ Testbench driver for the Keithley multimeter (through keithley-server and XML-RP
 
 # # Keithley generic command
 # server.register_function(keithley.send,         "send")
+# server.register_function(keithley.get_error_status,  "get_error_status")
 
 # # misc 
 # server.register_function(keithley.scroll_text,  "scroll_text")
@@ -69,7 +70,7 @@ class Instrument(Driver):
         """
         Open the hardware connection.
         """
-        self.xmlrpc.connect()
+        self.xmlrpc.open()
 
 
     def is_connected(self):
@@ -95,13 +96,13 @@ class Instrument(Driver):
         return self.xmlrpc.checkConnection()
 
 
-    def register(self):
-        Driver.register(self)
-
+    def register(self, bench):
         self.open()
         connected = self.is_connected()
         if not(connected):
             raise IOError("Keithley Multimeter not connected.")
+
+        Driver.register(self, bench)
 
 
     def close(self):
@@ -148,7 +149,7 @@ class Instrument(Driver):
     
     # ----------------------- Keithley generic command ------------------
 
-    def send(self, command, timeout = None):
+    def send(self, command, timeout = 1.0):
         """
         Send a command through the serial port.
         Read the answer from the serial port.
@@ -160,9 +161,13 @@ class Instrument(Driver):
 
         # logging.info("Keithley.send() called.")
         # logging.info("  command = [%s]" % command)
-        answer = self.xmlrpc.send(command, timeout = timeout)
+        answer = self.xmlrpc.send(command, timeout)
         # logging.info("  answer = [%s]" % answer)
         # logging.info("Keithley.send() done.")
+        esr = self.xmlrpc.get_error_status()
+        if esr != 0:
+            raise IOError("Keithley command [%s] failed: error code ESR = %d." 
+                          % (command, esr))
         return answer
 
     # ----------------------- Keithley identification -------------------
