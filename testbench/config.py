@@ -10,7 +10,7 @@ config = {
     # =====================================================================
 
     'dummy': {
-        'host'        : 'lpnp190',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/null'],
         'driver'      : 'dummy_dummy',
         'port'        : 8666,
@@ -18,7 +18,7 @@ config = {
         },
 
     'wallace': {
-        'host'        : 'lpnp190',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/null'],
         'driver'      : 'wallace_gromit',
         'port'        : 8999,
@@ -35,9 +35,10 @@ config = {
     # 
     #
     'reb': {
-        'host'        : 'lpnws4122',
+        'host'        : 'lpnlsstacq',
         # 'devices'     : ['/dev/laser'],
-        'driver'      : 'ccd_reb' #,
+        'driver'      : 'ccd_reb',
+        'reb_id'      : 2
         # 'port'        : 8082,
         # 'commandline' : 'laserthorlabs'
         },
@@ -47,9 +48,10 @@ config = {
     # 
     #
     'reb2': {
-        'host'        : 'lpnws4122',
+        'host'        : 'lpnlsstacq',
         # 'devices'     : ['/dev/laser'],
         'driver'      : 'ccd_reb2' #,
+        'reb_id'      : 2
         # 'port'        : 8082,
         # 'commandline' : 'laserthorlabs'
         },
@@ -74,7 +76,7 @@ config = {
     # option 2: no-GUI ultra simple control with keithley-server
     #
     # 'bss': {
-    #     'host'        : 'lpnp190',
+    #     'host'        : 'lpnlsstbench',
     #     'devices'     : ['/dev/ttyS11'],
     #     'driver'      : 'power_backsubstrate',
     #     'port'        : 8088,
@@ -82,11 +84,11 @@ config = {
     #     },
 
     'bss': {
-        'host'        : 'lpnp190',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyS11'],
         'driver'      : 'power_backsubstrate_ks',
         'port'        : 8201,
-        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=lpnp190 --port=8201'
+        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=lpnlsstbench --port=8201'
         },
     #
     # ---------------------------------------------------------------------
@@ -105,7 +107,7 @@ config = {
     # laserthorlabs
     #
     'laser': {
-        'host'        : 'lpnp190',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/laser'],
         'driver'      : 'laser_thorlabs',
         'port'        : 8082,
@@ -196,7 +198,7 @@ config = {
     # xyz-server -d
     #
     'xyz' : {
-        'host'        : 'lpnp190',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
         'driver'      : 'xyz_pollux',
         'port'        : 8101,
@@ -213,7 +215,7 @@ config = {
     # keithley-server -d
     #
     'keithley' : {
-        'host'        : 'lpnp190',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyS1'],
         'driver'      : 'keithley_ks',
         'port'        : 8102,

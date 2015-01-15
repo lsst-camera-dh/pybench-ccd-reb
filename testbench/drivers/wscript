@@ -23,6 +23,7 @@ def build(bld):
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py', 
                   'driver.py',
+                  'ccd_reb.py',
                   # 'power_backsubstrate.py',
                   'power_backsubstrate_ks.py',
                   'laser_thorlabs.py',
