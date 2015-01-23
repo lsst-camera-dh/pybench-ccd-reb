@@ -126,13 +126,13 @@ class Instrument(Driver):
         Close the safety shutter.
         Return the shutter state (1: opened, 0: closed).
         """
-        return self.xmlrpc.openShutter()
+        return self.xmlrpc.closeShutter()
 
-    def isOpen(self):
+    def shutterIsOpen(self):
         """
         Return the shutter state (Open = True, Close = False)
         """
-        status = self.xmlrpc.status()
+        status = self.status()
         return bool(status[0])
 
     # ===================================================================
@@ -154,14 +154,30 @@ class Instrument(Driver):
             self.filter_position += 1
         return self.xmlrpc.moveFilterWheel()
 
+    def filterWheelIsMoving(self):
+        """
+        Tell if the filter wheel is still moving (True) or not (False).
+        """
+        status = self.status()
+        if status[2] == -1:
+            return True
+        return False
+
+    # Higher level function
     def moveFilter(self, position = 1):
         """
         Move the filter wheel to the specified position [1-6].
         You should check the wheel movement with the status() method.
         """
         self.homeFilterWheel()
+        while self.filterWheelIsMoving():
+            time.sleep(1)
+
         for i in xrange(position):
             self.moveFilterWheel()
+            while self.filterWheelIsMoving():
+                time.sleep(1)
+            
 
     # ===================================================================
 

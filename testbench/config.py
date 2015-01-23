@@ -119,7 +119,7 @@ config = {
     # oriel /dev/ttyUSB3 8089
     #
     'QTH': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyUSB3'],
         'driver'      : 'lamp_oriel',
         'port'        : 8089,
@@ -131,7 +131,7 @@ config = {
     # oriel /dev/ttyUSB2 8085
     #
     'XeHg': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyUSB2'],
         'driver'      : 'lamp_oriel',
         'port'        : 8085,
@@ -147,7 +147,7 @@ config = {
     # triax /dev/ttyUSB0 8086
     #
     'triax': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyUSB0'],
         'driver'      : 'monochromator_triax',
         'port'        : 8086,
@@ -169,7 +169,7 @@ config = {
     # ttl
     #
     'ttl': {
-        'host'        : 'lpnlsst',
+        'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/comedi0'],
         'driver'      : 'ttl_ni',
         'port'        : 8083,
