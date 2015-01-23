@@ -58,8 +58,8 @@ class Instrument(Driver):
 
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
-
-
+        
+        self.filter_position = None # unknown by default
 
     def open(self):
         """
@@ -134,6 +134,7 @@ class Instrument(Driver):
         Move the filter wheel to its home position.
         You should check the wheel movement with the status() method.
         """
+        self.filter_position = 0
         return self.xmlrpc.homeFilterWheel()
 
     def moveFilterWheel(self):
@@ -141,6 +142,8 @@ class Instrument(Driver):
         Move the filter wheel (by one step).
         You should check the wheel movement with the status() method.
         """
+        if self.filter_position is not None:
+            self.filter_position += 1
         return self.xmlrpc.moveFilterWheel()
 
     def moveFilter(self, position = 1):
@@ -195,22 +198,44 @@ class Instrument(Driver):
             'DRIVER' : 'ttl / ttl_ni' 
             }
 
-        # for channel in self.allchannels:
-        #     # current 
-        #     key = 'CURR_CH%d' % channel
-        #     comment = '[mA] Current in laser diode %d in mA' % channel
-        #     value = self.getCurrent(channel)
-        #     keys.append(key)
-        #     values[key] = value
-        #     comments[key] = comment
+        # status
 
-        #     # current 
-        #     key = 'POW_CH%d' % channel
-        #     comment = '[mW] Output Power for laser diode %d in mW' % channel
-        #     value = self.getPower(channel)
-        #     keys.append(key)
-        #     values[key] = value
-        #     comments[key] = comment
+        status = self.status()
+
+        # LMIRROR  -> QTH or XeHg
+        key = 'LMIRROR'
+        comment = 'lamps mirror position : QTH or XeHg'
+        value = status[3]
+        keys.append(key)
+        values[key] = value
+        comments[key] = comment
+
+        # SAFSHUT  -> 0 / 1
+        key = 'SAFSHUT'
+        comment = 'safety shutter position 0=closed 1=open'
+        value = status[0]
+        keys.append(key)
+        values[key] = value
+        comments[key] = comment
+
+        # SPHSHUT  -> 0 / 1
+        key = 'SPHSHUT'
+        comment = 'integrating sphere shutter position 0=closed 1=open'
+        value = status[1]
+        keys.append(key)
+        values[key] = value
+        comments[key] = comment
+
+        # LMPFILT  -> unknown (-1) or position [1-???]
+        key = 'LMPFILT'
+        comment = 'lamp filter position'
+        if self.filter_position == None:
+            value = -1
+        else:
+            value = self.filter_position
+        keys.append(key)
+        values[key] = value
+        comments[key] = comment
 
         return keys, values, comments
 
