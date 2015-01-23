@@ -50,7 +50,7 @@ config = {
     'reb2': {
         'host'        : 'lpnlsstacq',
         # 'devices'     : ['/dev/laser'],
-        'driver'      : 'ccd_reb2' #,
+        'driver'      : 'ccd_reb2',
         'reb_id'      : 2
         # 'port'        : 8082,
         # 'commandline' : 'laserthorlabs'
