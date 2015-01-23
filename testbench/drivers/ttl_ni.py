@@ -106,7 +106,7 @@ class Instrument(Driver):
     #  Instrument specific methods
     # ===================================================================
 
-    def openShutter(self):
+    def status(self):
         """
         Return [ secShutterState(0,1), mellesShutterState(0,1),
                  wheel(-1: moving, 0: home, 1: other), ("QTH","XeHg") ]
