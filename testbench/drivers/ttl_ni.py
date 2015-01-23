@@ -108,6 +108,14 @@ class Instrument(Driver):
 
     def openShutter(self):
         """
+        Return [ secShutterState(0,1), mellesShutterState(0,1),
+                 wheel(-1: moving, 0: home, 1: other), ("QTH","XeHg") ]
+        """
+        return self.xmlrpc.status()
+
+
+    def openShutter(self):
+        """
         Open the safety shutter.
         Return the shutter state (1: opened, 0: closed).
         """
