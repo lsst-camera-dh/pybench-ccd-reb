@@ -27,9 +27,11 @@ which generates ttl signals (through Edo software and XML-RPC)
 # status()          returns [ secShutterState(0,1), mellesShutterState(0,1),
 #                         wheel(-1: moving, 0: home, 1: other), ("QTH","XeHg")
 
+import time
+import xmlrpclib
+
 from driver import Driver
 
-import xmlrpclib
 
 # =======================================================================
 
@@ -142,7 +144,7 @@ class Instrument(Driver):
         Move the filter wheel to its home position.
         You should check the wheel movement with the status() method.
         """
-        self.filter_position = 0
+        self.filter_position = 1
         return self.xmlrpc.homeFilterWheel()
 
     def moveFilterWheel(self):
@@ -169,11 +171,15 @@ class Instrument(Driver):
         Move the filter wheel to the specified position [1-6].
         You should check the wheel movement with the status() method.
         """
+
+        if position not in range(1,7):
+            raise ValueError("Invalid filter position: should be in [1-6]")
+
         self.homeFilterWheel()
         while self.filterWheelIsMoving():
             time.sleep(1)
 
-        for i in xrange(position):
+        for i in xrange(position - 1):
             self.moveFilterWheel()
             while self.filterWheelIsMoving():
                 time.sleep(1)
