@@ -630,8 +630,9 @@ class FPGA(object):
     def __init__(self, ctrl_host = None, reb_id = 2):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
-        self.cabac_top = cabac.CABAC()
-        self.cabac_bottom = cabac.CABAC()
+        # declare two CABACs for each stripe even if they will not be used (at least we will want to initialize to 0)
+        self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
+        self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
 
     # def open(self):
@@ -1140,38 +1141,38 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def get_cabac_config(self, s): # strip 's'
+    def get_cabac_config(self, s): # stripe 's'
         """
-        read CABAC configuration for strip <s>,
+        read CABAC configuration for stripe <s>,
         store it in the CABAC objects and the header string.
         """
         if s not in [0,1,2]:
-            raise ValueError("Invalid REB strip (%d)" % s)
+            raise ValueError("Invalid REB stripe (%d)" % s)
 
         self.write(0x500001, s) # starts the CABAC config readout
 
         top_config    = self.read(0x500110, 5) # 0 - 4
         bottom_config = self.read(0x500120, 5) # 0 - 4
 
-        self.cabac_top.set_from_registers(top_config)
-        self.cabac_bottom.set_from_registers(bottom_config)
+        self.cabac_top[s].set_from_registers(top_config)
+        self.cabac_bottom[s].set_from_registers(bottom_config)
 
-        config = self.cabac_top.get_header("T")
-        config.update(self.cabac_bottom.get_header("B"))
+        config = self.cabac_top[s].get_header("%dT" % s)
+        config.update(self.cabac_bottom[s].get_header("%dB" % s))
             
         return config
 
     # ----------------------------------------------------------
 
-    def send_cabac_config(self, s): # strip 's'
+    def send_cabac_config(self, s=0): # stripe 's'
         """
-        Writes the current CABAC objects to the FPGA registers
+        Writes the current CABAC objects of the given stripe to the FPGA registers
         """
         if s not in [0,1,2]:
-            raise ValueError("Invalid REB strip (%d)" % s)
+            raise ValueError("Invalid REB stripe (%d)" % s)
         
-        regs_top = self.cabac_top.write_to_registers()
-        regs_bottom = self.cabac_bottom.write_to_registers()
+        regs_top = self.cabac_top[s].write_to_registers()
+        regs_bottom = self.cabac_bottom[s].write_to_registers()
         
         for regnum in range(0,5):
             self.write(0x500010 + regnum, regs_top[regnum])
@@ -1181,36 +1182,36 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def set_cabac_value(self, param, value):
+    def set_cabac_value(self, param, value, s=0):
         """
-        Sets the CABAC parameter at the given value on both CABACs.
+        Sets the CABAC parameter at the given value on both CABACs of the given stripe.
+        Default value for retro-compatibility.
         """
-    
-        self.cabac_top.set_cabac_fromstring(param, value)
-        self.cabac_bottom.set_cabac_fromstring(param, value)
+        self.cabac_top[s].set_cabac_fromstring(param, value)
+        self.cabac_bottom[s].set_cabac_fromstring(param, value)
 
     # ----------------------------------------------------------
 
-    def check_cabac_value(self, param, value):
+    def check_cabac_value(self, param, value, s=0):
         """
-        Gets the current value of the CABAC objects 
-        for the given parameter and checks that it is correct.
+        Gets the current value of the CABAC objects for the given parameter on the given stripe
+        and checks that it is correct.
         """
-        prgm = ( self.cabac_top.get_cabac_fromstring(param) + 
-                 self.cabac_bottom.get_cabac_fromstring(param) )
+        prgm = ( self.cabac_top[s].get_cabac_fromstring(param) +
+                 self.cabac_bottom[s].get_cabac_fromstring(param) )
 
         for prgmval in prgm:
             if (abs(prgmval - value)>0.2):
                 raise StandardError(
-                    "CABAC readback different from setting for %s: %f != %f" % 
+                    "CABAC readback different from setting for %s: %f != %f" %
                     (param, prgmval, value) )
 
 
      # ----------------------------------------------------------
 
-    def reset_cabac(self, s): # strip 's'
+    def reset_cabac(self, s=0): # stripe 's'
         """
-        Writes the current 0 to all the FPGA CABAC registers
+        Writes 0 to all the FPGA CABAC registers for stripe s
         """
         if s not in [0,1,2]:
             raise ValueError("Invalid REB strip (%d)" % s)
@@ -1221,4 +1222,11 @@ class FPGA(object):
 
         self.write(0x500000, s) # starts the CABAC configuration
 
-   # ----------------------------------------------------------
+    # ----------------------------------------------------------
+
+    def apply_aspic_settings(self, stripes, locations):
+        """
+        Apply all stored settings to the ASPIC(s) designed by the stripes set (amongst 0,1,2) and the locations set
+        (amongst 1 for bottom, 2 for top, 3 for both).
+        :return:
+        """
