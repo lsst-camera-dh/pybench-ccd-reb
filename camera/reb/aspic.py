@@ -68,19 +68,101 @@ class ASPIC(object):
         else:
             raise ValueError("Erroneous gain value for ASPIC")
 
+    def write_gain_rc(self):
+        """
+        Takes values in the object and writes them in register format.
+        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
+        """
+        return self.Gain << 4 + self.RC
+
+    def write_clamps(self):
+        """
+        Takes values in the object and writes them in register format.
+        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
+        """
+        return self.write_clamps()
+
+    def write_modes(self):
+        """
+        Takes values in the object and writes them in register format.
+        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
+        """
+        return self.AF1 << 1 + self.TM
+
+
     def write_all_registers(self):
         """
         Takes values in the object and writes them in register format.
         Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
         """
-        regs = {}
+        regs = {}  # dict for use in writing registers at FPGA level
 
-        regs[0] = self.Gain << 4 + self.RC
-        regs[1] = self.Clamps
-        regs[2] = self.AF1 << 1 + self.TM
+        regs[0] = self.write_gain_rc()
+        regs[1] = self.write_clamps()
+        regs[2] = self.write_modes()
 
         return regs
 
+    def read_gain_rc(self, reg, check=True):
+        """
+        Takes values of register from readback and updates the object. If 'check' is True, checks against previous
+        values.
+        Note that this should be applied to the right ASPIC object(s).
+        """
+        ExpectedGain = self.Gain
+        ExpectedRC = self.RC
+        self.RC = reg & 0xF
+        self.Gain = (reg >> 4) & 0xF
+        if check:
+            if ExpectedGain != self.Gain:
+                print("Warning: unexpected value for Gain readback: %d" % self.Gain)
+            if ExpectedRC != self.RC:
+                print("Warning: unexpected value for RC readback: %d" % self.RC)
+
+    def read_clamps(self, reg, check=True):
+        """
+        Takes values of register from readback and updates the object. If 'check' is True, checks against previous
+        values.
+        Note that this should be applied to the right ASPIC object(s).
+        """
+        Expected = self.Clamps
+
+        self.Clamps = reg & 0xFF
+
+        if check:
+            if Expected != self.Clamps:
+                print("Warning: unexpected value for clamps readback: %d" % self.Clamps)
+
+
+    def read_modes(self, reg, check=True):
+        """
+        Takes values of register from readback and updates the object. If 'check' is True, checks against previous
+        values.
+        Note that this should be applied to the right ASPIC object(s).
+        """
+        ExpectedAF1 = self.AF1
+        ExpectedTM = self.TM
+        self.TM = reg & 0x1
+        self.AF1 = (reg >> 1) & 0x1
+        if check:
+            if ExpectedAF1 != self.AF1:
+                print("Warning: unexpected value for AF1 readback: %d" % self.AF1)
+            if ExpectedTM != self.TM:
+                print("Warning: unexpected value for TM readback: %d" % self.TM)
+
+    def read_all_registers(self, regs, check=True):
+        """
+        Takes values of registers from readback and updates the object. If 'check' is True, checks against previous
+        values.
+        Note that this should be applied to the right ASPIC object(s).
+        """
+        if len(regs) < 3:
+            print("Error: need three registers for complete readback.")
+
+        else:
+            self.read_gain_rc(regs[0], check)
+            self.read_clamps(regs[1], check)
+            self.read_modes(regs[2], check)
 
 
 
