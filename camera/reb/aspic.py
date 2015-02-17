@@ -66,7 +66,27 @@ class ASPIC(object):
         if c>=0 and c<=7.1:
             self.Clamps += 1 << int(c)
         else:
-            raise ValueError("Erroneous gain value for ASPIC")
+            raise ValueError("Erroneous clamp channel for ASPIC")
+
+    def set_aspic_fromstring(self, param, value):
+        """
+        Sets any ASPIC parameter as given by param.
+        :param param:
+        :param value:
+        :return:
+        """
+        if param == "Gain":
+            self.set_gain(value)
+        elif param == "RC":
+            self.set_RC(value)
+        elif param == "Clamps":
+            self.Clamps = value & 0xFF
+        elif param == "TM":
+            self.set_TM(value)
+        elif param == "AF1":
+            self.set_AF1(value)
+        else :
+            raise ValueError("No ASPIC parameter with this name: "+ param)
 
     def write_gain_rc(self):
         """
@@ -95,7 +115,7 @@ class ASPIC(object):
         Takes values in the object and writes them in register format.
         Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
         """
-        regs = {}  # dict for use in writing registers at FPGA level
+        regs = []
 
         regs[0] = self.write_gain_rc()
         regs[1] = self.write_clamps()

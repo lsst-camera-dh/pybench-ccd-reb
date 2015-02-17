@@ -11,6 +11,7 @@ import re
 import subprocess
 
 import cabac
+import aspic
 import bidi
 
 ## -----------------------------------------------------------------------
@@ -630,9 +631,12 @@ class FPGA(object):
     def __init__(self, ctrl_host = None, reb_id = 2):
         self.reb_id = reb_id
         self.ctrl_host = ctrl_host
-        # declare two CABACs for each stripe even if they will not be used (at least we will want to initialize to 0)
+        # declare two CABACs and two ASPICs for each stripe even if they will not be used
+        # (at least we will want to initialize to 0)
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
+        self.aspic_top = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
+        self.aspic_bottom = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
 
     # def open(self):
@@ -1224,9 +1228,64 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def apply_aspic_settings(self, stripes, locations):
+    def get_aspic_config(self, s=0):
         """
-        Apply all stored settings to the ASPIC(s) designed by the stripes set (amongst 0,1,2) and the locations set
-        (amongst 1 for bottom, 2 for top, 3 for both).
+        Read ASPIC configurations for the given stripe and updates objects in class.
+        :param s:
+        """
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB stripe (%d)" % s)
+
+        topconfig = []
+        bottomconfig = []
+        stripecode = 1 << (26+s)
+        for address in range(2):
+            # send for reading top ASPIC
+            position = 1 << 25
+            self.write(0xB00000, stripecode + position + address << 16)
+            # read answer
+            topconfig.append(self.read(0xB00010+s, 1)[0])
+            # send for reading bottom ASPIC
+            position = 1 << 24
+            self.write(0xB00000, stripecode + position + address << 16)
+            # read answer
+            bottomconfig.append(self.read(0xB00010+s, 1)[0])
+
+        self.aspic_top[s].read_all_registers(topconfig, False)  # not checking here
+        self.aspic_bottom[s].read_all_registers(bottomconfig, False)
+
+    def send_aspic_config(self, s=0, loc=3):
+        """
+        Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
+        (1 for bottom, 2 for top, 3 for both).
         :return:
         """
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB stripe (%d)" % s)
+        if loc not in [1,2,3]:
+            raise ValueError("Invalid Location code (%d)" % loc)
+
+        stripecode = 1 << (26+s) + 1 << 23  # 23 to write to ASPIC
+        if loc==1 or loc==3:
+            # bottom ASPIC
+            position = 1 << 24
+            AspicData = self.aspic_bottom[s].write_all_registers()
+            for address in range(2):
+                AspicComm = stripecode + position + address << 16 + AspicData[address]
+                self.write(0xB00000, AspicComm)
+        if loc==2 or loc==3:
+            # top ASPIC
+            position = 1 << 25
+            AspicData = self.aspic_top[s].write_all_registers()
+            for address in range(2):
+                AspicComm = stripecode + position + address << 16 + AspicData[address]
+                self.write(0xB00000, AspicComm)
+
+   def set_aspic_value(self, param, value, s=0, loc=3):
+        """
+        Sets the ASPIC parameter at the given value on ASPICs of the given stripe at the given location.
+        """
+        self.aspic_top[s].set_aspic_fromstring(param, value)
+        self.aspic_bottom[s].set_aspic_fromstring(param, value)
+
+
