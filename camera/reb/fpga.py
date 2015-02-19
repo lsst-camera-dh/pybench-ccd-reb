@@ -1258,7 +1258,6 @@ class FPGA(object):
         """
         Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
         (1 for bottom, 2 for top, 3 for both).
-        :return:
         """
         if s not in [0,1,2]:
             raise ValueError("Invalid REB stripe (%d)" % s)

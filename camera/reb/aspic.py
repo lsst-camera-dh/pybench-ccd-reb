@@ -75,11 +75,11 @@ class ASPIC(object):
         :param value:
         :return:
         """
-        if param == "Gain":
+        if param == "GAIN":
             self.set_gain(value)
         elif param == "RC":
             self.set_RC(value)
-        elif param == "Clamps":
+        elif param == "CLS":
             self.Clamps = value & 0xFF
         elif param == "TM":
             self.set_TM(value)
@@ -184,5 +184,41 @@ class ASPIC(object):
             self.read_clamps(regs[1], check)
             self.read_modes(regs[2], check)
 
+    def get_aspic_fromstring(self, param):
+        """
+        Reads any ASPIC parameter as given by param.
+        :param param:
+        :return:
+        """
+        if param == "GAIN":
+            return self.gain
+        elif param == "RC":
+            return self.RC
+        elif param == "CLS":
+            return self.Clamps
+        elif param == "TM":
+            return self.TM
+        elif param == "AF1":
+            return self.AF1
+        else :
+            raise ValueError("No ASPIC parameter with this name: "+ param)
+
+    def get_header(self, position = ''):
+        """
+        Writes current ASPIC settings to a dictionary to include in FITS header file.
+        'position' is a string to indicate top or bottom and/or stripe.
+        """
+
+        header = {}
+
+        suffix = ""
+        if position != '':
+            suffix = "_" + position
+
+        for field in ['GAIN', 'RC', 'CLS', 'TM', 'AF1']:
+            key = field + suffix
+            header[key] = self.get_aspic_fromstring(field)
+
+        return header
 
 
