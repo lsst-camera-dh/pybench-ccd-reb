@@ -1228,9 +1228,10 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def get_aspic_config(self, s=0):
+    def get_aspic_config(self, s=0, check=False):
         """
         Read ASPIC configurations for the given stripe and updates objects in class.
+        If check is true then it checks that the readback is the same as the expected value.
         :param s:
         """
         if s not in [0,1,2]:
@@ -1251,8 +1252,8 @@ class FPGA(object):
             # read answer
             bottomconfig.append(self.read(0xB00010+s, 1)[0])
 
-        self.aspic_top[s].read_all_registers(topconfig, False)  # not checking here
-        self.aspic_bottom[s].read_all_registers(bottomconfig, False)
+        self.aspic_top[s].read_all_registers(topconfig, True)
+        self.aspic_bottom[s].read_all_registers(bottomconfig, True)
 
     def send_aspic_config(self, s=0, loc=3):
         """
@@ -1280,7 +1281,7 @@ class FPGA(object):
                 AspicComm = stripecode + position + address << 16 + AspicData[address]
                 self.write(0xB00000, AspicComm)
 
-   def set_aspic_value(self, param, value, s=0, loc=3):
+    def set_aspic_value(self, param, value, s=0, loc=3):
         """
         Sets the ASPIC parameter at the given value on ASPICs of the given stripe at the given location.
         """
