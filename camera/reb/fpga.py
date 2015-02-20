@@ -1145,13 +1145,18 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
+    def check_location(self, s, loc = 3):
+        if s not in [0,1,2]:
+            raise ValueError("Invalid REB stripe (%d)" % s)
+        if loc not in [1,2,3]:
+            raise ValueError("Invalid Location code (%d)" % loc)
+
     def get_cabac_config(self, s): # stripe 's'
         """
         read CABAC configuration for stripe <s>,
         store it in the CABAC objects and the header string.
         """
-        if s not in [0,1,2]:
-            raise ValueError("Invalid REB stripe (%d)" % s)
+        self.check_location(s)
 
         self.write(0x500001, s) # starts the CABAC config readout
 
@@ -1172,9 +1177,8 @@ class FPGA(object):
         """
         Writes the current CABAC objects of the given stripe to the FPGA registers
         """
-        if s not in [0,1,2]:
-            raise ValueError("Invalid REB stripe (%d)" % s)
-        
+        self.check_location(s)
+
         regs_top = self.cabac_top[s].write_to_registers()
         regs_bottom = self.cabac_bottom[s].write_to_registers()
         
@@ -1191,6 +1195,7 @@ class FPGA(object):
         Sets the CABAC parameter at the given value on both CABACs of the given stripe.
         Default value for retro-compatibility.
         """
+        self.check_location(s)
         self.cabac_top[s].set_cabac_fromstring(param, value)
         self.cabac_bottom[s].set_cabac_fromstring(param, value)
 
@@ -1217,8 +1222,7 @@ class FPGA(object):
         """
         Writes 0 to all the FPGA CABAC registers for stripe s
         """
-        if s not in [0,1,2]:
-            raise ValueError("Invalid REB strip (%d)" % s)
+        self.check_location(s)
 
         for regnum in range(0,5):
             self.write(0x500010 + regnum, 0)
@@ -1234,8 +1238,7 @@ class FPGA(object):
         If check is true then it checks that the readback is the same as the expected value.
         :param s:
         """
-        if s not in [0,1,2]:
-            raise ValueError("Invalid REB stripe (%d)" % s)
+        self.check_location(s)
 
         topconfig = []
         bottomconfig = []
@@ -1260,10 +1263,7 @@ class FPGA(object):
         Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
         (1 for bottom, 2 for top, 3 for both).
         """
-        if s not in [0,1,2]:
-            raise ValueError("Invalid REB stripe (%d)" % s)
-        if loc not in [1,2,3]:
-            raise ValueError("Invalid Location code (%d)" % loc)
+        self.check_location(s, loc)
 
         stripecode = 1 << (26+s) + 1 << 23  # 23 to write to ASPIC
         if loc==1 or loc==3:
@@ -1285,7 +1285,12 @@ class FPGA(object):
         """
         Sets the ASPIC parameter at the given value on ASPICs of the given stripe at the given location.
         """
-        self.aspic_top[s].set_aspic_fromstring(param, value)
-        self.aspic_bottom[s].set_aspic_fromstring(param, value)
+        self.check_location(s, loc)
+
+        if loc==1 or loc==3:
+            self.aspic_bottom[s].set_aspic_fromstring(param, value)
+        if loc==2 or loc==3:
+            self.aspic_top[s].set_aspic_fromstring(param, value)
+
 
 

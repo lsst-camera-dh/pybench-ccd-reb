@@ -23,7 +23,6 @@ def generate_tag(number):
 
 class TestREB(object):
     xmlfile = "camera/reb/sequencer-soi.xml"
-    seq = rebxml.fromxmlfile(xmlfile)  # use self.seq.program to track addresses
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
     imglines = 2020
@@ -36,15 +35,16 @@ class TestREB(object):
 
     def __init__(self):
         self.f = fpga.FPGA()
-        self.load_sequencer_fromfile()
+        #self.load_sequencer()
         self.imgtag = generate_tag(0)
         self.f.set_time(self.imgtag)
 
-    def load_sequencer_fromfile(self):
+    def load_sequencer(self):
         """
         Loads all sequencer content.
         :return:
         """
+        self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
         self.f.send_sequencer(self.seq)
 
     def update_filetag(self, t):
@@ -128,5 +128,39 @@ class TestREB(object):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
         self.send_aspic_config(settings)
 
+    def set_parameter(self, param, value, stripe = 0, location = 3):
+        """
+        Generic interface to set any single parameter of the REB, and check the readback if possible.
+        :param param:
+        :param value:
+        :return:
+        """
+        if param in self.f.aspic_top[0].params:
+            self.f.set_aspic_value(param, value, stripe, location)
+            self.f.send_aspic_config(stripe)
+            time.sleep(0.1)
+            self.f.get_aspic_config(stripe, check=True)
+
+        elif param in self.f.cabac_top[0].params:
+            self.f.set_cabac_value(param, value, stripe)
+            self.f.send_cabac_config(stripe)
+            time.sleep(0.1)
+            self.f.get_cabac_config(stripe)
+            self.f.check_cabac_value(param, value, stripe)
+
+        elif param in ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH"]:
+            self.f.set_clock_voltages({param: value})
+
+        elif param == "I_OS":
+            self.f.set_current_source({param: value}, stripe)
+
+        else:
+            print("Warning: unidentified parameter for the REB: %s" % param)
+
 if __name__ == "__main__":
 
+    R = TestREB()
+    R.stripes = [0, 1, 2]
+    R.config_cabac()
+    R.config_aspic()
+    R.load_sequencer()

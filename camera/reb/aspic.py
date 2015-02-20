@@ -12,6 +12,8 @@ class ASPIC(object):
     """
     ASPIC settings
     """
+    params = ["GAIN", "RC", "AF1", "TM", "CLS"]  # list of accepted parameters
+
     def __init__(self):
         self.Gain = 0b1000
         self.RC = 0b0000
@@ -191,7 +193,7 @@ class ASPIC(object):
         :return:
         """
         if param == "GAIN":
-            return self.gain
+            return self.Gain
         elif param == "RC":
             return self.RC
         elif param == "CLS":
