@@ -1150,6 +1150,7 @@ class FPGA(object):
             raise ValueError("Invalid REB stripe (%d)" % s)
         if loc not in [1,2,3]:
             raise ValueError("Invalid Location code (%d)" % loc)
+        return True
 
     def get_cabac_config(self, s): # stripe 's'
         """
