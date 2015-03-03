@@ -1259,6 +1259,11 @@ class FPGA(object):
         self.aspic_top[s].read_all_registers(topconfig, True)
         self.aspic_bottom[s].read_all_registers(bottomconfig, True)
 
+        config = self.aspic_top[s].get_header("%dT" % s)
+        config.update(self.aspic_bottom[s].get_header("%dB" % s))
+
+        return config
+
     def send_aspic_config(self, s=0, loc=3):
         """
         Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
@@ -1292,6 +1297,15 @@ class FPGA(object):
             self.aspic_bottom[s].set_aspic_fromstring(param, value)
         if loc==2 or loc==3:
             self.aspic_top[s].set_aspic_fromstring(param, value)
+
+    def reset_aspic(self, s=0):
+        """
+        Sends the reset command to the ASPICs of the appropriate stripe(s).
+        :return:
+        """
+        self.check_location(s)
+
+        self.write(0xB00001, s)
 
 
 
