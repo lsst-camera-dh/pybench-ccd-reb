@@ -2,15 +2,14 @@
 #
 # LSST / LPNHE
 #
-# Testing REB2
+# Testing WREB
 
 __author__ = 'juramy'
 
 import time
 import os
-#import subprocess
-import lsst.camera.reb.fpga as fpga
-import lsst.camera.reb.xml as rebxml
+import fpga
+import rebxml
 import numpy as np
 import pyfits
 
@@ -58,7 +57,7 @@ def get_sequencer_hdu(seq):
     return exthdu
 
 class TestREB(object):
-    xmlfile = "camera/reb/sequencer-soi.xml"
+    xmlfile = "sequencer-wreb.xml"
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
     imglines = 2020
@@ -76,7 +75,7 @@ class TestREB(object):
         #self.load_sequencer()
         self.imgtag = generate_tag(0)
         self.f.set_time(self.imgtag)
-        self.full18bits = False  # TODO: check if version of the firmware is 16-bit or 18-bit
+        self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
         self.config = {}
 
     def set_stripes(self, liststripes):
@@ -140,14 +139,10 @@ class TestREB(object):
             for param in iter(params):
                 self.f.set_cabac_value(param, params[param], s)
 
-            self.f.send_cabac_config(s)
-
             time.sleep(0.1)
 
-            self.config.update(self.f.get_cabac_config(s))
+            self.config.update(self.f.get_cabac_config(s), check=True)
 
-            for param in iter(params):
-                self.f.check_cabac_value(param, params[param], s)
 
     def send_aspic_config(self, params):
         """
@@ -227,8 +222,7 @@ class TestREB(object):
             self.f.set_cabac_value(param, value, stripe)
             self.f.send_cabac_config(stripe)
             time.sleep(0.1)
-            self.f.get_cabac_config(stripe)
-            self.f.check_cabac_value(param, value, stripe)
+            self.f.get_cabac_config(stripe, check=True)
 
         elif param in ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH"]:
             self.f.set_clock_voltages({param: value})
@@ -489,14 +483,14 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
         #hdulist.append(exthdu)
 
         hdulist.writeto(fitsname, clobber=True)
-       print("Wrote FITS file "+fitsname)
+        print("Wrote FITS file "+fitsname)
     else:
         print("Did not find the expected raw file: %s " % imgname)
 
 if __name__ == "__main__":
 
-    R = TestREB()
-    R.set_stripes([0, 1, 2])
+    R = TestREB(rriaddress=0xFF)
+    R.set_stripes([0])
     R.config_cabac()
     R.config_aspic()
     R.load_sequencer()
