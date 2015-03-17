@@ -57,6 +57,7 @@ def get_sequencer_hdu(seq):
     return exthdu
 
 class TestREB(object):
+    useCABACbias = False
     xmlfile = "sequencer-wreb.xml"
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
@@ -138,9 +139,7 @@ class TestREB(object):
         for s in self.stripes:
             for param in iter(params):
                 self.f.set_cabac_value(param, params[param], s)
-
             time.sleep(0.1)
-
             self.config.update(self.f.get_cabac_config(s), check=True)
 
 
@@ -152,16 +151,38 @@ class TestREB(object):
         for s in self.stripes:
             for param in iter(params):
                 self.f.set_aspic_value(param, params[param], s)
-
-            self.f.send_aspic_config(s)
-
             time.sleep(0.1)
-
             self.config.update(self.f.get_aspic_config(s, check=True))
 
-    def config_cabac(self):
+    def set_biases(self, params):
         """
-        Sequence to power up the CCD safely.
+        Specific to CABAC1: safe change in bias values.
+        :param params: dict
+        :return:
+        """
+        #TODO: insert check that OG < ODs
+        if self.useCABACbias:
+            #TODO: increasing CABAC1 slowly along with power suppply.
+            for k,v in params.iteritems():
+                self.send_cabac_config({k:v})
+        else:
+            #TODO: external supplies
+            pass
+
+    def REBpowerup(self):
+        """
+        To be executed at power-up to safeguard CABAC1.
+        :return:
+        """
+        self.f.cabac_safety()  # this disables the high-Z safety features
+        if not self.useCABACbias:
+            #TODO: put biases just below power supply to VddOD.
+            pass
+        #Else: values should be put at 0 after checking that VddOD is not too high
+
+    def CCDpowerup(self):
+        """
+        Sequence to power up the CCD.
         """
 
         #sets the default sequencer clock states to 0
@@ -169,13 +190,13 @@ class TestREB(object):
 
         #starting drain voltages on CABAC
         drains = {"OD": 29, "GD": 24, "RD": 18}
-        self.send_cabac_config(drains)
+        self.set_biases(drains)
 
         time.sleep(1)
 
         #starting OG voltage on CABAC
         og = {"OG": 3.5}
-        self.send_cabac_config(og)
+        self.set_biases(og)
 
         #time.sleep(1)
 
@@ -216,19 +237,20 @@ class TestREB(object):
             self.f.set_aspic_value(param, value, stripe, location)
             self.f.send_aspic_config(stripe)
             time.sleep(0.1)
-            self.f.get_aspic_config(stripe, check=True)
+            self.config.update(self.f.get_aspic_config(stripe, check=True))
 
         elif param in self.f.cabac_top[0].params:
-            self.f.set_cabac_value(param, value, stripe)
-            self.f.send_cabac_config(stripe)
+            self.f.set_cabac_value(param, value, stripe, location)
             time.sleep(0.1)
-            self.f.get_cabac_config(stripe, check=True)
+            self.config.update(self.f.get_cabac_config(stripe, check=True))
 
         elif param in ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH"]:
             self.f.set_clock_voltages({param: value})
+            self.config.update({param: value})
 
         elif param == "I_OS":
             self.f.set_current_source({param: value}, stripe)
+            self.config.update({param: value})
 
         else:
             print("Warning: unidentified parameter for the REB: %s" % param)
@@ -491,6 +513,7 @@ if __name__ == "__main__":
 
     R = TestREB(rriaddress=0xFF)
     R.set_stripes([0])
-    R.config_cabac()
+    R.REBpowerup()
+    R.CCDpowerup()
     R.config_aspic()
     R.load_sequencer()

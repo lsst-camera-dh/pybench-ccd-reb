@@ -24,93 +24,96 @@ class ASPIC(object):
     def set_gain(self, g):
         """
         Changes gain setting, defined as an integer between 0 and 15.
-        :param g:
-        :return:
+        Returns the register value to write.
+        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
+        :param g: int
+        :return: int
         """
-        if g>=0 and g<=15.1:
+        if g>=-0.1 and g<=15.1:
             self.Gain = int(g)
         else:
             raise ValueError("Erroneous gain value for ASPIC")
+        return self.Gain << 4 + self.RC
 
     def set_RC(self, rc):
         """
         Changes RC constant setting, defined as an integer between 0 and 15.
-        :param g:
-        :return:
+        Returns the register value to write.
+        :param rc: int
+        :return: int
         """
-        if g>=0 and g<=15.1:
+        if rc>=-0.1 and rc<=15.1:
             self.RC = int(rc)
         else:
             raise ValueError("Erroneous RC value for ASPIC")
+        return self.Gain << 4 + self.RC
 
     def set_TM(self, tm):
         """
-        Sets the Transparent Mode to true or false.
-        :param tm:
-        :return:
+        Sets the Transparent Mode to true or false. Returns the register value to write.
+        :param tm: bool
+        :return: int
         """
         self.TM = tm
+        return 1<<17 + self.AF1 << 1 + self.TM
 
     def set_AF1(self, af1):
         """
-        Sets the Transparent Mode to true or false.
-        :param tm:
-        :return:
+        Sets the Amplifier Forced to 1 mode to true or false. Returns the register value to write.
+        :param af1: bool
+        :return: int
         """
         self.AF1 = af1
+        return 1<<17 + self.AF1 << 1 + self.TM
 
     def clamp_channel(self, c):
         """
-        Puts a permanent clamp on the given channel (0 to 7).
-        :param c:
+        Puts a permanent clamp on the given channel (0 to 7). Returns the register value to write with current
+        clamped channels.
+        :param c: int
         :return:
         """
-        if c>=0 and c<=7.1:
+        if c>=-0.1 and c<=7.1:
             self.Clamps += 1 << int(c)
         else:
             raise ValueError("Erroneous clamp channel for ASPIC")
+        return 1<<16 + self.Clamps
+
+    def clamp_all(self, clamping = True):
+        """
+        Clamps or unclamps all channels at once, depending of the value of the 'clamping' parameter.
+        Returns the register value to write.
+        :param clamping: bool
+        :return: int
+        """
+        if clamping:
+            self.Clamps = 0xFF
+        else:
+            self.Clamps = 0
+        return 1<<16 + self.Clamps
 
     def set_aspic_fromstring(self, param, value):
         """
         Sets any ASPIC parameter as given by param.
-        :param param:
+        :param param: string
         :param value:
         :return:
         """
+        reg = 0
         if param == "GAIN":
-            self.set_gain(value)
+            reg = self.set_gain(value)
         elif param == "RC":
-            self.set_RC(value)
+            reg = self.set_RC(value)
         elif param == "CLS":
             self.Clamps = value & 0xFF
+            reg = 1<<16 + self.Clamps
         elif param == "TM":
-            self.set_TM(value)
+            reg = self.set_TM(value)
         elif param == "AF1":
-            self.set_AF1(value)
+            reg = self.set_AF1(value)
         else :
             raise ValueError("No ASPIC parameter with this name: "+ param)
-
-    def write_gain_rc(self):
-        """
-        Takes values in the object and writes them in register format.
-        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
-        """
-        return self.Gain << 4 + self.RC
-
-    def write_clamps(self):
-        """
-        Takes values in the object and writes them in register format.
-        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
-        """
-        return 1<<16 + self.Clamps
-
-    def write_modes(self):
-        """
-        Takes values in the object and writes them in register format.
-        Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
-        """
-        return 1<<17 + self.AF1 << 1 + self.TM
-
+        return reg
 
     def write_all_registers(self):
         """
@@ -119,9 +122,9 @@ class ASPIC(object):
         """
         regs = []
 
-        regs[0] = self.write_gain_rc()
-        regs[1] = self.write_clamps()
-        regs[2] = self.write_modes()
+        regs[0] = self.Gain << 4 + self.RC
+        regs[1] = 1<<16 + self.Clamps
+        regs[2] = 1<<17 + self.AF1 << 1 + self.TM
 
         return regs
 
@@ -217,7 +220,7 @@ class ASPIC(object):
         if position != '':
             suffix = "_" + position
 
-        for field in ['GAIN', 'RC', 'CLS', 'TM', 'AF1']:
+        for field in self.params:
             key = field + suffix
             header[key] = self.get_aspic_fromstring(field)
 

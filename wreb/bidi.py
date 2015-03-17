@@ -27,6 +27,18 @@ class BidiMap(object):
             return self[k]
         return d
 
+    def update(self, input):
+        """
+        Add input dictionary and updates reverse lookup.
+        :param input:
+        :return:
+        """
+        self.dictionary.update(input)
+        for k,v in input.iteritems():
+            self.reverse[v] = k
+        #
+        self.dictionary.update(self.reverse)
+
     def __repr__(self):
         return repr(self.dictionary)
 

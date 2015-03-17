@@ -1208,6 +1208,25 @@ class FPGA(object):
                 comm = stripecode + position + reg
                 self.write(0x500000, comm)
 
+    # ----------------------------------------------------------
+
+    def cabac_safety(self, s=0):
+        """
+        Removes CABAC1 safety at the given stripe (required at CABAC1 start-up).
+        """
+        self.check_location(s)
+
+        stripecode = 1 << (26+s) + 1 << 23  # 23 to write to CABAC
+        position = 1 << 24
+        regs = self.cabac_bottom[s].safety_off()
+        for reg in regs:
+            comm = stripecode + position + reg
+            self.write(0x500000, comm)
+        position = 1 << 25
+        regs = self.cabac_top[s].safety_off()
+        for reg in regs:
+            comm = stripecode + position + reg
+            self.write(0x500000, comm)
 
      # ----------------------------------------------------------
 
@@ -1232,6 +1251,7 @@ class FPGA(object):
         topconfig = []
         bottomconfig = []
         stripecode = 1 << (26+s)
+
         for address in range(2):
             # send for reading top ASPIC
             position = 1 << 25
@@ -1252,7 +1272,28 @@ class FPGA(object):
 
         return config
 
-    def send_aspic_config(self, s=0, loc=3):
+    def set_aspic_value(self, param, value, s=0, loc=3):
+        """
+        Sets the ASPIC parameter at the given value on ASPICs of the given stripe at the given location and stores in
+        object.
+        """
+        self.check_location(s, loc)
+        stripecode = 1 << (26+s)
+
+        if loc==1 or loc==3:
+            # bottom ASPIC
+            position = 1 << 24
+            reg = self.aspic_bottom[s].set_aspic_fromstring(param, value)
+            AspicComm = stripecode + position + reg
+            self.write(0xB00000, AspicComm)
+        if loc==2 or loc==3:
+            # top ASPIC
+            position = 1 << 25
+            reg = self.aspic_top[s].set_aspic_fromstring(param, value)
+            AspicComm = stripecode + position + reg
+            self.write(0xB00000, AspicComm)
+
+    def apply_aspic_config(self, s=0, loc=3):
         """
         Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
         (1 for bottom, 2 for top, 3 for both).
@@ -1274,17 +1315,6 @@ class FPGA(object):
             for address in range(2):
                 AspicComm = stripecode + position + AspicData[address]
                 self.write(0xB00000, AspicComm)
-
-    def set_aspic_value(self, param, value, s=0, loc=3):
-        """
-        Sets the ASPIC parameter at the given value on ASPICs of the given stripe at the given location.
-        """
-        self.check_location(s, loc)
-
-        if loc==1 or loc==3:
-            self.aspic_bottom[s].set_aspic_fromstring(param, value)
-        if loc==2 or loc==3:
-            self.aspic_top[s].set_aspic_fromstring(param, value)
 
     def reset_aspic(self, s=0):
         """

@@ -5,6 +5,8 @@
 #
 # Laurent Le Guillou - Claire Juramy
 
+import bidi
+
 ## -----------------------------------------------------------------------
 
 def parse_reg_clock(reg):
@@ -42,8 +44,8 @@ class CABAC(object):
     GDconv = 0.049
     RDconv = 0.049
     OGconv = 0.049
-    params = ["OD", "OD0", "OD1", "GD", "RD", "OG", "IP", "IS", "IRG", "IC", "SPA",
-              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]  # list of accepted parameters
+    params = {"OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IRG", "IC", "SPA",
+              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS"}  # set of accepted parameters
     settings = {}
     conv = {'OD0': ODconv,
             'OD1': ODconv, 
@@ -51,9 +53,10 @@ class CABAC(object):
             'RD': RDconv,
             'OG': OGconv,
             'SPA': GDconv}
-    SPIaddress = {"OD0EM": 8, "OD0RM": 9, "OD1EM": 10, "OD1RM": 11, "RD": 12, "GD": 13, "OG": 14, "SPA": 15,
+    SPIaddress = bidi.BidiMap([],[])
+    SPIaddress.update({"OD0EM": 8, "OD0RM": 9, "OD1EM": 10, "OD1RM": 11, "RD": 12, "GD": 13, "OG": 14, "SPA": 15,
         "P0": 0, "P1": 1, "P2": 2, "P3": 3, "S0": 4, "S1": 5, "S2": 6, "RG": 7,
-        "MUX": 16, "OFMUX": 17, "EXPCLK": 18, "HIZ": 19, "SAFE": 20, "PULS": 21}
+        "MUX": 16, "OFMUX": 17, "EXPCLK": 18, "HIZ": 19, "SAFE": 20, "PULS": 21})
 
     def __init__(self):
         for param in self.params:
@@ -87,14 +90,12 @@ class CABAC(object):
             regs = self.set_cabac_fromstring("OD0", value)
             regs.extend(self.set_cabac_fromstring("OD1", value))
         elif param == "OD0":
-            value_int = int(value // self.conv[param]) & 0x3ff
-            regs.append(self.spi_reg("OD0EM", value_int))
-            regs.append(self.spi_reg("OD0RM", value_int))
+            regs = self.set_cabac_fromstring("OD0EM", value)
+            regs.extend(self.set_cabac_fromstring("OD0RM", value))
         elif param == "OD1":
-            value_int = int(value // self.conv[param]) & 0x3ff
-            regs.append(self.spi_reg("OD1EM", value_int))
-            regs.append(self.spi_reg("OD1RM", value_int))
-        elif param in ["GD", "RD", "OG", "SPA"]:
+            regs = self.set_cabac_fromstring("OD1EM", value)
+            regs.extend(self.set_cabac_fromstring("OD1RM", value))
+        elif param in ["GD", "RD", "OG", "SPA", "OD0EM", "OD0RM", "OD1EM", "OD1RM"]:
             value_int = int(value // self.conv[param]) & 0x3ff
             regs.append(self.spi_reg(param, value_int))
         elif param in ["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]:
@@ -113,6 +114,9 @@ class CABAC(object):
             regs = self.set_cabac_fromstring("IP", value)
             regs.extend(self.set_cabac_fromstring("IS", value))
             regs.extend(self.set_cabac_fromstring("RG", value))
+        elif param == "PULS":
+            value_int = value & 1
+            regs.append(self.spi_reg(param, value_int))
 
         self.settings[param] = value_int
         return regs
@@ -131,14 +135,19 @@ class CABAC(object):
     def set_from_register(self, reg, check=True):
         """
         Takes result from CABAC readback and updates the object.
-        If check is True, then checks against the stored value.
+        If check is True, also checks against the stored value.
         """
         
         #splits register
         data = reg & 0xFFFF
         address = (reg >> 16)  & 0x3f
 
-        #TODO: find dict key from content in SPIaddress
+        name = self.SPIaddress.reverse[address]
+        saved = self.settings[name]
+        self.settings[name] = data
+        if check:
+            if saved != data:
+                print("Warning: unexpected value for %s: %d" % (name, data))
 
     def read_all_registers(self, regs, check=True):
         """
@@ -155,10 +164,25 @@ class CABAC(object):
 
 
     # ----------------------------------------------------------
-
-    def get_header(self, position = ''):#string 'T' or 'B' or nothing
+    def safety_off(self):
         """
-        Writes current CABAC settings to a dictionary to include in FITS header file
+        Specific to CABAC1: neutralizes all safety features. To be done when powering up CABAC1.
+        """
+        regs = [self.spi_reg("HIZ", 0b111111), self.spi_reg("SAFE", 0)]
+        self.settings["HIZ"] = 0b111111
+        self.settings["SAFE"] = 0
+
+        return regs
+
+
+    #TODO: mux management
+
+    # ----------------------------------------------------------
+
+    def get_header(self, position = ''):
+        """
+        Writes current CABAC settings to a dictionary to include in FITS header file.
+        :param position: string = 'T' or 'B' plus stripe information, or nothing
         """
 
         header = {}
@@ -167,13 +191,13 @@ class CABAC(object):
         if position != '':
             suffix = "_" + position
 
-        for field in ['OD0', 'OD1', 'GD', 'RD', 'OG']:
-            key = "V_" + field + suffix
-            header[key] = self.settings[field] * self.conv[field]
-
-        header["I_P" + suffix]  = self.settings["IP"]
-        header["I_S" + suffix]  = self.settings["IS"]
-        header["I_RG" + suffix] = self.settings["RG"]
+        for field in self.params:
+            if field in ['OD0', 'OD1', 'GD', 'RD', 'OG']:
+                key = "V_" + field + suffix
+                header[key] = self.settings[field] * self.conv[field]
+            else:
+                key = field + suffix
+                header[key] = self.settings[field]
 
         return header
 
