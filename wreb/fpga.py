@@ -625,6 +625,7 @@ class FPGA(object):
     program_mem_size  = 1024 # ???
     serial_conv = 0.00306 #rough conversion for DACs, no guarantee
     parallel_conv = 0.00348
+    bias_conv = 0.003  # placeholder conversion for alternative biases
 
     # --------------------------------------------------------------------
 
@@ -731,6 +732,8 @@ class FPGA(object):
         # out : 
         # '  Register 0x4 (4): 0x9164efa8 (-1855656024)\n'
         # print err
+        # printout for debug
+        print command
 
     # --------------------------------------------------------------------
 
@@ -1144,6 +1147,41 @@ class FPGA(object):
         return {key: self.dacs[key]}
 
     # ----------------------------------------------------------
+
+    def set_bias_voltages(self, biases):
+        """
+        For WREB: sets the alternative bias voltages.
+        :param biases: dict
+        :return:
+        """
+        outputnum = {"GD":0,"RD":1,"OG":2,"OGS":3}
+
+        for key in iter(biases):
+            if key in outputnum:
+                self.dacs[key] = int(biases[key]/self.bias_conv)& 0xfff
+            else:
+                if key == "OD":
+                    pass  # set by power supply ?
+                else:
+                    raise ValueError("Unknown voltage key: %s, could not be set" % key)
+
+            self.write(0x400100, self.dacs[key] + (outputnum[key]<<12) )
+
+        # activates DAC outputs
+        self.write(0x400101, 1)
+
+
+    # ----------------------------------------------------------
+    def cabac_power(self, enable):
+        """
+        Enables/disables power to CABAC low voltage power supplies (specific to WREB).
+        :param enable: bool
+        :return:
+        """
+        if enable:
+            self.write(0xD00001, 0x1F)
+        else:
+            self.write(0xD00001, 0)
 
     def check_location(self, s, loc = 3):
         if s not in [0,1,2]:

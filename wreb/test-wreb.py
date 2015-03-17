@@ -57,7 +57,7 @@ def get_sequencer_hdu(seq):
     return exthdu
 
 class TestREB(object):
-    useCABACbias = False
+    useCABACbias = True
     xmlfile = "sequencer-wreb.xml"
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
@@ -76,6 +76,7 @@ class TestREB(object):
         #self.load_sequencer()
         self.imgtag = generate_tag(0)
         self.f.set_time(self.imgtag)
+        self.f.write(0x400006, 0)  # pattern generator off
         self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
         self.config = {}
 
@@ -142,7 +143,6 @@ class TestREB(object):
             time.sleep(0.1)
             self.config.update(self.f.get_cabac_config(s), check=True)
 
-
     def send_aspic_config(self, params):
         """
         Sets ASPIC parameters, writes to ASPIC, then check readback.
@@ -156,25 +156,41 @@ class TestREB(object):
 
     def set_biases(self, params):
         """
-        Specific to CABAC1: safe change in bias values.
+        Specific to CABAC1: safe change in bias values. Manages alternative biases.
         :param params: dict
         :return:
         """
-        #TODO: insert check that OG < ODs
+        if "OG" in params:
+            od = 0
+            try:
+                od = self.config["OD"]
+            except:
+                print("No saved value of OD to compare to OG")
+            if params["OG"]> od:
+                print("Warning: trying to program OG at %f, higher than OD, cancelling." % params["OG"])
+                params.pop("OG")
+
         if self.useCABACbias:
-            #TODO: increasing CABAC1 slowly along with power suppply.
+            #TODO: increasing CABAC1 slowly along with power suppply
             for k,v in params.iteritems():
                 self.send_cabac_config({k:v})
         else:
-            #TODO: external supplies
-            pass
+            self.f.set_bias_voltages(params)
+        self.config.update(params)
 
     def REBpowerup(self):
         """
         To be executed at power-up to safeguard CABAC1.
         :return:
         """
-        self.f.cabac_safety()  # this disables the high-Z safety features
+        # power-up the CABAC low voltages
+        self.f.cabac_power(True)
+        # power-up the clock rails
+        dacs = {"V_SL": 0.5, "V_SH": 9.5, "V_RGL": 0, "V_RGH": 10, "V_PL": 0, "V_PH": 9.0}
+        self.f.set_clock_voltages(dacs)
+        self.config.update(dacs)
+        # disable the high-Z safety features
+        self.f.cabac_safety()
         if not self.useCABACbias:
             #TODO: put biases just below power supply to VddOD.
             pass
@@ -189,7 +205,7 @@ class TestREB(object):
         self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
         #starting drain voltages on CABAC
-        drains = {"OD": 29, "GD": 24, "RD": 18}
+        drains = {"OD": 10, "GD": 9, "RD": 8}
         self.set_biases(drains)
 
         time.sleep(1)
@@ -198,17 +214,10 @@ class TestREB(object):
         og = {"OG": 3.5}
         self.set_biases(og)
 
-        #time.sleep(1)
-
-        #sets clock rails
-        dacs = {"V_SL": 0, "V_SH": 8.03, "V_RGL": 0, "V_RGH": 8.03, "V_PL": 0, "V_PH": 9.13}
-        self.f.set_clock_voltages(dacs)
-        self.config.update(dacs)
-
         time.sleep(1)
 
         #sets clock currents on CABAC
-        iclock = {"IC": 255}
+        iclock = {"IC": 200}
         self.send_cabac_config(iclock)
         #time.sleep(1)
 
@@ -235,7 +244,6 @@ class TestREB(object):
         """
         if param in self.f.aspic_top[0].params:
             self.f.set_aspic_value(param, value, stripe, location)
-            self.f.send_aspic_config(stripe)
             time.sleep(0.1)
             self.config.update(self.f.get_aspic_config(stripe, check=True))
 
@@ -513,7 +521,9 @@ if __name__ == "__main__":
 
     R = TestREB(rriaddress=0xFF)
     R.set_stripes([0])
+    # here power on other voltages
     R.REBpowerup()
+    time.sleep(0.1)
     R.CCDpowerup()
     R.config_aspic()
     R.load_sequencer()
