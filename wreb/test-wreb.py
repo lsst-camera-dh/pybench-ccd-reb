@@ -57,7 +57,7 @@ def get_sequencer_hdu(seq):
     return exthdu
 
 class TestREB(object):
-    useCABACbias = True
+    useCABACbias = False
     xmlfile = "sequencer-wreb.xml"
     rawimgdir = "/home/lsst/test_images"
     fitstopdir = "/home/lsst/test_frames"
@@ -171,9 +171,11 @@ class TestREB(object):
                 params.pop("OG")
 
         if self.useCABACbias:
-            #TODO: increasing CABAC1 slowly along with power suppply
+            #TODO: increasing CABAC1 slowly along with power supply
+            # this must include the spare output
             for k,v in params.iteritems():
                 self.send_cabac_config({k:v})
+            #self.send_cabac_config({"SPA": v})
         else:
             self.f.set_bias_voltages(params)
         self.config.update(params)
@@ -183,38 +185,37 @@ class TestREB(object):
         To be executed at power-up to safeguard CABAC1.
         :return:
         """
+        #sets the default sequencer clock states to 0
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
         # power-up the CABAC low voltages
         self.f.cabac_power(True)
-        # power-up the clock rails
-        dacs = {"V_SL": 0.5, "V_SH": 9.5, "V_RGL": 0, "V_RGH": 10, "V_PL": 0, "V_PH": 9.0}
-        self.f.set_clock_voltages(dacs)
-        self.config.update(dacs)
+        # power-up the clock rails (in V)
+        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
+        self.f.set_clock_voltages(rails)
+        self.config.update(rails)
         # disable the high-Z safety features
         self.f.cabac_safety()
         if not self.useCABACbias:
-            #TODO: put biases just below power supply to VddOD.
-            pass
-        #Else: values should be put at 0 after checking that VddOD is not too high
+            # put CABAC biases just below power supply to VddOD
+            self.send_cabac_config({"OD": 10, "GD": 10, "RD": 10, "OG": 10, "SPA": 10})
+        # else: all values are at 0, VddOD must not be too high
 
     def CCDpowerup(self):
         """
         Sequence to power up the CCD.
         """
 
-        #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
-
         #starting drain voltages on CABAC
         drains = {"OD": 10, "GD": 9, "RD": 8}
         self.set_biases(drains)
 
-        time.sleep(1)
+        time.sleep(0.5)
 
         #starting OG voltage on CABAC
         og = {"OG": 3.5}
         self.set_biases(og)
 
-        time.sleep(1)
+        time.sleep(0.5)
 
         #sets clock currents on CABAC
         iclock = {"IC": 200}
@@ -527,3 +528,4 @@ if __name__ == "__main__":
     R.CCDpowerup()
     R.config_aspic()
     R.load_sequencer()
+    #R.execute_sequence("Acquisition")

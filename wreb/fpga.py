@@ -623,9 +623,11 @@ class FPGA(object):
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
     program_mem_size  = 1024 # ???
-    serial_conv = 0.00306 #rough conversion for DACs, no guarantee
-    parallel_conv = 0.00348
-    bias_conv = 0.003  # placeholder conversion for alternative biases
+    serial_conv = 0.00366 # conversion for DAC (V/LSB), to be calibrated
+    parallel_conv = 0.00366
+    bias_conv = 0.00732  # placeholder conversion for alternative biases
+    od_conv = 0.0195  # placeholder for alternative OD
+    og_conv = 0.00122  # placeholder for alternative OG
 
     # --------------------------------------------------------------------
 
@@ -1076,21 +1078,23 @@ class FPGA(object):
         Sets voltages as defined in the input dictionary, 
         keeps others as previously defined.
         """
-        
-        #values to be set in the register for each output
-        outputnum = {"V_SL":0,"V_SH":1,"V_RGL":2,"V_RGH":3,"V_PL":4,"V_PH":5,"HEAT1":6,"HEAT2":7}
-
+        #values to be set in the register for each output (shift will be +1)
+        outputnum = {"SL":0, "SU":2, "RGL":4, "RGU":6, "PL":16, "PU":18}
+        # shift: output will follow positive dac minus (factor tbc) shift dac
         for key in iter(voltages):
-            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+            # TODO: calculate shifts here
+            shift = 0
+            if key in ["SL","SU","RGL","RGU"]:
                 self.dacs[key] = int(voltages[key]/self.serial_conv)& 0xfff
-            elif key in ["V_PL", "V_PH"]:
+            elif key in ["PL", "PU"]:
                 self.dacs[key] = int(voltages[key]/self.parallel_conv)& 0xfff
-            elif key in ["HEAT1", "HEAT2"]:
-                self.dacs[key] = int(voltages[key]) & 0xfff
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
-            
-            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12) )
+            self.dacs[key+"_S"] = shift
+
+            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12))
+            # shift
+            self.write(0x400000, shift + ((outputnum[key]+1) << 12))
          
         # activates DAC outputs
         self.write(0x400001, 1)
@@ -1103,10 +1107,11 @@ class FPGA(object):
         """
         fitsheader = {}
         for key in iter(self.dacs):
-            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+            if key in ["SL","SU","RGL","RGU"]:
                 # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
                 fitsheader[key]= self.dacs[key]*self.serial_conv
-            elif key in ["V_PL", "V_PH"]:
+                #TODO: subtract shift here with appropriate factor: self.dacs[key+"_S"]
+            elif key in ["PL", "PU"]:
                 # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
                 fitsheader[key]= self.dacs[key]*self.parallel_conv
             else:
@@ -1120,6 +1125,7 @@ class FPGA(object):
     def set_current_source(self, currents, ccdnum = 0):
         """
         Sets current source DAC value for given CCD (0, 1, 2).
+        The same FPGA registers are also used to write OD and FS if used, see set_bias_voltages()
         """
         
         key = "I_OS"
@@ -1155,21 +1161,27 @@ class FPGA(object):
         :return:
         """
         outputnum = {"GD":0,"RD":1,"OG":2,"OGS":3}
-
+        # OG seen by CCD will be the difference OG-OGS
+        outputnum1 = {"FSB": 3, "OD": 6}
         for key in iter(biases):
-            if key in outputnum:
+            if key in ["GD","RD"]:
                 self.dacs[key] = int(biases[key]/self.bias_conv)& 0xfff
+                self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
+            elif key == "OD":
+                self.dacs[key] = int(biases[key]/self.od_conv)& 0xfff
+                self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
+            elif key == "OG":
+                self.dacs[key] = int(biases[key]/self.og_conv)& 0xfff
+                self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
+            elif key == "FSB":
+                self.dacs[key] = int(biases[key]/self.serial_conv)& 0xfff
+                self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
             else:
-                if key == "OD":
-                    pass  # set by power supply ?
-                else:
-                    raise ValueError("Unknown voltage key: %s, could not be set" % key)
-
-            self.write(0x400100, self.dacs[key] + (outputnum[key]<<12) )
+                raise ValueError("Unknown voltage key: %s, could not be set" % key)
 
         # activates DAC outputs
+        self.write(0x400011, 1)
         self.write(0x400101, 1)
-
 
     # ----------------------------------------------------------
     def cabac_power(self, enable):
