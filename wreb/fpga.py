@@ -623,8 +623,7 @@ class FPGA(object):
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
     program_mem_size  = 1024 # ???
-    serial_conv = 0.00366 # conversion for DAC (V/LSB), to be calibrated
-    parallel_conv = 0.00366
+    clock_conv = 0.00366 # conversion for DAC (V/LSB), to be calibrated
     bias_conv = 0.00732  # placeholder conversion for alternative biases
     od_conv = 0.0195  # placeholder for alternative OD
     og_conv = 0.00122  # placeholder for alternative OG
@@ -1082,19 +1081,21 @@ class FPGA(object):
         outputnum = {"SL":0, "SU":2, "RGL":4, "RGU":6, "PL":16, "PU":18}
         # shift: output will follow positive dac minus (factor tbc) shift dac
         for key in iter(voltages):
-            # TODO: calculate shifts here
-            shift = 0
-            if key in ["SL","SU","RGL","RGU"]:
-                self.dacs[key] = int(voltages[key]/self.serial_conv)& 0xfff
-            elif key in ["PL", "PU"]:
-                self.dacs[key] = int(voltages[key]/self.parallel_conv)& 0xfff
+            key_shift = key+"_S"
+            if key in ["SL","SU","RGL","RGU","PL", "PU"]:
+                if voltages[key] > 0:
+                    self.dacs[key] = int(voltages[key]/self.clock_conv)& 0xfff
+                    self.dacs[key_shift] = 0
+                else:
+                    self.dacs[key] = 0
+                    self.dacs[key_shift] = int(-voltages[key]/self.clock_conv)& 0xfff
+            # TODO: check factor for shift
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
-            self.dacs[key+"_S"] = shift
 
             self.write(0x400000, self.dacs[key] + (outputnum[key]<<12))
-            # shift
-            self.write(0x400000, shift + ((outputnum[key]+1) << 12))
+            # shift at address+1
+            self.write(0x400000, self.dacs[key_shift] + ((outputnum[key]+1) << 12))
          
         # activates DAC outputs
         self.write(0x400001, 1)
@@ -1106,17 +1107,10 @@ class FPGA(object):
         No readback available, using values stored in fpga object.
         """
         fitsheader = {}
-        for key in iter(self.dacs):
-            if key in ["SL","SU","RGL","RGU"]:
-                # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
-                fitsheader[key]= self.dacs[key]*self.serial_conv
-                #TODO: subtract shift here with appropriate factor: self.dacs[key+"_S"]
-            elif key in ["PL", "PU"]:
-                # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
-                fitsheader[key]= self.dacs[key]*self.parallel_conv
-            else:
-                # fitsheader[key]= "{:d}".format(self.dacs[key])
-                fitsheader[key]= self.dacs[key]
+        for key in ["SL","SU","RGL","RGU","PL", "PU"]:
+            # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
+            fitsheader[key]= (self.dacs[key]-self.dacs[key+"_S"])*self.clock_conv
+            #TODO: check appropriate factor for shift
 
         return fitsheader
 
@@ -1171,10 +1165,16 @@ class FPGA(object):
                 self.dacs[key] = int(biases[key]/self.od_conv)& 0xfff
                 self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
             elif key == "OG":
-                self.dacs[key] = int(biases[key]/self.og_conv)& 0xfff
+                if biases[key] > 0:
+                    self.dacs[key] = int(biases[key]/self.og_conv)& 0xfff
+                    self.dacs["OGS"] = 0
+                else:
+                    self.dacs[key] = 0
+                    self.dacs["OGS"] = int(-biases[key]/self.og_conv)& 0xfff
                 self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
+                self.write(0x400100, self.dacs["OGS"] + (outputnum["OGS"]<<12))
             elif key == "FSB":
-                self.dacs[key] = int(biases[key]/self.serial_conv)& 0xfff
+                self.dacs[key] = int(biases[key]/self.clock_conv)& 0xfff
                 self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)

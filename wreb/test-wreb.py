@@ -205,13 +205,13 @@ class TestREB(object):
         Sequence to power up the CCD.
         """
 
-        #starting drain voltages on CABAC
+        #starting drain voltages
         drains = {"OD": 10, "GD": 9, "RD": 8}
         self.set_biases(drains)
 
         time.sleep(0.5)
 
-        #starting OG voltage on CABAC
+        #starting OG voltage
         og = {"OG": 3.5}
         self.set_biases(og)
 
@@ -231,6 +231,51 @@ class TestREB(object):
         #rewrite default state of sequencer (to avoid reloading all functions)
         self.f.send_function(0, self.seq.get_function(0))
 
+        # see control of BSS
+
+    def CCDshutdown(self):
+        """
+        Sequence to shutdown power to the CCD.
+        """
+        # see control of BSS here
+
+        #shuts current on CS gate
+        dacOS = {"I_OS": 0}
+        for s in self.stripes:
+            self.f.set_current_source(dacOS, s)
+        self.config.update(dacOS)
+
+        #shuts clock currents on CABAC
+        iclock = {"IC": 0}
+        self.send_cabac_config(iclock)
+
+        time.sleep(0.1)
+
+        # shuts OG voltage
+        og = {"OG": 0}
+        self.set_biases(og)
+
+        time.sleep(0.5)
+
+        #shutting drain voltages
+        drains = {"OD": 0, "GD": 0, "RD": 0}
+        self.set_biases(drains)
+
+        time.sleep(0.5)
+
+    def REBshutdown(self):
+        """
+        To be executed when shutting down the WREB to safeguard CABAC1.
+        :return:
+        """
+        # need to bring down VddOD here to < 15V
+        # clock rails first (in V)
+        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
+        self.f.set_clock_voltages(rails)
+        self.config.update(rails)
+        # shutdown the CABAC low voltages
+        self.f.cabac_power(False)
+        # need to shutdown VddOD right here
 
     def config_aspic(self):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
@@ -529,3 +574,4 @@ if __name__ == "__main__":
     R.config_aspic()
     R.load_sequencer()
     #R.execute_sequence("Acquisition")
+    #save_to_fits(R)
