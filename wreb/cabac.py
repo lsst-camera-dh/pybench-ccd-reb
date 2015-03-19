@@ -44,8 +44,8 @@ class CABAC(object):
     GDconv = 0.049
     RDconv = 0.049
     OGconv = 0.049
-    params = {"OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IRG", "IC", "SPA",
-              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS"}  # set of accepted parameters
+    params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IRG", "IC", "SPA",
+              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS"])  # set of accepted parameters
     settings = {}
     conv = {'OD0': ODconv,
             'OD1': ODconv, 

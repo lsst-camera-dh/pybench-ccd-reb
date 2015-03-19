@@ -1,4 +1,4 @@
-# ! /usr/bin/env python
+#! /usr/bin/env python
 #
 # LSST / LPNHE
 #
@@ -414,11 +414,11 @@ class TestREB(object):
         # for 18-bit data:
         # negative numbers are translated, sign is inverted on all data, also make all values positive
         # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
-        buffer = np.vectorize(lambda i: 0x5FFFF-i if i & (1 << 17) else 0x1FFFF-i)(buff)
+        rawdata = np.vectorize(lambda i: 0x5FFFF-i if i & (1 << 17) else 0x1FFFF-i)(buff)
         # TODO: check structure of 16-bit data. It might be already translated back to 18 bits.
         # reshape by channel (all stripes included)
         length = self.imglines * self.imgcols
-        buffer = buffer.reshape(length, self.nchannels)
+        rawdata = rawdata.reshape(length, self.nchannels)
 
         # Creating FITS HDUs:
         # Create empty primary HDU and fills header
@@ -431,7 +431,7 @@ class TestREB(object):
             if channels:  # to skip non-useful channels
                 if num not in channels:
                     continue
-            chan = buffer[0:length,num]
+            chan = rawdata[0:length,num]
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(np.int32)
             # create extension to fits file for each channel
