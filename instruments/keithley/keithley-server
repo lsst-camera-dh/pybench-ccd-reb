@@ -43,9 +43,8 @@ from exceptions import Exception
 
 # ==================================================================
 
-# DEFAULT_HOSTNAME = "lpnlsst"
-DEFAULT_HOSTNAME = "lpnp190"
-DEFAULT_PORT     = 8102
+DEFAULT_HOSTNAME = "lpnlsstbench"
+DEFAULT_PORT     = 8211
 DEFAULT_DEVICE   = "/dev/ttyS1"
 
 SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)

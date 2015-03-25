@@ -7,7 +7,7 @@
 # High level control of the XYZ used on the LSST testbench
 # Tuned for the spot projector
 # XML-RPC server to control it remotely
-# default port: 8101
+# default port: 8201
 #
 # Authors: Laurent Le Guillou 
 # (recycled from DICE control system code)
@@ -44,8 +44,9 @@ class MotorError(Exception): pass
 # ==================================================================
 
 # DEFAULT_HOSTNAME = "lpnlsst"
-DEFAULT_HOSTNAME = "lpnlsstbench.in2p3.fr"
-DEFAULT_PORT     = 8101
+# DEFAULT_HOSTNAME = "lpnlsstbench.in2p3.fr"
+DEFAULT_HOSTNAME = "lpnlsstbench"
+DEFAULT_PORT     = 8201
 SERVER_HOSTNAME = os.getenv("XYZ_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
 SERVER_PORT = int(os.getenv("XYZ_SERVER_PORT", DEFAULT_PORT))
 
@@ -371,7 +372,6 @@ Start the XYZ control server.
     server = XYZServer((SERVER_HOSTNAME, SERVER_PORT))
     server.register_introspection_functions()
 
-    # server = SimpleXMLRPCServer(("dicehead", 8001))
     print "XYZ: Listening on port %s:%d. Waiting for commands." % (SERVER_HOSTNAME, SERVER_PORT)
     
     if options.daemon:

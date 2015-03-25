@@ -87,8 +87,8 @@ config = {
         'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyS11'],
         'driver'      : 'power_backsubstrate_ks',
-        'port'        : 8201,
-        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=lpnlsstbench --port=8201'
+        'port'        : 8301,
+        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=lpnlsstbench --port=8301'
         },
     #
     # ---------------------------------------------------------------------
@@ -194,14 +194,14 @@ config = {
     #  Optical bench motors
     # =====================================================================
     #
-    # XYZ pollux (8101) /dev/ttyS16, /dev/ttyS17, /dev/ttyS18
+    # XYZ pollux (8201) /dev/ttyS16, /dev/ttyS17, /dev/ttyS18
     # xyz-server -d
     #
     'xyz' : {
         'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
         'driver'      : 'xyz_pollux',
-        'port'        : 8101,
+        'port'        : 8201,
         'commandline' : 'xyz-server -d'
         },
 
@@ -211,14 +211,14 @@ config = {
     #  Multimeters / Photodiodes
     # =====================================================================
     #
-    # Keithley 6514 multimeter (8102)
+    # Keithley 6514 multimeter (8211)
     # keithley-server -d
     #
     'keithley' : {
         'host'        : 'lpnlsstbench',
         'devices'     : ['/dev/ttyS1'],
         'driver'      : 'keithley_ks',
-        'port'        : 8102,
+        'port'        : 8211,
         'commandline' : 'keithley-server -d'
         }
 
