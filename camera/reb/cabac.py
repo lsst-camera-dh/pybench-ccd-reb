@@ -30,8 +30,8 @@ class CABAC(object):
     GDconv = 0.1412
     RDconv = 0.1414
     OGconv = 0.01895
-
-    conv = {'OD0': ODconv, 
+    params = ["OD", "GD", "RD", "OG", "IP", "IS", "IRG", "IC"]  # list of accepted parameters
+    conv = {'OD0': ODconv,
             'OD1': ODconv, 
             'GD': GDconv, 
             'RD': RDconv,
