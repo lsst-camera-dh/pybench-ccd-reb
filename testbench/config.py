@@ -84,7 +84,8 @@ config = {
     #     },
 
     'bss': {
-        'host'        : 'lpnlsstbench',
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
         'devices'     : ['/dev/ttyS11'],
         'driver'      : 'power_backsubstrate_ks',
         'port'        : 8301,
@@ -199,7 +200,7 @@ config = {
     #
     'xyz' : {
         # 'host'        : 'lpnlsstbench',
-        'host'        : '134.158.155.98',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
         'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
         'driver'      : 'xyz_pollux',
         'port'        : 8201,
@@ -216,7 +217,8 @@ config = {
     # keithley-server -d
     #
     'keithley' : {
-        'host'        : 'lpnlsstbench',
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
         'devices'     : ['/dev/ttyS1'],
         'driver'      : 'keithley_ks',
         'port'        : 8211,
