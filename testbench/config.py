@@ -198,7 +198,8 @@ config = {
     # xyz-server -d
     #
     'xyz' : {
-        'host'        : 'lpnlsstbench',
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98',
         'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
         'driver'      : 'xyz_pollux',
         'port'        : 8201,
