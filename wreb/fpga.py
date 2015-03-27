@@ -639,7 +639,7 @@ class FPGA(object):
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.aspic_top = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
         self.aspic_bottom = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
-        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
+        self.dacs = {}
 
     # def open(self):
     #     "Opening the connection ?"
@@ -691,7 +691,7 @@ class FPGA(object):
             if line == '': continue
             matches = re.match("Register ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)\: ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)", line)
             if not(matches):
-                raise IOError("Failed to read register 0x%0x on REB %d" % (address, reb))
+                raise IOError("Failed to read register 0x%0x on FPGA" % address)
             r = int(matches.group(1), base=16)
             v = int(matches.group(4), base=16)
 
@@ -735,6 +735,22 @@ class FPGA(object):
         # print err
         # printout for debug
         print command
+
+    def write_spi(self, address, stripe, position, register, write=False):
+        """
+        Writes to an SPI serial link through the FPGA in the format defined for ASPIC and CABAC.
+        Position = 1 for bottom, 2 for top.
+        :param address: int
+        :param stripe: int
+        :param position: int
+        :param register: int
+        :return:
+        """
+        stripecode = 1 << (26+stripe)
+        positioncode = position << 24
+        if write:
+            stripecode += (1 << 23)
+        self.write(address, stripecode + positioncode + register)
 
     # --------------------------------------------------------------------
 
@@ -874,15 +890,6 @@ class FPGA(object):
         for i in xrange(16):
             funcs[i] = self.dump_function(i)
         return funcs
-
-    # --------------------------------------------------------------------
-
-    def set_image_size(self, size):
-        """
-        Set image size (in ADC count).
-        """
-        # rriClient 2 write 0x400005 0x0010F3D8
-        self.write(0x400005, size)
 
     # --------------------------------------------------------------------
 
@@ -1074,8 +1081,8 @@ class FPGA(object):
     
     def set_clock_voltages(self, voltages):
         """
-        Sets voltages as defined in the input dictionary, 
-        keeps others as previously defined.
+        Sets voltages as defined in the input dictionary, keeps others as previously defined.
+        Note that order in which they are programmed does not matter as they are all activated together.
         """
         #values to be set in the register for each output (shift will be +1)
         outputnum = {"SL":0, "SU":2, "RGL":4, "RGU":6, "PL":16, "PU":18}
@@ -1130,7 +1137,7 @@ class FPGA(object):
             raise ValueError(
                 "No key found for current source (%s), could not be set." % key)
             
-        self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
+        self.write(0x400010, self.dacs[key] + (ccdnum <<12))
                 
         #activates DAC output
         self.write(0x400011, 1)
@@ -1212,16 +1219,14 @@ class FPGA(object):
 
         topconfig = []
         bottomconfig = []
-        stripecode = 1 << (26+s)
+
         for address in range(22):
             # send for reading top CABAC
-            position = 1 << 25
-            self.write(0x500000, stripecode + position + address << 16)
+            self.write_spi(0x500000, s, 2, address << 16)
             # read answer
             topconfig.append(self.read(0x500010+s, 1)[0])
             # send for reading bottom CABAC
-            position = 1 << 24
-            self.write(0x500000, stripecode + position + address << 16)
+            self.write_spi(0x500000, s, 1, address << 16)
             # read answer
             bottomconfig.append(self.read(0x500010+s, 1)[0])
 
@@ -1242,21 +1247,16 @@ class FPGA(object):
         """
         self.check_location(s, loc)
 
-        stripecode = 1 << (26+s) + 1 << 23  # 23 to write to CABAC
         if loc==1 or loc==3:
             # bottom CABAC
-            position = 1 << 24
             regs = self.cabac_bottom[s].set_cabac_fromstring(param, value)
             for reg in regs:
-                comm = stripecode + position + reg
-                self.write(0x500000, comm)
+                self.write_spi(0x500000, s, 1, reg, True)
         if loc==2 or loc==3:
             # top CABAC
-            position = 1 << 25
             regs = self.cabac_top[s].set_cabac_fromstring(param, value)
             for reg in regs:
-                comm = stripecode + position + reg
-                self.write(0x500000, comm)
+                self.write_spi(0x500000, s, 2, reg, True)
 
     # ----------------------------------------------------------
 
@@ -1266,17 +1266,12 @@ class FPGA(object):
         """
         self.check_location(s)
 
-        stripecode = 1 << (26+s) + 1 << 23  # 23 to write to CABAC
-        position = 1 << 24
         regs = self.cabac_bottom[s].safety_off()
         for reg in regs:
-            comm = stripecode + position + reg
-            self.write(0x500000, comm)
-        position = 1 << 25
+            self.write_spi(0x500000, s, 1, reg, True)
         regs = self.cabac_top[s].safety_off()
         for reg in regs:
-            comm = stripecode + position + reg
-            self.write(0x500000, comm)
+            self.write_spi(0x500000, s, 2, reg, True)
 
      # ----------------------------------------------------------
 
@@ -1300,17 +1295,14 @@ class FPGA(object):
 
         topconfig = []
         bottomconfig = []
-        stripecode = 1 << (26+s)
 
         for address in range(2):
             # send for reading top ASPIC
-            position = 1 << 25
-            self.write(0xB00000, stripecode + position + address << 16)
+            self.write_spi(0xB00000, s, 2, address << 16)
             # read answer
             topconfig.append(self.read(0xB00010+s, 1)[0])
             # send for reading bottom ASPIC
-            position = 1 << 24
-            self.write(0xB00000, stripecode + position + address << 16)
+            self.write_spi(0xB00000, s, 1, address << 16)
             # read answer
             bottomconfig.append(self.read(0xB00010+s, 1)[0])
 
@@ -1328,20 +1320,15 @@ class FPGA(object):
         object.
         """
         self.check_location(s, loc)
-        stripecode = 1 << (26+s)
 
         if loc==1 or loc==3:
             # bottom ASPIC
-            position = 1 << 24
             reg = self.aspic_bottom[s].set_aspic_fromstring(param, value)
-            AspicComm = stripecode + position + reg
-            self.write(0xB00000, AspicComm)
+            self.write_spi(0xB00000, s, 1, reg, True)
         if loc==2 or loc==3:
             # top ASPIC
-            position = 1 << 25
             reg = self.aspic_top[s].set_aspic_fromstring(param, value)
-            AspicComm = stripecode + position + reg
-            self.write(0xB00000, AspicComm)
+            self.write_spi(0xB00000, s, 2, reg, True)
 
     def apply_aspic_config(self, s=0, loc=3):
         """
@@ -1350,21 +1337,16 @@ class FPGA(object):
         """
         self.check_location(s, loc)
 
-        stripecode = 1 << (26+s) + 1 << 23  # 23 to write to ASPIC
         if loc==1 or loc==3:
             # bottom ASPIC
-            position = 1 << 24
             AspicData = self.aspic_bottom[s].write_all_registers()
             for address in range(2):
-                AspicComm = stripecode + position + AspicData[address]
-                self.write(0xB00000, AspicComm)
+                self.write_spi(0xB00000, s, 1, AspicData[address], True)
         if loc==2 or loc==3:
             # top ASPIC
-            position = 1 << 25
             AspicData = self.aspic_top[s].write_all_registers()
             for address in range(2):
-                AspicComm = stripecode + position + AspicData[address]
-                self.write(0xB00000, AspicComm)
+                self.write_spi(0xB00000, s, 2, AspicData[address], True)
 
     def reset_aspic(self, s=0):
         """

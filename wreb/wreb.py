@@ -197,7 +197,7 @@ class TestREB(object):
         self.f.cabac_safety()
         if not self.useCABACbias:
             # put CABAC biases just below power supply to VddOD
-            self.send_cabac_config({"OD": 10, "GD": 10, "RD": 10, "OG": 10, "SPA": 10})
+            self.send_cabac_config({"OD": 5, "GD": 5, "RD": 5, "OG": 5, "SPA": 5})
         # else: all values are at 0, VddOD must not be too high
 
     def CCDpowerup(self):
