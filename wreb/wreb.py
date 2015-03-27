@@ -79,6 +79,7 @@ class TestREB(object):
         self.f.write(0x400006, 0)  # pattern generator off
         self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
         self.config = {}
+        self.seq = None  # until loaded
 
     def set_stripes(self, liststripes):
         self.stripes = []
@@ -228,8 +229,11 @@ class TestREB(object):
             self.f.set_current_source(dacOS, s)
         self.config.update(dacOS)
 
-        #rewrite default state of sequencer (to avoid reloading all functions)
-        self.f.send_function(0, self.seq.get_function(0))
+        #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
+        if self.seq:
+            self.f.send_function(0, self.seq.get_function(0))
+        else:
+            self.load_sequencer()
 
         # see control of BSS
 
@@ -238,6 +242,9 @@ class TestREB(object):
         Sequence to shutdown power to the CCD.
         """
         # see control of BSS here
+
+        #sets the default sequencer clock states to 0
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
         #shuts current on CS gate
         dacOS = {"I_OS": 0}
@@ -270,7 +277,7 @@ class TestREB(object):
         """
         # need to bring down VddOD here to < 15V
         # clock rails first (in V)
-        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
+        rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
         self.f.set_clock_voltages(rails)
         self.config.update(rails)
         # shutdown the CABAC low voltages
@@ -572,6 +579,6 @@ if __name__ == "__main__":
     time.sleep(0.1)
     R.CCDpowerup()
     R.config_aspic()
-    R.load_sequencer()
+    #R.load_sequencer()
     #R.execute_sequence("Acquisition")
     #save_to_fits(R)

@@ -734,7 +734,7 @@ class FPGA(object):
         # '  Register 0x4 (4): 0x9164efa8 (-1855656024)\n'
         # print err
         # printout for debug
-        print command
+        #print command
 
     def write_spi(self, address, stripe, position, register, write=False):
         """
@@ -749,8 +749,10 @@ class FPGA(object):
         stripecode = 1 << (26+stripe)
         positioncode = position << 24
         if write:
-            stripecode += (1 << 23)
-        self.write(address, stripecode + positioncode + register)
+            regcode = ((1 << 23) | register) & 0xffffff
+        else:
+            regcode = register & 0x7fffff
+        self.write(address, stripecode + positioncode + regcode)
 
     # --------------------------------------------------------------------
 
@@ -1224,11 +1226,11 @@ class FPGA(object):
             # send for reading top CABAC
             self.write_spi(0x500000, s, 2, address << 16)
             # read answer
-            topconfig.append(self.read(0x500010+s, 1)[0])
+            topconfig.append(self.read(0x500010+s, 1)[0x500010+s])
             # send for reading bottom CABAC
             self.write_spi(0x500000, s, 1, address << 16)
             # read answer
-            bottomconfig.append(self.read(0x500010+s, 1)[0])
+            bottomconfig.append(self.read(0x500010+s, 1)[0x500010+s])
 
         self.cabac_top[s].read_all_registers(topconfig, check)
         self.cabac_bottom[s].read_all_registers(bottomconfig, check)
@@ -1300,11 +1302,11 @@ class FPGA(object):
             # send for reading top ASPIC
             self.write_spi(0xB00000, s, 2, address << 16)
             # read answer
-            topconfig.append(self.read(0xB00010+s, 1)[0])
+            topconfig.append(self.read(0xB00010+s, 1)[0xB00010+s])
             # send for reading bottom ASPIC
             self.write_spi(0xB00000, s, 1, address << 16)
             # read answer
-            bottomconfig.append(self.read(0xB00010+s, 1)[0])
+            bottomconfig.append(self.read(0xB00010+s, 1)[0xB00010+s])
 
         self.aspic_top[s].read_all_registers(topconfig, True)
         self.aspic_bottom[s].read_all_registers(bottomconfig, True)

@@ -47,9 +47,14 @@ class CABAC(object):
     params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IRG", "IC", "SPA",
               "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS"])  # set of accepted parameters
     settings = {}
-    conv = {'OD0': ODconv,
-            'OD1': ODconv, 
-            'GD': GDconv, 
+    conv = {'OD0EM': ODconv,
+            'OD1EM': ODconv,
+            'OD0RM': ODconv,
+            'OD1RM': ODconv,
+            'OD0': ODconv,
+            'OD1': ODconv,
+            'OD': ODconv,
+            'GD': GDconv,
             'RD': RDconv,
             'OG': OGconv,
             'SPA': GDconv}
@@ -77,7 +82,7 @@ class CABAC(object):
         :param value: integer
         :return: integer
         """
-        return self.SPIaddress[param] << 16 + value
+        return (self.SPIaddress[param] << 16) + value
 
     def set_cabac_fromstring(self, param, value):
         """
@@ -106,7 +111,7 @@ class CABAC(object):
         elif param in ["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]:
             value_int = value & 0xff
             # rise and fall currents
-            regs.append(self.spi_reg(param, value_int)* 0x101)
+            regs.append(self.spi_reg(param, value_int * 0x101))
         elif param == "IP":
             value_int = value & 0xff
             for subpar in ["P0", "P1", "P2", "P3"]:
@@ -159,7 +164,7 @@ class CABAC(object):
 
         if check:
             if saved != value_int:
-                print("Warning: unexpected value for %s: %d" % (name, data))
+                print("Warning: unexpected value for %s: %d" % (name, value_int))
 
     def read_all_registers(self, regs, check=True):
         """

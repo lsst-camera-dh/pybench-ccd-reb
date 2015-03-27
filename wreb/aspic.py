@@ -33,7 +33,7 @@ class ASPIC(object):
             self.Gain = int(g)
         else:
             raise ValueError("Erroneous gain value for ASPIC")
-        return self.Gain << 4 + self.RC
+        return (self.Gain << 4) + self.RC
 
     def set_RC(self, rc):
         """
@@ -46,7 +46,7 @@ class ASPIC(object):
             self.RC = int(rc)
         else:
             raise ValueError("Erroneous RC value for ASPIC")
-        return self.Gain << 4 + self.RC
+        return (self.Gain << 4) + self.RC
 
     def set_TM(self, tm):
         """
@@ -55,7 +55,12 @@ class ASPIC(object):
         :return: int
         """
         self.TM = tm
-        return 1<<17 + self.AF1 << 1 + self.TM
+        code = 0
+        if self.TM:
+            code += 1
+        if self.AF1:
+            code += 2
+        return 1<<17 | code
 
     def set_AF1(self, af1):
         """
@@ -64,7 +69,12 @@ class ASPIC(object):
         :return: int
         """
         self.AF1 = af1
-        return 1<<17 + self.AF1 << 1 + self.TM
+        code = 0
+        if self.TM:
+            code += 1
+        if self.AF1:
+            code += 2
+        return 1<<17 | code
 
     def clamp_channel(self, c):
         """
@@ -77,7 +87,7 @@ class ASPIC(object):
             self.Clamps += 1 << int(c)
         else:
             raise ValueError("Erroneous clamp channel for ASPIC")
-        return 1<<16 + self.Clamps
+        return 1<<16 | self.Clamps
 
     def clamp_all(self, clamping = True):
         """
@@ -90,7 +100,7 @@ class ASPIC(object):
             self.Clamps = 0xFF
         else:
             self.Clamps = 0
-        return 1<<16 + self.Clamps
+        return 1<<16 | self.Clamps
 
     def set_aspic_fromstring(self, param, value):
         """
@@ -106,7 +116,7 @@ class ASPIC(object):
             reg = self.set_RC(value)
         elif param == "CLS":
             self.Clamps = value & 0xFF
-            reg = 1<<16 + self.Clamps
+            reg = 1<<16 | self.Clamps
         elif param == "TM":
             reg = self.set_TM(value)
         elif param == "AF1":
@@ -120,11 +130,11 @@ class ASPIC(object):
         Takes values in the object and writes them in register format.
         Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
         """
-        regs = []
+        regs = [0,0,0]
 
-        regs[0] = self.Gain << 4 + self.RC
-        regs[1] = 1<<16 + self.Clamps
-        regs[2] = 1<<17 + self.AF1 << 1 + self.TM
+        regs[0] = self.Gain << 4 | self.RC
+        regs[1] = 1<<16 | self.Clamps
+        regs[2] = self.set_TM(self.TM)
 
         return regs
 
