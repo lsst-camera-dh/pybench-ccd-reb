@@ -149,7 +149,7 @@ class BackSubstrate():
     name = "Keithley 6487"
 
     def __init__(self):
-        self.server = xmlrpclib.ServerProxy("http://lpnlsst:8088/")
+        self.server = xmlrpclib.ServerProxy("http://lpnlsstbench:8087/")
         self.server.connect()
         check_xmlrpc(self.server, "6487")
 
@@ -285,13 +285,13 @@ class Source(object):
 
     def __init__(self, logger=None):
         self.source_name = None
-        self.laser = xmlrpclib.ServerProxy("http://lpnlsst:8082/")
-        self.ttl = xmlrpclib.ServerProxy("http://lpnlsst:8083/")
+        self.laser = xmlrpclib.ServerProxy("http://lpnlsstbench:8082/")
+        self.ttl = xmlrpclib.ServerProxy("http://lpnlsstbench:8083/")
         self.ttl.connect()
         # check_xmlrpc(self.ttl, True)
         # light sources: create objects here, does not try to connect
-        self.qth = xmlrpclib.ServerProxy("http://lpnlsst:8089/")
-        self.xehg = xmlrpclib.ServerProxy("http://lpnlsst:8085/")
+        self.qth = xmlrpclib.ServerProxy("http://lpnlsstbench:8089/")
+        self.xehg = xmlrpclib.ServerProxy("http://lpnlsstbench:8085/")
         self.multi = None
         self.logger = logger
 
