@@ -13,6 +13,7 @@ class ASPIC(object):
     ASPIC settings
     """
     params = ["GAIN", "RC", "AF1", "TM", "CLS"]  # list of accepted parameters
+    # could be cleaned up with bidi for addressing like CABAC1
 
     def __init__(self):
         self.Gain = 0b1000
@@ -190,14 +191,22 @@ class ASPIC(object):
         Takes values of registers from readback and updates the object. If 'check' is True, checks against previous
         values.
         Note that this should be applied to the right ASPIC object(s).
+        :param regs: dict
+        :param check: bool
         """
-        if len(regs) < 3:
-            print("Error: need three registers for complete readback.")
+        # Now accepts any number of registers (in a dictionary).
+        #if len(regs) < 3:
+        #    print("Error: need three registers for complete readback.")
 
-        else:
-            self.read_gain_rc(regs[0], check)
-            self.read_clamps(regs[1], check)
-            self.read_modes(regs[2], check)
+        for add,reg in regs.iteritems():
+            if add == 0:
+                self.read_gain_rc(reg, check)
+            elif add == 1:
+                self.read_clamps(reg, check)
+            elif add == 2:
+                self.read_modes(reg, check)
+            else:
+                print("Warning: unknown register in ASPIC readback.")
 
     def get_aspic_fromstring(self, param):
         """

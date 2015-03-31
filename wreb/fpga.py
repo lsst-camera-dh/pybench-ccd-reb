@@ -6,7 +6,7 @@
 #
 
 import sys
-import os, os.path
+import time
 import re
 import subprocess
 
@@ -1195,13 +1195,19 @@ class FPGA(object):
     # ----------------------------------------------------------
     def cabac_power(self, enable):
         """
-        Enables/disables power to CABAC low voltage power supplies (specific to WREB).
+        Enables/disables power to CABAC low voltage power supplies and VEE (specific to WREB).
         :param enable: bool
         :return:
         """
         if enable:
+            # staged
+            self.write(0xD00001, 0x4)  # VEE (CABAC substrate) alone first
+            time.sleep(0.2)
             self.write(0xD00001, 0x1F)
         else:
+            # reverse order
+            self.write(0xD00001, 0x4)
+            time.sleep(0.2)
             self.write(0xD00001, 0)
 
     def check_location(self, s, loc = 3):
@@ -1219,18 +1225,19 @@ class FPGA(object):
 
         self.check_location(s)
 
-        topconfig = []
-        bottomconfig = []
+        topconfig = {}
+        bottomconfig = {}
 
         for address in range(22):
+            regaddress = address << 16
             # send for reading top CABAC
-            self.write_spi(0x500000, s, 2, address << 16)
-            # read answer
-            topconfig.append(self.read(0x500010+s, 1)[0x500010+s])
+            self.write_spi(0x500000, s, 2, regaddress)
+            # read answer to dict
+            topconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
             # send for reading bottom CABAC
-            self.write_spi(0x500000, s, 1, address << 16)
-            # read answer
-            bottomconfig.append(self.read(0x500010+s, 1)[0x500010+s])
+            self.write_spi(0x500000, s, 1, regaddress)
+            # read answer to dict
+            bottomconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
 
         self.cabac_top[s].read_all_registers(topconfig, check)
         self.cabac_bottom[s].read_all_registers(bottomconfig, check)
@@ -1295,18 +1302,18 @@ class FPGA(object):
         """
         self.check_location(s)
 
-        topconfig = []
-        bottomconfig = []
+        topconfig = {}
+        bottomconfig = {}
 
-        for address in range(2):
+        for address in range(3):
             # send for reading top ASPIC
             self.write_spi(0xB00000, s, 2, address << 16)
             # read answer
-            topconfig.append(self.read(0xB00010+s, 1)[0xB00010+s])
+            topconfig[address] = self.read(0xB00011+s, 1)[0xB00011+s]
             # send for reading bottom ASPIC
             self.write_spi(0xB00000, s, 1, address << 16)
             # read answer
-            bottomconfig.append(self.read(0xB00010+s, 1)[0xB00010+s])
+            bottomconfig[address] = self.read(0xB00011+s, 1)[0xB00011+s]
 
         self.aspic_top[s].read_all_registers(topconfig, True)
         self.aspic_bottom[s].read_all_registers(bottomconfig, True)

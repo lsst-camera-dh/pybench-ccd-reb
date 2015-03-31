@@ -44,8 +44,9 @@ class CABAC(object):
     GDconv = 0.049
     RDconv = 0.049
     OGconv = 0.049
-    params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IRG", "IC", "SPA",
+    params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IC", "SPA",
               "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS"])  # set of accepted parameters
+    # TODO: manage rise and fall currents
     settings = {}
     conv = {'OD0EM': ODconv,
             'OD1EM': ODconv,
@@ -96,18 +97,19 @@ class CABAC(object):
         if param not in self.params:
             raise ValueError("No CABAC parameter with this name: "+ param)
 
-        if param == "OD":
-            regs = self.set_cabac_fromstring("OD0", value)
-            regs.extend(self.set_cabac_fromstring("OD1", value))
-        elif param == "OD0":
-            regs = self.set_cabac_fromstring("OD0EM", value)
-            regs.extend(self.set_cabac_fromstring("OD0RM", value))
-        elif param == "OD1":
-            regs = self.set_cabac_fromstring("OD1EM", value)
-            regs.extend(self.set_cabac_fromstring("OD1RM", value))
-        elif param in ["GD", "RD", "OG", "SPA", "OD0EM", "OD0RM", "OD1EM", "OD1RM"]:
+        if param in self.conv:
             value_int = int(value // self.conv[param]) & 0x3ff
-            regs.append(self.spi_reg(param, value_int))
+            if param == "OD":
+                regs = self.set_cabac_fromstring("OD0", value)
+                regs.extend(self.set_cabac_fromstring("OD1", value))
+            elif param == "OD0":
+                regs = self.set_cabac_fromstring("OD0EM", value)
+                regs.extend(self.set_cabac_fromstring("OD0RM", value))
+            elif param == "OD1":
+                regs = self.set_cabac_fromstring("OD1EM", value)
+                regs.extend(self.set_cabac_fromstring("OD1RM", value))
+            elif param in ["GD", "RD", "OG", "SPA", "OD0EM", "OD0RM", "OD1EM", "OD1RM"]:
+                regs.append(self.spi_reg(param, value_int))
         elif param in ["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]:
             value_int = value & 0xff
             # rise and fall currents
@@ -121,6 +123,7 @@ class CABAC(object):
             for subpar in ["S0", "S1", "S2"]:
                 regs.extend(self.set_cabac_fromstring(subpar, value))
         elif param == "IC":
+            value_int = value & 0xff
             regs = self.set_cabac_fromstring("IP", value)
             regs.extend(self.set_cabac_fromstring("IS", value))
             regs.extend(self.set_cabac_fromstring("RG", value))
@@ -142,14 +145,14 @@ class CABAC(object):
 
     # ----------------------------------------------------------
 
-    def set_from_register(self, reg, check=True):
+    def set_from_register(self, address, reg, check=True):
         """
         Takes result from CABAC readback and updates the object.
         If check is True, also checks against the stored value.
+        :param address: int
+        :param reg: int
+        :param check: bool
         """
-        
-        #need address to find type of data
-        address = (reg >> 16)  & 0x3f
 
         name = self.SPIaddress.reverse[address]
         saved = self.settings[name]
@@ -171,14 +174,18 @@ class CABAC(object):
         Takes values of registers from readback and updates the object. If 'check' is True, checks against previous
         values.
         Note that this should be applied to the right CABAC object(s).
+        :param regs: dict
+        :param check: bool
         """
-        if len(regs) < 22:
-            print("Error: need 22 registers for complete readback.")
+        # Now accepts any number of parameters in the dict
+        #if len(regs) < 22:
+        #    print("Error: need 22 registers for complete readback.")
 
-        else:
-            for reg in regs:
-                self.set_from_register(reg, check)
-
+        for add, reg in regs.iteritems():
+            if add > -1 and add < 23:
+                self.set_from_register(add, reg, check)
+            else:
+                print("Warning: unknown address for CABAC1 register: %d" % add)
 
     # ----------------------------------------------------------
     def safety_off(self):
@@ -258,8 +265,8 @@ class CABAC(object):
             suffix = "_" + position
 
         for field in self.params:
-            if field in ['OD0', 'OD1', 'GD', 'RD', 'OG']:
-                key = "V_" + field + suffix
+            if field in self.conv:
+                key = field + suffix
                 header[key] = self.settings[field] * self.conv[field]
             else:
                 key = field + suffix

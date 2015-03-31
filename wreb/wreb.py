@@ -73,7 +73,7 @@ class TestREB(object):
 
     def __init__(self, rriaddress = 2):
         self.f = fpga.FPGA(ctrl_host = None, reb_id = rriaddress)
-        #self.load_sequencer()
+        self.f.stop_clock()  # stops the clocks to use as image tag
         self.imgtag = generate_tag(0)
         self.f.set_time(self.imgtag)
         self.f.write(0x400006, 0)  # pattern generator off
