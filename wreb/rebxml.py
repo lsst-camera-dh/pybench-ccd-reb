@@ -42,13 +42,13 @@ class XMLParser(object):
         ss = s.strip()
 
         # replace by the parameter
-        print ss
+        # print ss
         if self.parameters.has_key(ss):
             lvalue = self.parameters[ss]
-            print "K lvalue = ", lvalue
+            # print "K lvalue = ", lvalue
         else:
             lvalue = ss
-            print "NK lvalue = ", lvalue
+            # print "NK lvalue = ", lvalue
 
         # process the unit
         unit = None
@@ -73,7 +73,7 @@ class XMLParser(object):
     def parse_parameters(self, parameters_node):
 
         params = parameters_node.xpath('parameter')
-        print params
+        # print params
 
         for param in params:
             fullname = param.xpath('fullname/text()')[0]
@@ -144,22 +144,22 @@ class XMLParser(object):
 
             constants = {}
             for const in func.xpath('constants/constant'):
-                print const
+                # print const
                 channel = const.get('ref')
-                print channel
+                # print channel
                 # print const.xpath('text()')
                 value = int(const.xpath('text()')[0])
-                print value
+                # print value
                 constants[channel] = value
         
-            print constants
+            # print constants
 
             # analyzing slices
 
             channel_position = {}
             cpos = 0
             for clock in func.xpath('clocklist/clock'):
-                print clock
+                # print clock
                 cname = clock.get('ref')
                 channel_position[cname] = cpos
                 cpos += 1
@@ -290,13 +290,12 @@ class XMLParser(object):
 
             return instr
 
-
     def parse_subroutine(self, sub_node):
-        print "subroutine"
+        # print "subroutine"
         subname =  sub_node.get('id')
         fullname =  sub_node.xpath('fullname/text()')[0]
         print "   name = ", subname
-        print "   fullname = ", fullname
+        # print "   fullname = ", fullname
         
         sub = Subroutine()
         sub.name = subname
@@ -312,7 +311,6 @@ class XMLParser(object):
             Instruction(opcode = Instruction.OP_ReturnFromSubroutine))
 
         return sub
-
 
     def parse_subroutines(self, subroutines_node):
 

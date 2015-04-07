@@ -124,11 +124,11 @@ class Instruction(object):
                 self.repeat = 0
             else:
                 self.infinite_loop = False
-                self.repeat = int(repeat) & ((1<<23) - 1)
+                self.repeat = int(repeat) & 0x3fffff
 
         elif self.opcode == self.OP_JumpToSubroutine:
             if address != None:
-                self.address = int(address) & ((1<<10) - 1)
+                self.address = int(address) & 0x3ff
             elif subroutine != None:
                 self.subroutine = subroutine
             else:
@@ -136,7 +136,7 @@ class Instruction(object):
                                  "no address or subroutine to jump")
                 
             # self.infinite_loop = bool(infinite_loop)
-            self.repeat = int(repeat) & ((1<<16) - 1)
+            self.repeat = int(repeat) & 0xffff
 
 
     def __repr__(self):
@@ -176,14 +176,14 @@ class Instruction(object):
             if self.infinite_loop:
                 bc |= 1 << 23
             else:
-                bc |= (self.repeat & ((1<<23) - 1))
+                bc |= (self.repeat & 0x3fffff)
                 
         elif self.opcode == self.OP_JumpToSubroutine:
             if self.address == None:
                 raise ValueError("Unassembled JSR instruction. No bytecode")
 
-            bc |= (self.address & ((1<<10) - 1)) << 16
-            bc |= (self.repeat & ((1<<16) - 1))
+            bc |= (self.address & 0x3ff) << 16
+            bc |= (self.repeat & 0xffff)
 
         elif self.opcode in [ self.OP_ReturnFromSubroutine, 
                               self.OP_EndOfProgram]:
@@ -279,7 +279,7 @@ class Instruction(object):
             function_id = (bc >> 24) & 0xf
             infinite_loop = (bc & (1 << 23)) != 0
             # print infinite_loop
-            repeat = (bc & ((1 << 23) - 1))
+            repeat = (bc & 0x3fffff)
             # print repeat
 
             if infinite_loop:
@@ -296,9 +296,9 @@ class Instruction(object):
                 
                 
         elif opcode == cls.OP_JumpToSubroutine:
-            address = (bc >> 18) & ((1 << 10) - 1)
+            address = (bc >> 16) & 0x3ff
             # print address
-            repeat  = bc & ((1 << 17) - 1)
+            repeat  = bc & 0xffff
             # print repeat
 
             return Instruction(opcode = opcode,
@@ -622,7 +622,7 @@ class FPGA(object):
     outputs_base_addr = 0x100000
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
-    program_mem_size  = 1024 # ???
+    program_mem_size  = 0x3ff
     clock_conv = 0.00366 # conversion for DAC (V/LSB), to be calibrated
     bias_conv = 0.00732  # placeholder conversion for alternative biases
     od_conv = 0.0195  # placeholder for alternative OD
@@ -1309,11 +1309,11 @@ class FPGA(object):
             # send for reading top ASPIC
             self.write_spi(0xB00000, s, 2, address << 16)
             # read answer
-            topconfig[address] = self.read(0xB00011+s, 1)[0xB00011+s]
+            topconfig[address] = self.read(0xB00010+s, 1)[0xB00010+s]
             # send for reading bottom ASPIC
             self.write_spi(0xB00000, s, 1, address << 16)
             # read answer
-            bottomconfig[address] = self.read(0xB00011+s, 1)[0xB00011+s]
+            bottomconfig[address] = self.read(0xB00010+s, 1)[0xB00010+s]
 
         self.aspic_top[s].read_all_registers(topconfig, True)
         self.aspic_bottom[s].read_all_registers(bottomconfig, True)

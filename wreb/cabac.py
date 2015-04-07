@@ -11,27 +11,25 @@ import bidi
 
 def parse_reg_clock(reg):
     """
-        Parses CABAC 32-bit register into address and two 8-bit clock currents
+        Parses CABAC 16-bit data two 8-bit clock currents
     """
 
-    add = (reg >> 16)  & 0xff
     crise = (reg >> 8) & 0xff
     cfall =  reg & 0xff
     #TODO: check rise/fall order
 
-    return add, crise, cfall
+    return crise, cfall
 
 ## -----------------------------------------------------------------------
 
 def parse_reg_dc(reg):
     """
-        Parses CABAC 32-bit register into address and 10-bit DAC setting
+        Parses CABAC 16-bit register into 10-bit DAC setting
     """
 
-    add = (reg >> 16)  & 0xff
     dac=  reg & 0x3ff
 
-    return add, dac
+    return dac
 
 ## -----------------------------------------------------------------------
 
@@ -44,8 +42,9 @@ class CABAC(object):
     GDconv = 0.049
     RDconv = 0.049
     OGconv = 0.049
+    # set of accepted parameters
     params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IC", "SPA",
-              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS"])  # set of accepted parameters
+              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
     # TODO: manage rise and fall currents
     settings = {}
     conv = {'OD0EM': ODconv,
@@ -62,7 +61,7 @@ class CABAC(object):
     SPIaddress = bidi.BidiMap([],[])
     SPIaddress.update({"OD0EM": 8, "OD0RM": 9, "OD1EM": 10, "OD1RM": 11, "RD": 12, "GD": 13, "OG": 14, "SPA": 15,
         "P0": 0, "P1": 1, "P2": 2, "P3": 3, "S0": 4, "S1": 5, "S2": 6, "RG": 7,
-        "MUX": 16, "OFMUX": 17, "EXPCLK": 18, "HIZ": 19, "SAFE": 20, "PULS": 21})
+        "MUX": 16, "OFMUX": 17, "EXPCK": 18, "HIZ": 19, "SAFE": 20, "PULS": 21})
     # Mux maps: see function for use due to complications
     mux0map = bidi.BidiMap(["TEMP", "SPA", "OG", "GD", "RD", "OD0", "OD1"], range(1,8))
     mux0map.update({"ATIME": 15})
@@ -72,7 +71,9 @@ class CABAC(object):
     def __init__(self):
         for param in self.params:
             self.settings[param] = 0
-    
+        self.settings["SAFE"] = 1
+        self.settings["EXPCK"] = 0xff
+        # actual CABAC1 settings at start-up
     
 # Note: serial link works differently from CABAC0. Setting a parameter
 # returns a list of registers to write (address on CABAC + value).
@@ -158,7 +159,7 @@ class CABAC(object):
         saved = self.settings[name]
 
         if address < self.SPIaddress["OD0EM"]:
-            value_int = parse_reg_clock(reg)[1]
+            value_int = parse_reg_clock(reg)[0]
         elif address < self.SPIaddress["MUX"]:
             value_int = parse_reg_dc(reg)
         else:
@@ -246,7 +247,8 @@ class CABAC(object):
             else:
                 print("Unknown parameter for MuxOut1: %s" % output0)
 
-        reg = ena1 << 9 + ena0 << 8 + add1 << 4 + add0
+        reg = (ena1 << 9) | (ena0 << 8) | (add1 << 4) | add0
+        #TODO: offsets (separate function)
 
         return reg
 

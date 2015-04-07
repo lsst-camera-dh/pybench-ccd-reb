@@ -109,7 +109,8 @@ class TestREB(object):
 
     def select_subroutine(self, subname, repeat = 1):
         """
-        Modify the main subroutine to be a call (JSR) to the subroutine.
+        Old: Modify the main subroutine to be a call (JSR) to the subroutine.
+        TODO: New: use the pointer to the program start. Need to separate in rebxml.py and process in fpga.py
         """
         if self.seq.program == None:
             raise ValueError("No program with identified subroutines yet.")
@@ -305,7 +306,7 @@ class TestREB(object):
             time.sleep(0.1)
             self.config.update(self.f.get_cabac_config(stripe, check=True))
 
-        elif param in ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH"]:
+        elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
             self.f.set_clock_voltages({param: value})
             self.config.update({param: value})
 
@@ -394,6 +395,7 @@ class TestREB(object):
         self.select_subroutine(name)
         # starts the sequencer
         self.f.start()
+        print("Starting %s sequence with %f exposure time." % (name, self.exptime))
         #freeze until image output (do not send commands while the COB is acquiring)
         time.sleep(self.exptime+3)
 
