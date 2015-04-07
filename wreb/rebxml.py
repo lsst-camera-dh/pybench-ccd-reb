@@ -367,6 +367,8 @@ class XMLParser(object):
         self.parse_mains(mains_node)
         print "MAINS", self.mains_names
 
+        # TODO: Modify for new sequencer: mains should now be written in memory as mains with END at the end,
+        # we will use 0x340000 to point to the right one.
         allsubs = dict(self.mains)
         allsubs.update(self.subroutines)
         allsubsnames = self.mains_names + self.subroutines_names
