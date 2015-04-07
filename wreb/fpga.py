@@ -623,8 +623,8 @@ class FPGA(object):
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
     program_mem_size  = 0x3ff
-    clock_conv = 0.00366 # conversion for DAC (V/LSB), to be calibrated
-    bias_conv = 0.00732  # placeholder conversion for alternative biases
+    clock_conv = 0.00357 # conversion for DAC (V/LSB)
+    bias_conv = 0.00725  # conversion for alternative biases
     od_conv = 0.0195  # placeholder for alternative OD
     og_conv = 0.00122  # placeholder for alternative OG
 

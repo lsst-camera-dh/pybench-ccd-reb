@@ -266,11 +266,11 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>50 ns</duration>
+                        <duration>100 ns</duration>
                         <value>1</value>
                     </timeslice>
                     <timeslice id="slice2">
-                        <duration>50 ns</duration>
+                        <duration>100 ns</duration>
                         <value>0</value>
                     </timeslice>
                 </slicelist>

@@ -584,3 +584,6 @@ if __name__ == "__main__":
     #R.load_sequencer()
     #R.execute_sequence("Acquisition")
     #save_to_fits(R)
+    #R.f.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
+    #R.f.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux
+    # TO BE CHECKED: only one of each mux outputs should be active at any time over all CABACs ?!?!

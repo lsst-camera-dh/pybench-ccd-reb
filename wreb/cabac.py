@@ -90,7 +90,7 @@ class CABAC(object):
         """
         Saves new value to object and returns registers to write to the SPI link.
         :param param: string
-        :param value: voltage for biases, integer for the rest
+        :param value: voltage for biases, integer for the rest, tuple of strings for mux
         :return: list
         """
         regs = []
@@ -131,7 +131,16 @@ class CABAC(object):
         elif param == "PULS":
             value_int = value & 1
             regs.append(self.spi_reg(param, value_int))
-
+        elif param == "MUX":
+            # need two strings as parameters for mux outputs
+            value_int = self.set_muxout(value[0], value[1])
+            regs.append(self.spi_reg(param, value_int))
+        elif param == "OFMUX":
+            value_int = value & 0xff
+            regs.append(self.spi_reg(param, value_int * 0x101))
+        elif param == "EXPCK":
+            value_int = value & 0xff
+            regs.append(self.spi_reg(param, value_int))
         self.settings[param] = value_int
         return regs
 
@@ -201,11 +210,11 @@ class CABAC(object):
 
 
     # ----------------------------------------------------------
-    def set_muxout(self, output0, output1=None):
+    def set_muxout(self, output0, output1="None"):
         """
         Multiplexer management, takes in names of what we want on each mux output.
         There are some quirks due to CABAC1 mux addressing bug.
-        Passing None, None as parameters disables both muxes.
+        Passing unknown parameters to both outputs disables both muxes.
         :param output0: string
         :param output1: string
         :return:
@@ -215,40 +224,39 @@ class CABAC(object):
         add0 = 0
         add1 = 0
 
-        if output0:
+        if self.mux0map.has_key(output0):
             ena0 = 1
-            if self.mux0map.has_key(output0):
-                add0 = self.mux0map[output0]
-                if output1:
-                    if self.mux1map.has_key(output1):
-                        add1 = self.mux1map[output1]
-                        ena1 = 1
-                    else:
-                        print("Incompatible setting for multiplexers: %s, %s" % (output0, output1))
-            elif self.clockmap.has_key(output0):
-                ena1 = 1  # inverted mux blocks
-                add1 = self.clockmap[output0]
-                if output1:
-                    if self.clockmap.has_key(output1) and output1 != "RG":
-                        add0 = self.clockmap[output1]
-                    else:
-                        print("Incompatible setting for multiplexers: %s, %s" % (output0, output1))
-                        add0 = 8
-            else:
-                print("Unknown parameter for MuxOut0: %s" % output0)
-        elif output1:
-            ena1 = 1
+            add0 = self.mux0map[output0]
+            if output1:
+                if self.mux1map.has_key(output1):
+                    add1 = self.mux1map[output1]
+                    ena1 = 1
+                else:
+                    print("Incompatible setting for multiplexers: %s, %s" % (output0, output1))
+        elif self.clockmap.has_key(output0):
+            ena0 = 1
+            ena1 = 1  # inverted mux blocks, need to enable both
+            add1 = self.clockmap[output0]
+            if output1:
+                if self.clockmap.has_key(output1) and output1 != "RG":
+                    add0 = self.clockmap[output1]
+                else:
+                    print("Incompatible setting for multiplexers: %s, %s" % (output0, output1))
+                    add0 = 8
+        else:
+            # print("Unknown parameter for MuxOut0: %s" % output0)
             if self.mux1map.has_key(output1):
+                ena1 = 1
                 add1 = self.mux1map[output1]
             elif self.clockmap.has_key(output1) and output1 != "RG":
-                add0 = self.clockmap[output1]
                 ena0 = 1
+                ena1 = 1
+                add0 = self.clockmap[output1]
                 add1 = 8
-            else:
-                print("Unknown parameter for MuxOut1: %s" % output0)
+            #else:
+                # print("Unknown parameter for MuxOut1: %s" % output0)
 
         reg = (ena1 << 9) | (ena0 << 8) | (add1 << 4) | add0
-        #TODO: offsets (separate function)
 
         return reg
 
