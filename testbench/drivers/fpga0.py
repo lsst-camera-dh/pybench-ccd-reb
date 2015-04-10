@@ -3,7 +3,9 @@
 # LSST
 # Python minimal interface for the REB FPGA
 #
-#
+# This one is for REB1 with DREB1. This means CABAC0, ASPIC2 (not managed by the FPGA),
+# and first version of the sequencer (with no pointers).
+# Take from wreb for more advanced REBs and DREBs.
 
 import sys
 import os, os.path
@@ -11,7 +13,6 @@ import re
 import subprocess
 
 import cabac
-import aspic
 import bidi
 
 ## -----------------------------------------------------------------------
