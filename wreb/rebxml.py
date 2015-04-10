@@ -223,7 +223,7 @@ class XMLParser(object):
         Return an instruction; update the dictionary of subroutines
         """
 
-        print "        call"
+        #print "        call"
 
         repeat = 1
         repeats = call_node.xpath('repeat/text()')
@@ -232,10 +232,10 @@ class XMLParser(object):
             lvalue, lunit = self.process_value(srepeat)
             repeat = lvalue
 
-        print "            repeat = ", repeat
+        #print "            repeat = ", repeat
 
         if call_node.get('ref') != None:
-            print "            calling", call_node.get('ref')
+            #print "            calling", call_node.get('ref')
             called = str(call_node.get('ref')).strip()
 
             # is it a 'function' call?

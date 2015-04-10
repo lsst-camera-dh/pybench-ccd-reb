@@ -986,7 +986,6 @@ class FPGA(object):
         st = self.get_state()
         self.set_trigger(st ^ 0x2)
 
-
     def get_time(self):
         result = self.read(address = 0x4, n = 2)
         t = (result[0x5] << 32) | result[0x4]

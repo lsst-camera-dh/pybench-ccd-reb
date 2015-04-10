@@ -74,12 +74,15 @@ class TestREB(object):
     def __init__(self, rriaddress = 2):
         self.f = fpga.FPGA(ctrl_host = None, reb_id = rriaddress)
         self.f.stop_clock()  # stops the clocks to use as image tag
+        self.f.get_state()  # check
         self.imgtag = generate_tag(0)
         self.f.set_time(self.imgtag)
         self.f.write(0x400006, 0)  # pattern generator off
         self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
         self.config = {}
         self.seq = None  # until loaded
+        # load 0 on default state to prep for REB start-up
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
     def set_stripes(self, liststripes):
         self.stripes = []
@@ -187,8 +190,6 @@ class TestREB(object):
         To be executed at power-up to safeguard CABAC1.
         :return:
         """
-        #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
         # power-up the CABAC low voltages
         self.f.cabac_power(True)
         # power-up the clock rails (in V)
@@ -208,8 +209,18 @@ class TestREB(object):
         """
 
         #starting drain voltages
-        drains = {"OD": 10, "GD": 9, "RD": 8}
-        self.set_biases(drains)
+        # safety: OD-RD < 20 V, but preferably also OD>RD
+        if self.useCABACbias:
+            #two steps
+            drains = {"OD": 18, "GD": 18}
+            self.set_biases(drains)
+            self.set_biases({"RD": 18})
+            drains = {"OD": 30, "GD": 24}
+            self.set_biases(drains)
+        else:
+            # simultaneous activation works fine
+            drains = {"RD": 18, "OD": 30, "GD": 24}
+            self.set_biases(drains)
 
         time.sleep(0.5)
 
@@ -284,6 +295,8 @@ class TestREB(object):
         # shutdown the CABAC low voltages
         self.f.cabac_power(False)
         # need to shutdown VddOD right here
+        #sets the default sequencer clock states to 0
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
     def config_aspic(self):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
