@@ -981,10 +981,12 @@ class FPGA(object):
 
     def stop_clock(self):
         """
-        Stop the FPGA internal clock counter.
+        Stop the FPGA internal clock counter if it is running.
         """
         st = self.get_state()
-        self.set_trigger(st ^ 0x2)
+        if st & 2:
+            st -= 2
+        self.set_trigger(st)
 
     def get_time(self):
         result = self.read(address = 0x4, n = 2)
@@ -1232,10 +1234,12 @@ class FPGA(object):
             # send for reading top CABAC
             self.write_spi(0x500000, s, 2, regaddress)
             # read answer to dict
+            #time.sleep(0.05)
             topconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
             # send for reading bottom CABAC
             self.write_spi(0x500000, s, 1, regaddress)
             # read answer to dict
+            #time.sleep(0.05)
             bottomconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
 
         self.cabac_top[s].read_all_registers(topconfig, check)

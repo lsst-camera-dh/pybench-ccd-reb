@@ -192,7 +192,7 @@ class CABAC(object):
         #    print("Error: need 22 registers for complete readback.")
 
         for add, reg in regs.iteritems():
-            if add > -1 and add < 23:
+            if add > -1 and add < 22:
                 self.set_from_register(add, reg, check)
             else:
                 print("Warning: unknown address for CABAC1 register: %d" % add)

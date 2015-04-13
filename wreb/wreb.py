@@ -13,11 +13,13 @@ import rebxml
 import numpy as np
 import pyfits
 
+
 def generate_tag(number):
     today = time.gmtime()
     tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
     tag = int(tagstr,16)
     return tag
+
 
 def get_sequencer_hdu(seq):
     """
@@ -33,9 +35,9 @@ def get_sequencer_hdu(seq):
     output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
     duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
 
-    for ifunc in range(16):
+    for ifunc in seq.functions.iterkeys():
         func = seq.get_function(ifunc)
-        for islice in range(16):
+        for islice in func.outputs.keys():
             i = ifunc * 16 + islice
             slicenum[i] = hex(i)[2:]
             output[i] = bin(func.outputs[islice])[2:]
@@ -74,9 +76,8 @@ class TestREB(object):
     def __init__(self, rriaddress = 2):
         self.f = fpga.FPGA(ctrl_host = None, reb_id = rriaddress)
         self.f.stop_clock()  # stops the clocks to use as image tag
-        self.f.get_state()  # check
-        self.imgtag = generate_tag(0)
-        self.f.set_time(self.imgtag)
+        self.imgtag = 0
+        self.f.set_time(generate_tag(self.imgtag))
         self.f.write(0x400006, 0)  # pattern generator off
         self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
         self.config = {}
@@ -101,14 +102,20 @@ class TestREB(object):
 
         self.nchannels = 16*len(self.stripes)
 
-    def load_sequencer(self):
+    def load_sequencer(self, xmlfile = None):
         """
         Loads all sequencer content.
         :return:
         """
+        if xmlfile:
+            self.xmlfile = xmlfile
+
         self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
         self.f.send_sequencer(self.seq)
-        self.exptime = self.get_exposure_time()
+        try:
+            self.exptime = self.get_exposure_time()
+        except:
+            print("Warning: could not find exposure subroutine in %s" % xmlfile)
 
     def select_subroutine(self, subname, repeat = 1):
         """
@@ -134,8 +141,14 @@ class TestREB(object):
         self.seq.program.instructions[0x0] = first_instr # to keep it in sync
 
     def update_filetag(self, t):
-        self.imgtag = generate_tag(t)
-        self.f.set_time(self.imgtag)
+        """
+        Updates the filetag to the FPGA timer.
+        :param t: int new numerical tag
+        :return:
+        """
+        self.imgtag = t
+        hextag = generate_tag(t)
+        self.f.set_time(hextag)
 
     def send_cabac_config(self, params):
         """
@@ -388,19 +401,20 @@ class TestREB(object):
         :param exposuretime:
         :return:
         """
-                # load new exposure time here (better: with XML parameter ?)
-        if exposuretime:
-            self.set_exposure_time(exposuretime)
-            self.exptime = exposuretime
-        else:
-            # else use preset exposure time
-            darktime = (name == "Dark")
-            self.exptime = self.get_exposure_time(darktime)
 
         if name == "Bias":
             self.delay = 0
+            self.exptime = 0
         else:
             self.delay = 100
+            # load new exposure time here (better: with XML parameter ?)
+            if exposuretime:
+                self.set_exposure_time(exposuretime)
+                self.exptime = exposuretime
+            else:
+                # else use preset exposure time
+                darktime = (name == "Dark")
+                self.exptime = self.get_exposure_time(darktime)
 
         self.timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # acquisition date
 
@@ -430,7 +444,7 @@ class TestREB(object):
         # Reading raw file to array
         dt = np.dtype('i4')
         buff = np.fromfile(imgname, dtype=dt)
-        # Readies to save next file (could be moved to acquisition function)
+        # Readies to save next file
         self.update_filetag(self.imgtag + 1)
 
         # for 18-bit data:
@@ -571,9 +585,10 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
         primaryhdu.header["IMGTYPE"] = 'Bias'  # TODO: update with actual test running
         # TODO: add keyword comments
         # information from REB itself
-        primaryhdu.header.update(R.get_meta())
+        # todo: test, does not work as is
+        #primaryhdu.header.update(R.get_meta())
         # also need info from 'localheader.txt'
-        localheader = pyfits.Header.fromtextfile("camera/localheader.txt")
+        localheader = pyfits.Header.fromtextfile("localheader.txt")
         primaryhdu.header.update(localheader)
         # add other instruments here
         #exthdu = pyfits.ImageHDU(name="TEST_COND")
@@ -595,7 +610,7 @@ if __name__ == "__main__":
     R.CCDpowerup()
     R.config_aspic()
     #R.load_sequencer()
-    #R.execute_sequence("Acquisition")
+    #R.execute_sequence("Bias")
     #save_to_fits(R)
     #R.f.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
     #R.f.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux
