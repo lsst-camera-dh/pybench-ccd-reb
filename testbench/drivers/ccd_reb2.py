@@ -6,13 +6,28 @@
 Testbench driver for REB (through direct calls to rriClient)
 """
 
-import lsst.camera.reb.fpga as fpga
-
+import fpga0 as fpga
+import rebxml
+import time
+import string
 from driver import Driver
 
 # =======================================================================
 
 class Instrument(Driver):
+
+    xmlfile = "sequencer-wreb.xml"
+    rawimgdir = "/home/lsst/test_images"
+    fitstopdir = "/home/lsst/test_frames"
+    nchannels = 16
+    imgtag = 0
+    # to be loaded from XML later
+    imglines = 2020
+    imgcols = 550
+    exposuresub = "Exposure"
+    darksub = "DarkExposure"
+    exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
+    min_exposure = int(0.1 / exposure_unit)  # minimal shutter opening time (not used for darks)
 
     # ===================================================================
     #  Generic methods (init, open, etc)
@@ -21,40 +36,24 @@ class Instrument(Driver):
     def __init__(self, identifier, **kargs):
         Driver.__init__(self, identifier, **kargs)
 
-        # self.identifier = identifier
-        # self.host = host
-        # self.device = device
-        # self.port = port # XML-RPC port
-
-        # if 'host' not in kargs.keys():
-        #     raise ValueError("host is requested")
-
-        # if 'devices' not in kargs.keys():
-        #     raise ValueError("devices is requested")
-
-        # if 'port' not in kargs.keys():
-        #     raise ValueError("port is requested")
-
-        if reb_id not in kargs.keys():
+        if "reb_id" not in kargs.keys():
             raise ValueError("reb_id is requested")
 
-        if host not in kargs.keys():
-            raise ValueError("reb_id is requested")
+        if "host" not in kargs.keys():
+            kargs["host"] = None
 
-        self.reb_id = reb_id
-        self.host = host
-        self.strip_id = set()  # to be filled with stripe(s) in use
+        self.fpga = fpga.FPGA(ctrl_host=kargs["host"], reb_id=kargs["reb_id"])
+        self.set_stripe(0)  # stripe in use
 
-        self.fpga = fpga.FPGA(ctrl_host = self.host, reb_id = self.reb_id)
+        self.seq = None
 
-        self.program = None
-        self.functions = {}
+        self.recover_filetag()
 
     def open(self):
         """
         Open the hardware connection.
         """
-        pass
+        print("Remember to launch imageClient in %s" % self.rawimgdir)
 
     def is_connected(self):
         """
@@ -98,162 +97,144 @@ class Instrument(Driver):
         pass
 
 
-    # ===================================================================
-    #  Instrument specific methods
-    # ===================================================================
-
-
-    def read(self, address, n = 1, check = True):
-        """
-        Read a FPGA register and return its value.
-        if n > 1, returns a list of values as a dictionary.
-        """
-        return self.fpga.read(address = address, n = n, check = check)
-
-    def write(self, address, value, check = True):
-        """
-        Write a given value into a FPGA register.
-        """
-        return self.fpga.write(address = address, value = value, check = check)
-
-    def start(self):
-        """
-        Start the sequencer program.
-        """
-        self.fpga.start()
-
-    def stop(self):
-        """
-        Send the command STOP.
-        """
-        self.fpga.stop()
-
-    def step(self):
-        """
-        Send the command STEP.
-        """
-        self.fpga.step()
-
     # --------------------------------------------------------------------
 
-    def send_function(self, function_id, function):
+    def set_stripe(self, strip_id=0):
         """
-        Send the function <function> into the FPGA memory
-        at the #function_id slot.
+        Set which REB stripe is read out. For this bench, does not accept more than one stripe.
         """
-        self.reb.send_function(function_id, function)
+        if strip_id not in [0, 1, 2]:
+            raise ValueError("Incorrect stripe number: %d" % strip_id)
 
-    def send_functions(self, functions):
-        """
-        Load all functions from dict <functions> into the FPGA memory.
-        """
-        self.reb.send_functions(functions)
-
-    def dump_function(self, function_id):
-        """
-        Dump the function #function_id from the FPGA memory.
-        """
-        return self.reb.dump_function(function_id)
-
-    def dump_functions(self):
-        """
-        Dump all functions from the FPGA memory.
-        """
-        return self.reb.dump_functions()
+        self.stripe = strip_id
+        self.fpga.write(0x400007, 1 << strip_id)
 
     # --------------------------------------------------------------------
+    def get_exposure_time(self, darktime=False):
+        """
+        Gets the exposure time from the subroutines in memory.
+        (input in seconds). If darktime is set to true, gives the dark 'exposure' time instead.
+        :param darktime: boolean
+        """
 
-    def send_program_instruction(self, addr, instr):
-        """
-        Load the program instruction <instr> at relative address <addr>
-        into the FPGA program memory.
-        """
-        self.reb.send_program_instruction(addr, instr)
+        # look up address of exposure subroutine
+        # then get current instruction
+        if darktime:
+            darkadd = self.seq.program.subroutines[self.darksub]
+            instruction = self.seq.program.instructions[darkadd]
+        else:
+            exposureadd = self.seq.program.subroutines[self.exposuresub]
+            instruction = self.seq.program.instructions[exposureadd]
+        iter = instruction.repeat
 
-    def send_program(self, program, clear = True):
-        """
-        Load the compiled program <program> into the FPGA program memory.
-        """
-        self.reb.send_program(program, clear = clear)
+        return float(iter)*self.exposure_unit  # in seconds
 
-    def load_program(self, program = default_program, clear = True):
+    def set_exposure_time(self, exptime, lighttime=True, darktime=True):
         """
-        Load the compiled program <program> into the FPGA program memory.
-        The program may also be provided as an uncompiled text string.
+        Modifies exposure subroutines to last the given exposure time
+        (input in seconds). By default both exposures with shutter open
+        and closed are modified, use optional parameters to preserve one
+        or the other.
+        :param exptime:
+        :param lighttime:
+        :param darktime:
         """
-        self.reb.send_program(program, clear = clear)
+        newiter = int(exptime / self.exposure_unit)
+        # look up address of exposure subroutine
+        # then get current instruction and rewrite the number of iterations only
+        if lighttime:
+            exposureadd = self.seq.program.subroutines[self.exposuresub]
+            newinstruction = self.seq.program.instructions[exposureadd]
+            newinstruction.repeat = int(max(newiter, self.min_exposure))  # This does rewrite the seq.program too
+            self.fpga.send_program_instruction(exposureadd, newinstruction)
+        #same for dark subroutine
+        if darktime:
+            darkadd = self.seq.program.subroutines[self.darksub]
+            newinstruction = self.seq.program.instructions[darkadd]
+            newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
+            self.fpga.send_program_instruction(darkadd, newinstruction)
 
-    def dump_program(self):
+    def load_sequencer(self, xmlfile = None):
         """
-        Dump the FPGA sequencer program. Return the program.
+        Loads all sequencer content.
+        :return:
         """
-        return self.reb.dump_program()
+        if xmlfile:
+            self.xmlfile = xmlfile
 
-    def clear_program(self):
-        """
-        Clear the FPGA sequencer program memory.
-        """
-        self.reb.clear_program()
-
-    def run_program(self):
-        """
-        Trigger the FPGA sequencer program.
-        """
-        self.reb.start()
-
+        self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
+        self.fpga.send_sequencer(self.seq)
+        try:
+            self.exptime = self.get_exposure_time()
+        except:
+            print("Warning: could not find exposure subroutine in %s" % xmlfile)
 
     def select_subroutine(self, subname, repeat = 1):
         """
         Modify the main subroutine to be a call (JSR) to the subroutine.
         """
-        self.reb.select_subroutine(subname, repeat=repeat)
+        if self.seq.program == None:
+            raise ValueError("No program with identified subroutines yet.")
 
+        if not(self.seq.program.subroutines.has_key(subname)):
+            raise ValueError("No subroutine '%s' in the FPGA program." % subname)
 
-    def run_subroutine(self, subname, repeat = 1):
+        first_instr = fpga.Instruction(
+            opcode = fpga.Instruction.OP_JumpToSubroutine,
+            address = self.seq.program.subroutines[subname],
+            repeat = repeat)
+
+       # load it at the very beginning of the program (rel addr 0x0)
+        self.fpga.send_program_instruction(0x0, first_instr)
+        self.seq.program.instructions[0x0] = first_instr # to keep it in sync
+
+    def recover_filetag(self):
         """
-        Select and run the specified subroutine
+        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
+        Returns the tag.
+        :return: string
         """
-        self.reb.run_subroutine(subname, repeat = repeat)
+        t = self.fpga.get_time()
+        tagstr = '0x%016x' % t
+        todaystr = time.strftime('%Y%m%d', time.gmtime())
+        if string.find(tagstr, todaystr) > -1:
+            self.imgtag = int(tagstr[-5:], base=10)
 
-    # --------------------------------------------------------------------
+        return tagstr
 
-    def send_sequencer(self, seq, clear = True):
+    def update_filetag(self, t):
         """
-        Load the functions and the program at once.
+        Updates the filetag to the FPGA timer.
+        :param t: int new numerical tag
+        :return:
         """
-        self.reb.send_sequencer(seq, clear = clear)
-
-    def dump_sequencer(self):
-        """
-        Dump the sequencer program and the 16 functions from the FPGA memory.
-        """
-        return self.reb.dump_sequencer()
-
-    # --------------------------------------------------------------------
-
-    def set_strip(self, strip_id=0):
-        """
-        Set which REB strip is read out. For now, does not accept more than one strip.
-        """
-        self.reb.set_strip(strip_id)
-
-    # --------------------------------------------------------------------
-
-    def get_board_temperatures(self):
-        return self.reb.get_board_temperatures()
+        self.imgtag = t
+        today = time.gmtime()
+        tagstr = time.strftime('%Y%m%d', today)+'%05d' % t
+        hextag = int(tagstr,16)
+        self.fpga.set_time(hextag)
 
     # --------------------------------------------------------------------
 
     def get_input_voltages_currents(self):
-        return self.reb.get_input_voltages_currents()
+        return self.fpga.get_input_voltages_currents()
 
     # --------------------------------------------------------------------
 
-    def set_dacs(self, dacs):
+    def set_current_source(self, value_int):
         """
-        Sets CS gate or clock voltage DACs, but not both at the same time (for extra safety).
+        Sets CS gate DACs.
         """
-        self.reb.set_dacs(dacs)
+        self.fpga.set_current_source(value_int, self.stripe)
+
+    # --------------------------------------------------------------------
+
+    def set_clocks(self, dacs):
+        """
+        Sets clock rail DACs from voltage values.
+        :param dacs: dict
+        """
+        self.fpga.set_clock_voltages(dacs)
 
     # --------------------------------------------------------------------
 
@@ -261,7 +242,7 @@ class Instrument(Driver):
         """
         read CABAC configuration.
         """
-        return self.reb.get_cabac_config()
+        self.fpga.get_cabac_config(self.stripe)
 
     # --------------------------------------------------------------------
 
@@ -269,7 +250,17 @@ class Instrument(Driver):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
         """
-        self.reb.send_cabac_config(params)
+        for param in iter(params):
+            self.fpga.set_cabac_value(param, params[param])
+
+        self.fpga.send_cabac_config(self.stripe)
+
+        time.sleep(0.1)
+
+        self.fpga.get_cabac_config(self.stripe)
+
+        for param in iter(params):
+            self.fpga.check_cabac_value(param, params[param])
 
     # --------------------------------------------------------------------
 
@@ -277,7 +268,12 @@ class Instrument(Driver):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
         """
-        self.reb.reset_cabac()
+        self.fpga.reset_cabac(self.stripe)
+
+        time.sleep(0.1)
+
+        self.fpga.get_cabac_config(self.stripe)
+
 
 
     # ===================================================================
@@ -306,6 +302,9 @@ class Instrument(Driver):
             'MODEL'  : self.get_serial(),
             'DRIVER' : 'keithley-server / keithley'
             }
+        fitsheader = self.get_cabac_config()
+        fitsheader.update(self.fpga.get_clock_voltages())
+        fitsheader.update(self.fpga.get_current_source())
 
         return keys, values, comments
 
