@@ -169,11 +169,11 @@
                     </timeslice>
                     <timeslice id="slice5">
                         <duration>360 ns</duration>
-                        <value>000100010</value>
+                        <value>000100100</value>
                     </timeslice>
                     <timeslice id="slice6">
                         <duration>BufferS</duration>
-                        <value>010100010</value>
+                        <value>010100100</value>
                     </timeslice>
                     <timeslice id="slice7">
                         <duration>ISO2</duration>
@@ -181,7 +181,7 @@
                     </timeslice>
                     <timeslice id="slice8">
                         <duration>RampTime</duration>
-                        <value>010000100</value>
+                        <value>010000010</value>
                     </timeslice>
                     <timeslice id="slice9">
                         <duration>BufferS</duration>

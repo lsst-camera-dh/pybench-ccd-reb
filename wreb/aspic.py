@@ -16,11 +16,11 @@ class ASPIC(object):
     # could be cleaned up with bidi for addressing like CABAC1
 
     def __init__(self):
-        self.Gain = 0b1000
-        self.RC = 0b0000
+        self.Gain = 0
+        self.RC = 0
         self.TM = True
-        self.AF1 = False
-        self.Clamps = 0b0
+        self.AF1 = True
+        self.Clamps = 0
 
     def set_gain(self, g):
         """
