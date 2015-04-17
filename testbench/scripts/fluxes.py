@@ -42,7 +42,15 @@ B.PhD.connect()
 #     time.sleep(2)
 
 def flux_ramp(self):
-    import time # requested (why ???)
+    import time        # requested (why ???) TO FIX
+    import numpy as np # requested (why ???) TO FIX
+
+    ramps = { 
+        1: { 'Imin': 15.0, 'Imax': 35.20, 'Istep': 1. },
+        2: { 'Imin': 40.0, 'Imax': 64.20, 'Istep': 1. },
+        3: { 'Imin': 20.0, 'Imax': 66.00, 'Istep': 1. },
+        4: { 'Imin': 30.0, 'Imax': 56.80, 'Istep': 1. }
+        }
 
     # Turn Off Keithley continuous readout if activated
     self.PhD.readContinuous(-1)
@@ -60,6 +68,7 @@ def flux_ramp(self):
     self.DKD.setRate(5.)
     # self.DKD.readContinuous(1)
 
+    print "Opening the shutter"
     self.ttl.openShutter()
     time.sleep(2)
 
@@ -71,20 +80,36 @@ def flux_ramp(self):
         #
         # for n in xrange(50):
         #      print self.PhD.getCurrent(), self.DKD.getCurrent()
-        self.PhD.startSequence(10)
-        self.DKD.startSequence(10)
 
-        while (self.DKD.status() != 0) or (self.PhD.status() != 0):
+        print "Ramping up the current for channel ", ch
+        for I in np.arange(ramps[ch]['Imin'],
+                           ramps[ch]['Imax'] + ramps[ch]['Istep'],
+                           ramps[ch]['Istep']):
+            print "set laser current to I = ", I
+            self.laser.setCurrent(ch, I)
             time.sleep(1)
 
-        print self.PhD.getSequence()
-        print self.DKD.getSequence()
+            print self.laser.getCurrent(ch)
+            print self.laser.getPower(ch)
+
+            for i in xrange(1):
+                # read-out
+                self.PhD.startSequence(32)
+                self.DKD.startSequence(32)
+                while (self.DKD.status() != 0) or (self.PhD.status() != 0):
+                    time.sleep(1)
+                print self.PhD.getSequence()
+                print self.DKD.getSequence()
 
         #
         print "Disable Laser channel ", ch
         self.laser.unselect(ch)
         self.laser.disable()
         time.sleep(2)
+
+
+    self.ttl.closeShutter()
+    time.sleep(2)
 
 # B.flux_ramp = types.MethodType(flux_ramp, B)
 Bench.flux_ramp = flux_ramp
