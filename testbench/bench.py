@@ -73,24 +73,24 @@ class Bench(Borg):
         
         # Create an instance of the instrument
 
-        print "[A]"
+        # print "[A]"
         instrument_module   = getattr(drivers, params['driver'])
         print instrument_module
-        print "[B]"
+        # print "[B]"
         instrument_class    = getattr(instrument_module, 'Instrument')
         print instrument_class
-        print "[C]"
+        # print "[C]"
         instrument_instance = instrument_class(identifier, **params)
         print instrument_instance
         print dir(instrument_instance)
-        print "[D]"
+        # print "[D]"
         
         # register actions: try to open and connect to the instrument
         # will raise an exception if it fails
         try:
-            print "[EA]"
+            # print "[EA]"
             instrument_instance.register(self)
-            print "[EE]"
+            # print "[EE]"
         except:
             raise IOError("Failed to connect to instrument %s. Stop." %
                           identifier)
