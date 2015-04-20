@@ -1161,14 +1161,14 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
-    def set_current_source(self, currents, ccdnum = 0):
+    def set_current_source(self, current, ccdnum = 0):
         """
         Sets current source DAC value for given CCD (0, 1, 2).
         """
         
         key = "I_OS"
 
-        self.dacs[key] = currents[key] & 0xfff
+        self.dacs[key] = current & 0xfff
 
         self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
                 
