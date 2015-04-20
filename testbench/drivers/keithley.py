@@ -7,30 +7,36 @@ Testbench driver for the Keithley multimeter (through keithley-server and XML-RP
 """
 
 # XML-RPC interface:
-#
-# # General Control Functions 
-# server.register_function(keithley.status,       "status")
-# server.register_function(keithley.open,         "open")
-# server.register_function(keithley.close,        "close")
-# server.register_function(keithley.reset,        "reset")
-# server.register_function(keithley.clear,        "clear")
-# server.register_function(keithley.get_serial,   "get_serial")
-# server.register_function(keithley.get_serial,   "checkConnection")
 
-# # Keithley generic command
-# server.register_function(keithley.send,         "send")
+# common methods
+#   [rc,string] connect()        rc=0 error, rc=1 OK, rc=2 warn, port already opened
+#   void close()                 
+#   string getModel()            returns the instrument's model or an empty string if no connection
+#   int status()                 returns the instrument status (amps.):
+#                                   0=not reading, 1=not connected, 2=acquiring continuous,
+#                                   3=acquiring  a sequence
+#   void setVerbose(bool)        puts software in verbose mode
+#   void recordData(String)      records data (amps.) in String file if String is not empty, otherwise stops recording
+#   void writeComment(String)    adds String to the header of the record file
+#   help()                       this information
 
-# # misc 
-# server.register_function(keithley.scroll_text,  "scroll_text")
-# server.register_function(server_quit,           "quit")
+# current measurement related methods
+#   zeroCorrect()                performs zero correct procedure
+#   double getCurrent()          the last read value, instrument must be acquiring continuously
+#   readContinuous(int)          -1 to stop, 0 to read fastest, other value = delay between reads
+#   setRate(double)              sets read rate 0.01 --> 10.0 or 50.0 (if model is 6487)
+#   startSequence(int)           begins acquiring a sequence, argument: number of data values to acquire
+#   getSequence()                returns the list of read values (double)
 
-# # for remote introspection (tab completion with ipython)
-# server.register_function(keithley._listMethods, "__dir__")
-# server.register_function(keithley._listMethods, "system.listMethods")
-# server.register_function(keithley._listMethods,  "trait_names")
-# server.register_function(keithley._listMethods,  "_getAttributeNames")
-# # TODO: implement: system.methodSignature
-# server.register_function(keithley._methodHelp,  "system.methodHelp")
+# voltage source related methods (only 6487 model)
+#   getVoltageRange              returns int 0: 10V 1: 50V 2: 500V
+#   setVoltageRange              int argument [0-2]
+#   getVoltage                   returns a double, preset output voltage
+#   setVoltage                   double argument, [-70.0, 0.0]
+#   getCurrentLimit              returns int 0: 25uA, 1: 250uA, 2: 2.5mA and 3: 25mA iff voltage range is 10V
+#   setCurrentLimit              int argument [0-2,3]
+#   sourceVoltage                int argument 0: stop sourcing, other value sources voltage
+#   voltageStatus                returns int 0: not sourcing 1: sourcing
 
 from driver import Driver
 
@@ -92,7 +98,7 @@ class Instrument(Driver):
         """
         Returns a NULL string or the instrument model name
         """
-        return self.xmlrpc.checkConnection()
+        return self.xmlrpc.getModel()
 
 
     def register(self):
