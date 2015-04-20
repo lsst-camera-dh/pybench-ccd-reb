@@ -6,6 +6,8 @@
  */
 
 #include <SPI.h>
+#include <string.h>
+
 // Pin 13 has an LED connected on most Arduino boards.
 // give it a name:
 //int ledPin = 13;
@@ -15,6 +17,10 @@ int vpowPin = 9;
 bool det = HIGH;
 bool state = HIGH;
 const int chipSelectPin = 4;
+
+char buffer[100];
+int index = 0;
+
 void isr(){
    det = digitalRead(detPin);
 }
@@ -104,6 +110,20 @@ void focus_move(char what){
        answers[4] = send (0xF6);
        delay(100);
    }
+   else if (what == 'h'){
+           Serial.println("Asking zoom value");
+       answers[2] = send (0xA0);
+       answers[3] = send (0x00);
+       answers[4] = send (0x00);
+       delay(100);
+   }
+   else if (what == 'x'){
+           Serial.println("Asking USM motor counter position");
+           answers[2] = send (0xC0);
+           answers[3] = send (0x00);
+           answers[4] = send (0x00);
+          delay(100);
+   }
    // Wait a bit
    
 
@@ -149,6 +169,46 @@ void setup() {
   // Serial port initialization 19200
   Serial.begin(38400);
   
+}
+
+void executeCommand(char buffer[], int & index)
+{
+       int k = 0;
+       int secure = 0;
+       while(buffer[k]!='/')
+           {
+                 char instruction[4];
+                 instruction[0] = '0';
+                 instruction[1] = 'x';
+                 instruction[2] = buffer[k];
+                 instruction[3] = buffer[k+1];
+                 
+                 int a;
+                 sscanf(instruction, "%s", &a);
+                 
+                 Serial.print("Command : ");
+                 Serial.print(a);
+                 Serial.println("  Answer : ");
+                 //Serial.print(send(instruction));
+                 delay(100);
+                 if(secure == 150)
+                 {
+                       break;
+                 }
+                 k = k + 2;
+                 secure = secure + 1;
+           }
+       Serial.println("Command executed, reinitializing buffer...");
+       eraseBuffer(buffer,index);
+}
+
+void eraseBuffer(char buffer[], int & index)
+{
+      for(int j = 0; j < 100; j++)
+           {
+                   buffer[j] = 0;
+            }
+      index = 0;
 }
 
 void loop() {
@@ -197,8 +257,56 @@ void loop() {
         case 'p':
         init_lens();
         break;
-        
+        case 'h':
+        focus_move('h');
+        break;
+        case 'x':
+        focus_move('x');
+        break;
+        case '/':
+              if(index > 1 && !(index%2))
+              {
+                      buffer[index] = incomingByte;
+                      executeCommand(buffer,index);
+              }
+              else
+              {
+                  Serial.println("Warning : Command need even number of element");
+                  Serial.println("Buffer not reinitialized");
+              }
+        break;
+        default:
+              if(index<100)
+              {
+                    bool test = false;
+                    for(int i = 0; i < 36; i++)
+                    {
+                            if(incomingByte==valid[i])
+                            {
+                                      buffer[index]= incomingByte;
+                                      index = index + 1;
+                                      test = true;
+                                      Serial.print(buffer);
+                                      Serial.print("  ");
+                                      Serial.println(index);
+                                      //Serial.println(index%2);
+                                      break;
+                            }
+                    }
+                    if(!test)
+                    {
+                      Serial.println("Invalid caracter detected, command aborted...");
+                      eraseBuffer(buffer,index);
+                    }
+              }
+              else
+              {
+                    Serial.println("Command sequence too long (>100), command aborted...");
+                    eraseBuffer(buffer,index);
+              }
+        break;
       }
     }
   }
 }
+
