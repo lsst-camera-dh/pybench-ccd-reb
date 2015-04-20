@@ -111,7 +111,7 @@ def flux_ramp(self):
     self.ttl.closeShutter()
     time.sleep(2)
 
-# B.flux_ramp = types.MethodType(flux_ramp, B)
-Bench.flux_ramp = flux_ramp
+B.flux_ramp = types.MethodType(flux_ramp, B)
+# Bench.flux_ramp = flux_ramp
 
 
