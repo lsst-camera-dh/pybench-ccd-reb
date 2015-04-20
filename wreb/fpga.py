@@ -1035,7 +1035,7 @@ class FPGA(object):
         Send the command to stop incrementing the ADC sampling time and reset the shift.
         """
         self.write(0x330000, 0)
-        self.write(0x340000, 0)
+        self.write(0x330001, 0)
 
     # ----------------------------------------------------------
 

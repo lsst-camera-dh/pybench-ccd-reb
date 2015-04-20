@@ -394,14 +394,12 @@ class TestREB(object):
         while self.f.get_state() & 4:  # sequencer status bit in the register
             time.sleep(1)
 
-    def execute_sequence(self, name, exposuretime = None):
+    def config_sequence(self, name, exposuretime=None, shutdelay=100):
         """
-        Executes a named sequence.
-        :param name:
-        :param exposuretime:
-        :return:
+        Configure the programmed sequence. Used also to record parameters.
         """
-
+        # selects the right subroutine as main
+        self.select_subroutine(name)
         if name == "Bias":
             self.delay = 0
             self.exptime = 0
@@ -416,13 +414,17 @@ class TestREB(object):
                 darktime = (name == "Dark")
                 self.exptime = self.get_exposure_time(darktime)
 
+    def execute_sequence(self):
+        """
+        Executes a named sequence.
+        :param name:
+        :param exposuretime:
+        :return:
+        """
         self.timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # acquisition date
-
-        # selects the right subroutine as main
-        self.select_subroutine(name)
         # starts the sequencer
         self.f.start()
-        print("Starting %s sequence with %f exposure time." % (name, self.exptime))
+        print("Starting sequence with %f exposure time." % self.exptime)
         #freeze until image output (do not send commands while the COB is acquiring)
         time.sleep(self.exptime+3)
 
@@ -450,7 +452,11 @@ class TestREB(object):
         # for 18-bit data:
         # negative numbers are translated, sign is inverted on all data, also make all values positive
         # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
-        rawdata = np.vectorize(lambda i: 0x5FFFF-i if i & (1 << 17) else 0x1FFFF-i)(buff)
+        # rawdata = np.vectorize(lambda i: 0x5FFFF-i if i & (1 << 17) else 0x1FFFF-i)(buff)
+        # alternatives to test for speed
+        # rawdata = np.select([buff & 0x20000, True], [0x5ffff-buff, 0x1ffff-buff])
+        rawdata = np.choose(buff & 0x20000, (0x1ffff-buff, 0x5ffff-buff))
+
         # TODO: check structure of 16-bit data. It might be already translated back to 18 bits.
         # reshape by channel (all stripes included)
         length = self.imglines * self.imgcols
@@ -474,7 +480,7 @@ class TestREB(object):
             exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
-            avchan = np.mean(y[11:522,1:2002])
+            avchan = np.mean(y[11:self.imgcols-50,2:self.imglines-20])
             exthdu.header["AVERAGE"] = avchan
             hdulist.append(exthdu)
 
@@ -610,7 +616,8 @@ if __name__ == "__main__":
     R.CCDpowerup()
     R.config_aspic()
     #R.load_sequencer()
-    #R.execute_sequence("Bias")
+    #R.config_sequence("Bias")
+    #R.execute_sequence()
     #save_to_fits(R)
     #R.f.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
     #R.f.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux

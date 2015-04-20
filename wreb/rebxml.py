@@ -269,8 +269,13 @@ class XMLParser(object):
             unnamed = Subroutine()
             unnamed.name = "unnamed%04d" % self.unnamed_subroutine_num
             self.unnamed_subroutine_num += 1
+            instr = Instruction(opcode = Instruction.OP_JumpToSubroutine,
+                                subroutine = unnamed.name,
+                                infinite_loop = False,
+                                repeat = repeat)
+            print instr
 
-            print "unnamed subroutine", unnamed.name
+            print "   unnamed subroutine", unnamed.name
 
             for subcall in subcalls:
                 subinstr = self.parse_call(subcall)
@@ -279,11 +284,6 @@ class XMLParser(object):
             # Add the final RTS
             unnamed.instructions.append(
                 Instruction(opcode = Instruction.OP_ReturnFromSubroutine))
-
-            instr = Instruction(opcode = Instruction.OP_JumpToSubroutine,
-                                subroutine = unnamed.name,
-                                infinite_loop = False,
-                                repeat = repeat)
 
             self.subroutines[unnamed.name] = unnamed
             self.subroutines_names.append(unnamed.name)
@@ -396,7 +396,7 @@ class XMLParser(object):
 
     def parse_file(self, xmlfile):
         tree = etree.parse(xmlfile)
-        return self. parse_tree(tree)
+        return self.parse_tree(tree)
 
     def validate_file(self, xmlfile):
         """
