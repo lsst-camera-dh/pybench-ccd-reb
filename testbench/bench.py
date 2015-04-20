@@ -1,11 +1,12 @@
 
-import importlib
+import os, os.path
+import datetime
 import logging ## critical: common logging system (all devices should log through it)
+
+import importlib
  
 from singleton import Borg
-
 from config import config
-
 import drivers
 
 # find a better way, to dynamically load the modules associated (from config.py)
@@ -20,13 +21,31 @@ class Bench(Borg):
     This object *MUST* be a singleton.
     """
 
+    def log(self, message, level=logging.INFO):
+        print message
+        logging.log(level, message)
+
     def __init__(self):
         Borg.__init__(self)
         # Be careful here: do not reset any existing member
         if not(self.__dict__.has_key("name")):
-            self.name = "LSST CCD Testbench"
+            self.name = "LSST CCD Testbench -- LPNHE, Paris"
         if not(self.__dict__.has_key("registry")):
             self.registry = {}
+
+        now = datetime.datetime.now()
+        logname = "bench-%s.log" % now.isoformat().split('T')[0]
+        logdir = os.path.join(os.getenv("HOME"), 'logs')
+        try:
+            os.mkdir(logdir)
+        except:
+            pass
+        logfile = os.path.join(logdir, logname)
+        logging.basicConfig(filename = logfile, 
+                            level = logging.DEBUG, 
+                            format = '%(asctime)s: %(message)s')
+
+        self.log("Bench singleton instance initialised.")
 
     def __str__(self): 
         return self.name
@@ -52,8 +71,8 @@ class Bench(Borg):
         #
         if (self.registry.has_key(identifier) and
             not(kargs.get('force_reload', False))):
-            print "Instrument", identifier, "is already registered"
-            return
+            self.log("Instrument %s is already registered." % identifier)
+            return True
         
         params = {}
         
@@ -76,13 +95,15 @@ class Bench(Borg):
         # instrument_module   = getattr(drivers, params['driver'])
         # print instrument_module
 
+        self.log("Loading driver %s" % params['driver'])
+
         ## TODO: improve!
         instrument_module = importlib.import_module(
             "lsst.testbench.drivers.%s" % params['driver'])
         # "drivers.%s" % params['driver'], package = 'lsst.testbench')
 
         instrument_class    = getattr(instrument_module, 'Instrument')
-        print instrument_class
+        # print instrument_class
 
         instrument_instance = instrument_class(identifier, **params)
         # print instrument_instance
@@ -93,6 +114,8 @@ class Bench(Borg):
         try:
             instrument_instance.register(self)
         except:
+            logging.error("Failed to connect to instrument %s. Stop." %
+                          identifier)
             raise IOError("Failed to connect to instrument %s. Stop." %
                           identifier)
 
@@ -102,6 +125,9 @@ class Bench(Borg):
         self.registry[identifier] = dict(params)
         self.registry[identifier]['instance'] = instrument_instance
         self.__dict__[identifier] = instrument_instance
+
+        self.log("Instrument %s is now attached to the Bench instance." 
+                     % identifier)
 
         return True
 
@@ -118,8 +144,10 @@ class Bench(Borg):
         #                mode = 'exec')
         # eval(code)
 
+        self.log("Loading script %s." % script)
+
         script_module = importlib.import_module(
-            "lsst.testbench.script.%s" % script)
+            "lsst.testbench.scripts.%s" % script)
 
         return True
           

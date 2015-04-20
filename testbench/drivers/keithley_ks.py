@@ -36,6 +36,7 @@ Testbench driver for the Keithley multimeter (through keithley-server and XML-RP
 from driver import Driver
 
 import xmlrpclib
+import logging
 
 # =======================================================================
 
@@ -131,9 +132,9 @@ class Instrument(Driver):
         Reset the instrument to the factory default settings
         (with the exception of all remote interface settings).
         """
-        # logging.info("Keithley.reset() called.")
+        logging.info("Keithley.reset() called.")
         result = self.xmlrpc.reset()
-        # logging.info("Keithley.reset() done.")
+        logging.info("Keithley.reset() done.")
         return result
 
 
@@ -141,9 +142,9 @@ class Instrument(Driver):
         """
         Clear the instrument status.
         """ 
-        # logging.info("Keithley.clear() called.")
+        logging.info("Keithley.clear() called.")
         result = self.xmlrpc.clear()
-        # logging.info("Keithley.clear() done.")
+        logging.info("Keithley.clear() done.")
         return result
 
     
@@ -159,11 +160,11 @@ class Instrument(Driver):
         for data with the specified timeout (instead of the default one). 
         """
 
-        # logging.info("Keithley.send() called.")
-        # logging.info("  command = [%s]" % command)
+        logging.info("Keithley.send() called.")
+        logging.info("  command = [%s]" % command)
         answer = self.xmlrpc.send(command, timeout)
-        # logging.info("  answer = [%s]" % answer)
-        # logging.info("Keithley.send() done.")
+        logging.info("  answer = [%s]" % answer)
+        logging.info("Keithley.send() done.")
         esr = self.xmlrpc.get_error_status()
         if esr != 0:
             raise IOError("Keithley command [%s] failed: error code ESR = %d." 
@@ -176,10 +177,10 @@ class Instrument(Driver):
         """
         Return the identification string of the Keithley.
         """
-        # logging.info("Keithley.get_serial() called.")
+        logging.info("Keithley.get_serial() called.")
         serial = self.xmlrpc.get_serial()
-        # logging.info("  serial = [%s]" % serial)
-        # logging.info("Keithley.get_serial() done.")
+        logging.info("  serial = [%s]" % serial)
+        logging.info("Keithley.get_serial() done.")
         return serial
 
     # ----------------------- Various methods ---------------------------
@@ -189,9 +190,9 @@ class Instrument(Driver):
         Scroll text 'msg' on the Multimeter display.
         For debug purpose only.
         """
-        # logging.info("Keithley.scroll_text() called.")
+        logging.info("Keithley.scroll_text() called.")
         result = self.xmlrpc.scroll_text(msg)
-        # logging.info("Keithley.scroll_text() done.")
+        logging.info("Keithley.scroll_text() done.")
         return result
 
 
