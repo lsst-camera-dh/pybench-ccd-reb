@@ -22,7 +22,7 @@ def configure(conf):
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = [], 
+        source = ['__init__.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench/scripts')
 
     bld.recurse(submodules)

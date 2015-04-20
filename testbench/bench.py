@@ -67,15 +67,19 @@ class Bench(Borg):
         # Dynamically load the module
         # eval('import %s' % instrument_module)
         
-        code = compile("import drivers.%s" % params['driver'], 
-                       filename = '/dev/stderr',
-                       mode = 'exec')
-        eval(code)
-        
+        # code = compile("import drivers.%s" % params['driver'], 
+        #                filename = '/dev/stderr',
+        #                mode = 'exec')
+        # eval(code)
         # Create an instance of the instrument
 
-        instrument_module   = getattr(drivers, params['driver'])
-        print instrument_module
+        # instrument_module   = getattr(drivers, params['driver'])
+        # print instrument_module
+
+        ## TODO: improve!
+        instrument_module = importlib.import_module(
+            "lsst.testbench.drivers.%s" % params['driver'])
+        # "drivers.%s" % params['driver'], package = 'lsst.testbench')
 
         instrument_class    = getattr(instrument_module, 'Instrument')
         print instrument_class
