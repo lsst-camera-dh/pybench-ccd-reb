@@ -72,12 +72,12 @@ void focus_move(char what){
    digitalWrite(vpowPin, LOW);
    
    // Turn focus ring to AF min or max
-   if (what == 'd'){
+   if (what == '<'){
      Serial.println("Moving to focus min");
       answers[2] = send(0x05);
       delay(1000);
    }
-   else if (what == 'u'){
+   else if (what == '>'){
      Serial.println("Moving to focus max");
       answers[2] = send(0x06);
       delay(1000);
@@ -152,6 +152,7 @@ void setup() {
   digitalWrite(vddPin, HIGH);		
   digitalWrite(vpowPin, HIGH);
   attachInterrupt(0, isr, CHANGE);
+   //attachInterrupt(0, isr, LOW);
   delay(300);
   
   // Change frequency to 8MHz to get SPI communication at 62kHz
@@ -183,14 +184,17 @@ void executeCommand(char buffer[], int & index)
                  instruction[2] = buffer[k];
                  instruction[3] = buffer[k+1];
                  
-                 int a;
-                 sscanf(instruction, "%s", &a);
+                 unsigned char a;
+                 unsigned int d;
+                 sscanf(instruction, "%s", &d);
+                 
+                 a = (unsigned char)d;
                  
                  Serial.print("Command : ");
-                 Serial.print(a);
+                 Serial.print(a, HEX);
                  Serial.println("  Answer : ");
-                 //Serial.print(send(instruction));
-                 delay(100);
+                 Serial.print(send(a), HEX);
+                 delay(1500);
                  if(secure == 150)
                  {
                        break;
@@ -213,18 +217,18 @@ void eraseBuffer(char buffer[], int & index)
 
 void loop() {
   if (det != state){
-    if (det == LOW){
-      delay(1000);
-      if (det == LOW){
-        //digitalWrite(ledPin, HIGH);
-	digitalWrite(vddPin, LOW);
-	//digitalWrite(vpowPin, LOW);
-   	state = LOW;
-        Serial.println("Lens detected, init...");	
-	delay(300);
-	init_lens();
-      }
-    }
+     if (det == LOW){
+        delay(1000);
+        if (det == LOW){
+          //digitalWrite(ledPin, HIGH);
+	  digitalWrite(vddPin, LOW);
+	  //digitalWrite(vpowPin, LOW);
+   	  state = LOW;
+          Serial.println("Lens detected, init...");	
+	  delay(300);
+	  init_lens();
+        }
+     }
    else{
      //digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
      digitalWrite(vddPin, HIGH);
@@ -236,16 +240,16 @@ void loop() {
     if (Serial.available() > 0){
       char incomingByte = Serial.read();
       switch(incomingByte){
-        case 'd':
-        focus_move('d');
+        case '<':
+        focus_move('<');
         break;
-        case 'u':
-        focus_move('u');
+        case '>':
+        focus_move('>');
         break;
-        case 'a':
+        case '+':
         focus_move('+');
         break;
-        case 'z':
+        case '-':
         focus_move('-');
         break;
         case 'q':
@@ -278,22 +282,19 @@ void loop() {
         default:
               if(index<100)
               {
-                    bool test = false;
-                    for(int i = 0; i < 36; i++)
-                    {
-                            if(incomingByte==valid[i])
-                            {
+                   if(((incomingByte >= '0') && (incomingByte <= '9')) ||
+                       ((incomingByte >= 'A') && (incomingByte <= 'F')) || 
+                       ((incomingByte >= 'a') && (incomingByte <= 'f')))
+                   {
                                       buffer[index]= incomingByte;
                                       index = index + 1;
-                                      test = true;
                                       Serial.print(buffer);
                                       Serial.print("  ");
                                       Serial.println(index);
                                       //Serial.println(index%2);
                                       break;
-                            }
                     }
-                    if(!test)
+                    else
                     {
                       Serial.println("Invalid caracter detected, command aborted...");
                       eraseBuffer(buffer,index);
