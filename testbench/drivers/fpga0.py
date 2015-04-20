@@ -3,18 +3,66 @@
 # LSST
 # Python minimal interface for the REB FPGA
 #
-#
+# This one is for REB1 with DREB1. This means CABAC0, ASPIC2 (not managed by the FPGA),
+# and first version of the sequencer (with no pointers).
+# Take from wreb for more advanced REBs and DREBs.
 
 import sys
 import os, os.path
 import re
 import subprocess
 
-import cabac
-import aspic
+import cabac0 as cabac
+import time
 import bidi
+import pyfits
+import numpy as np
 
 ## -----------------------------------------------------------------------
+def generate_tag(number):
+    today = time.gmtime()
+    tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
+    tag = int(tagstr,16)
+    return tag
+
+
+def get_sequencer_hdu(seq):
+    """
+    Builds table HDU for FITS file containing sequencer dump
+        :param seq: Sequencer
+        :return: pyfits.TableHDU
+        """
+    prog = seq.program
+    progaddr = prog.instructions.keys()
+    prognum = 256 + len(progaddr)
+
+    slicenum = np.ndarray(shape=(prognum,), dtype=np.dtype('a4'))
+    output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
+    duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
+
+    for ifunc in seq.functions.iterkeys():
+        func = seq.get_function(ifunc)
+        for islice in func.outputs.keys():
+            i = ifunc * 16 + islice
+            slicenum[i] = hex(i)[2:]
+            output[i] = bin(func.outputs[islice])[2:]
+            duration[i] = func.timelengths[islice]
+
+    for i, addr in enumerate(sorted(progaddr)):
+        slicenum[i+256] = '30' + hex(addr)[2:]
+        output[i+256] = prog.instructions[addr].__repr__()[:20]
+        duration[i+256] = prog.instructions[addr].repeat
+
+    slicecol = pyfits.Column(name="Address", format='A4', array=slicenum)
+    outputcol = pyfits.Column(name="Output", format='A32', array=output)
+    durationcol = pyfits.Column(name="Time", format='I8', array=duration)
+
+    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
+    # add name to extension here
+    exthdu.header["EXTNAME"] = "SEQ_CFG"
+
+    return exthdu
+
 
 class Program(object):
     """
@@ -635,8 +683,6 @@ class FPGA(object):
         # (at least we will want to initialize to 0)
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
-        self.aspic_top = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
-        self.aspic_bottom = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
 
     # def open(self):
@@ -968,11 +1014,12 @@ class FPGA(object):
 
     def stop_clock(self):
         """
-        Stop the FPGA internal clock counter.
+        Stop the FPGA internal clock counter if it is running.
         """
         st = self.get_state()
-        self.set_trigger(st ^ 0x2)
-
+        if st & 2:
+            st -= 2
+        self.set_trigger(st)
 
     def get_time(self):
         result = self.read(address = 0x4, n = 2)
@@ -1120,13 +1167,9 @@ class FPGA(object):
         """
         
         key = "I_OS"
-        
-        if key in currents:
-            self.dacs[key] = currents[key] & 0xfff
-        else:
-            raise ValueError(
-                "No key found for current source (%s), could not be set." % key)
-            
+
+        self.dacs[key] = currents[key] & 0xfff
+
         self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
                 
         #activates DAC output

@@ -13,13 +13,14 @@ class ASPIC(object):
     ASPIC settings
     """
     params = ["GAIN", "RC", "AF1", "TM", "CLS"]  # list of accepted parameters
+    # could be cleaned up with bidi for addressing like CABAC1
 
     def __init__(self):
-        self.Gain = 0b1000
-        self.RC = 0b0000
+        self.Gain = 0
+        self.RC = 0
         self.TM = True
-        self.AF1 = False
-        self.Clamps = 0b0
+        self.AF1 = True
+        self.Clamps = 0
 
     def set_gain(self, g):
         """
@@ -33,7 +34,7 @@ class ASPIC(object):
             self.Gain = int(g)
         else:
             raise ValueError("Erroneous gain value for ASPIC")
-        return self.Gain << 4 + self.RC
+        return (self.Gain << 4) + self.RC
 
     def set_RC(self, rc):
         """
@@ -46,7 +47,7 @@ class ASPIC(object):
             self.RC = int(rc)
         else:
             raise ValueError("Erroneous RC value for ASPIC")
-        return self.Gain << 4 + self.RC
+        return (self.Gain << 4) + self.RC
 
     def set_TM(self, tm):
         """
@@ -55,7 +56,12 @@ class ASPIC(object):
         :return: int
         """
         self.TM = tm
-        return 1<<17 + self.AF1 << 1 + self.TM
+        code = 0
+        if self.TM:
+            code += 1
+        if self.AF1:
+            code += 2
+        return 1<<17 | code
 
     def set_AF1(self, af1):
         """
@@ -64,7 +70,12 @@ class ASPIC(object):
         :return: int
         """
         self.AF1 = af1
-        return 1<<17 + self.AF1 << 1 + self.TM
+        code = 0
+        if self.TM:
+            code += 1
+        if self.AF1:
+            code += 2
+        return 1<<17 | code
 
     def clamp_channel(self, c):
         """
@@ -77,7 +88,7 @@ class ASPIC(object):
             self.Clamps += 1 << int(c)
         else:
             raise ValueError("Erroneous clamp channel for ASPIC")
-        return 1<<16 + self.Clamps
+        return 1<<16 | self.Clamps
 
     def clamp_all(self, clamping = True):
         """
@@ -90,7 +101,7 @@ class ASPIC(object):
             self.Clamps = 0xFF
         else:
             self.Clamps = 0
-        return 1<<16 + self.Clamps
+        return 1<<16 | self.Clamps
 
     def set_aspic_fromstring(self, param, value):
         """
@@ -106,7 +117,7 @@ class ASPIC(object):
             reg = self.set_RC(value)
         elif param == "CLS":
             self.Clamps = value & 0xFF
-            reg = 1<<16 + self.Clamps
+            reg = 1<<16 | self.Clamps
         elif param == "TM":
             reg = self.set_TM(value)
         elif param == "AF1":
@@ -120,11 +131,11 @@ class ASPIC(object):
         Takes values in the object and writes them in register format.
         Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
         """
-        regs = []
+        regs = [0,0,0]
 
-        regs[0] = self.Gain << 4 + self.RC
-        regs[1] = 1<<16 + self.Clamps
-        regs[2] = 1<<17 + self.AF1 << 1 + self.TM
+        regs[0] = self.Gain << 4 | self.RC
+        regs[1] = 1<<16 | self.Clamps
+        regs[2] = self.set_TM(self.TM)
 
         return regs
 
@@ -180,14 +191,22 @@ class ASPIC(object):
         Takes values of registers from readback and updates the object. If 'check' is True, checks against previous
         values.
         Note that this should be applied to the right ASPIC object(s).
+        :param regs: dict
+        :param check: bool
         """
-        if len(regs) < 3:
-            print("Error: need three registers for complete readback.")
+        # Now accepts any number of registers (in a dictionary).
+        #if len(regs) < 3:
+        #    print("Error: need three registers for complete readback.")
 
-        else:
-            self.read_gain_rc(regs[0], check)
-            self.read_clamps(regs[1], check)
-            self.read_modes(regs[2], check)
+        for add,reg in regs.iteritems():
+            if add == 0:
+                self.read_gain_rc(reg, check)
+            elif add == 1:
+                self.read_clamps(reg, check)
+            elif add == 2:
+                self.read_modes(reg, check)
+            else:
+                print("Warning: unknown register in ASPIC readback.")
 
     def get_aspic_fromstring(self, param):
         """

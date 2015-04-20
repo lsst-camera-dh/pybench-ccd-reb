@@ -3,7 +3,9 @@
 # LSST / LPNHE
 # Python minimal interface for the ASPIC chip
 #
-# Current version ASPIC3 chip with DREB1 interface
+# Current ASPIC3 chip with DREB1 interface
+#
+# wreb has the tested version, TAKE THAT ONE NOT THIS ONE
 
 ## -----------------------------------------------------------------------
 __author__ = 'juramy'
@@ -95,7 +97,7 @@ class ASPIC(object):
         Takes values in the object and writes them in register format.
         Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
         """
-        return self.Gain << 4 + self.RC
+        return (self.Gain << 4) + self.RC
 
     def write_clamps(self):
         """
@@ -109,7 +111,7 @@ class ASPIC(object):
         Takes values in the object and writes them in register format.
         Note that the register needs to be completed with the addressing bits to target the right ASPIC(s).
         """
-        return self.AF1 << 1 + self.TM
+        return (self.AF1 << 1) + self.TM
 
 
     def write_all_registers(self):

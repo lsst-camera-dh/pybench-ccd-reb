@@ -81,10 +81,9 @@ class Bench(Borg):
         print instrument_class
 
         instrument_instance = instrument_class(identifier, **params)
-        print instrument_instance
-        print dir(instrument_instance)
+        # print instrument_instance
+        # print dir(instrument_instance)
 
-        
         # register actions: try to open and connect to the instrument
         # will raise an exception if it fails
         try:

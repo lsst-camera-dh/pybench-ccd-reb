@@ -1,0 +1,50 @@
+   66  info=( $(wmctrl -d | awk '{print $4, $6}') )
+   67  desktop_width=${info[0]%x*}
+   68  viewports=$(( desktop_width / screen_width ))
+   69  current_vp=$(( ${info[1]%,*} / screen_width ))
+   70  echo $current_vp
+   71  info=( $(wmctrl -d | awk '{print $4, $6}') )
+   72  desktop_width=${info[0]%x*}
+   73  viewports=$(( desktop_width / screen_width ))
+   74  current_vp=$(( ${info[1]%,*} / screen_width ))
+   75  echo $current_vp
+   76  wmctrl -d 
+wmctrl -o 15360,1200
+
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 0,0  WA: 65,24 3775x1176  N/A
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 3840,0  WA: 65,24 3775x1176  N/A
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 7680,0  WA: 65,24 3775x1176  N/A
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 11520,0  WA: 65,24 3775x1176  N/A
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 15360,0  WA: 65,24 3775x1176  N/A
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 15360,1200  WA: 65,24 3775x1176  N/A
+lsst@lpnlsstbench:~> wmctrl -d
+0  * DG: 19200x2400  VP: 0,1200  WA: 65,24 3775x1176  N/A
+
+
+
+
+dice@dicebench:~> wmctrl -l
+0x04200027 -1 dicebench Gestionnaire de mises à jour
+0x01c00003  0 dicebench Tableau de bord inférieur de côté étendu
+0x01c00049  0 dicebench Tableau de bord supérieur de côté étendu
+0x01e00020  0 dicebench x-nautilus-desktop
+0x03400004  0 dicebench dice@dicebench: ~/skydaq/py/testbench/tests/spectra
+0x034ae5de  0 dicebench llg@LPNP204: ~
+0x034af045  0 dicebench dice@dicebench: ~
+0x0480000a  0 dicebench xclock
+
+moving the xclock window on another position
+wmctrl -i -r 0x0480000a -e 0,3500,0,200,200
+
+
+changing the current desktop
+dice@dicebench:~> wmctrl -o 0,0
+dice@dicebench:~> wmctrl -o 1280,0
+dice@dicebench:~> wmctrl -o 2560,0
+dice@dicebench:~> wmctrl -o 3840,0

@@ -34,6 +34,10 @@
                 <fullname>Number of columns left after window</fullname>
                 <value>244</value>
             </parameter>
+            <parameter id="FastColumns">
+                <fullname>Number of serial transfers during one parallel phase of fast flush</fullname>
+                <value>2</value>
+            </parameter>
             <parameter id="ExposureTime">
                 <fullname>Duration of exposure in unit of 20 ms</fullname>
                 <value>100</value>
@@ -43,16 +47,20 @@
                 <value>10 ns</value>
             </parameter>
             <parameter id="TimeP">
-                <fullname>Parallel clock period</fullname>
+                <fullname>Base time element of parallel transfers</fullname>
                 <value>2000 ns</value>
             </parameter>
             <parameter id="BufferP">
-                <fullname>Parallel buffer period</fullname>
+                <fullname>Parallel transfer buffer time</fullname>
                 <value>1000 ns</value>
             </parameter>
+            <parameter id="TimeS">
+                <fullname>Base element of serial transfers</fullname>
+                <value>300 ns</value>
+            </parameter>
             <parameter id="BufferS">
-                <fullname>Serial buffer period</fullname>
-                <value>200 ns</value>
+                <fullname>Buffer for serial clock crossing</fullname>
+                <value>100 ns</value>
             </parameter>
             <parameter id="RampTime">
                 <fullname>ASPIC ramp time</fullname>
@@ -160,31 +168,31 @@
                     <clock ref="P2"/>
                     <clock ref="P3"/>
                     <clock ref="P4"/>
+                    <clock ref="RG"/>
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
                         <duration>BufferP</duration>
-                        <value>0110</value>
+                        <value>01101</value>
                     </timeslice>
                     <timeslice id="slice2">
                         <duration>TimeP</duration>
-                        <value>0011</value>
+                        <value>00111</value>
                     </timeslice>
                     <timeslice id="slice3">
                         <duration>TimeP</duration>
-                        <value>1001</value>
+                        <value>10011</value>
                     </timeslice>
                     <timeslice id="slice4">
                         <duration>TimeP</duration>
-                        <value>1100</value>
+                        <value>11001</value>
                     </timeslice>
                     <timeslice id="slice5">
                         <duration>TimeP</duration>
-                        <value>0110</value>
+                        <value>01100</value>
                     </timeslice>
                 </slicelist>
                 <constants>
-                    <constant ref="RG"> 1 </constant>
                     <constant ref="R1"> 1 </constant>
                     <constant ref="R2"> 1 </constant>
                     <constant ref="CL"> 1 </constant>
@@ -206,7 +214,7 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>101011000</value>
                     </timeslice>
                     <timeslice id="slice2">
@@ -223,11 +231,11 @@
                     </timeslice>
                     <timeslice id="slice5">
                         <duration>360 ns</duration>
-                        <value>000100010</value>
+                        <value>000100100</value>
                     </timeslice>
                     <timeslice id="slice6">
                         <duration>BufferS</duration>
-                        <value>010100010</value>
+                        <value>010100100</value>
                     </timeslice>
                     <timeslice id="slice7">
                         <duration>ISO2</duration>
@@ -235,7 +243,7 @@
                     </timeslice>
                     <timeslice id="slice8">
                         <duration>RampTime</duration>
-                        <value>010000100</value>
+                        <value>010000010</value>
                     </timeslice>
                     <timeslice id="slice9">
                         <duration>BufferS</duration>
@@ -258,11 +266,11 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>50 ns</duration>
+                        <duration>100 ns</duration>
                         <value>1</value>
                     </timeslice>
                     <timeslice id="slice2">
-                        <duration>50 ns</duration>
+                        <duration>100 ns</duration>
                         <value>0</value>
                     </timeslice>
                 </slicelist>
@@ -286,15 +294,15 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>1010</value>
                     </timeslice>
                     <timeslice id="slice2">
-                        <duration>400 ns</duration>
+                        <duration>BufferS</duration>
                         <value>1011</value>
                     </timeslice>
                     <timeslice id="slice3">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>0001</value>
                     </timeslice>
                     <timeslice id="slice4">
@@ -302,7 +310,7 @@
                         <value>0101</value>
                     </timeslice>
                     <timeslice id="slice5">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>0100</value>
                     </timeslice>
                     <timeslice id="slice6">
@@ -310,7 +318,7 @@
                         <value>0110</value>
                     </timeslice>
                     <timeslice id="slice7">
-                        <duration>100 ns</duration>
+                        <duration>BufferS</duration>
                         <value>0010</value>
                     </timeslice>
                 </slicelist>
@@ -331,15 +339,15 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>1010</value>
                     </timeslice>
                     <timeslice id="slice2">
-                        <duration>400 ns</duration>
+                        <duration>BufferS</duration>
                         <value>1011</value>
                     </timeslice>
                     <timeslice id="slice3">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>0001</value>
                     </timeslice>
                     <timeslice id="slice4">
@@ -347,7 +355,7 @@
                         <value>0101</value>
                     </timeslice>
                     <timeslice id="slice5">
-                        <duration>300 ns</duration>
+                        <duration>TimeS</duration>
                         <value>0100</value>
                     </timeslice>
                     <timeslice id="slice6">
@@ -355,7 +363,7 @@
                         <value>0110</value>
                     </timeslice>
                     <timeslice id="slice7">
-                        <duration>300 ns</duration>
+                        <duration>BufferS</duration>
                         <value>0010</value>
                     </timeslice>
                 </slicelist>
@@ -380,6 +388,10 @@
                     <timeslice id="slice2">
                         <duration>100 ns</duration>
                         <value>1</value>
+                    </timeslice>
+                   <timeslice id="slice3">
+                        <duration>100 ns</duration>
+                        <value>0</value>
                     </timeslice>
                 </slicelist>
                 <constants>
@@ -446,7 +458,142 @@
                     <constant ref="RST"> 1 </constant>
                 </constants>
             </function>
-        </functions>
+            <function id="FastFlush2">
+                <fullname>Second step of fast flush</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeS</duration>
+                        <value>1010</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>BufferS</duration>
+                        <value>1011</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeS</duration>
+                        <value>0001</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>0101</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeS</duration>
+                        <value>0100</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>0110</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>BufferS</duration>
+                        <value>0010</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P3">1</constant>
+                    <constant ref="P4">1</constant>
+                    <constant ref="CL">1</constant>
+                    <constant ref="RST">1</constant>
+                </constants>
+            </function>
+            <function id="FastFlush3">
+                <fullname>Third step of fast flush</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeS</duration>
+                        <value>1010</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>BufferS</duration>
+                        <value>1011</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeS</duration>
+                        <value>0001</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>0101</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeS</duration>
+                        <value>0100</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>0110</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>BufferS</duration>
+                        <value>0010</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P1">1</constant>
+                    <constant ref="P4">1</constant>
+                    <constant ref="CL">1</constant>
+                    <constant ref="RST">1</constant>
+                </constants>
+            </function>
+            <function id="FastFlush4">
+                <fullname>Fourth step of fast flush</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeS</duration>
+                        <value>1010</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>BufferS</duration>
+                        <value>1011</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeS</duration>
+                        <value>0001</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>0101</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeS</duration>
+                        <value>0100</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>0110</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>BufferS</duration>
+                        <value>0010</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P1">1</constant>
+                    <constant ref="P2">1</constant>
+                    <constant ref="CL">1</constant>
+                    <constant ref="RST">1</constant>
+                </constants>
+            </function>
+       </functions>
     </sequencer-config>
     <sequencer-routines>
         <subroutines>
@@ -493,6 +640,24 @@
                 <call ref="TransferLine"/>
                 <call ref="FlushSerial">
                     <repeat>ReadColumns</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="FastFlushLine">
+                <fullname>Transfer line while flushing serial register</fullname>
+                <call ref="FlushSerial">
+                    <repeat>FastColumns</repeat>
+                </call>
+                <call ref="FastFlush2">
+                    <repeat>FastColumns</repeat>
+                </call>
+                <call ref="FastFlush3">
+                    <repeat>FastColumns</repeat>
+                </call>
+                <call ref="FastFlush4">
+                    <repeat>FastColumns</repeat>
+                </call>
+                <call ref="FlushSerial">
+                    <repeat>FastColumns</repeat>
                 </call>
             </subroutine>
             <subroutine id="Exposure20ms">
@@ -630,6 +795,12 @@
             <main id="PocketPump">
                 <fullname>Frame acquisition with pocket pumping</fullname>
                 <call ref="PumpedAcquisition"/>
+            </main>
+            <main id="Test">
+                <fullname>Test of sequencer</fullname>
+                <call ref="StartOfImage"/>
+                <call ref="ReadFrame"/>
+                <call ref="EndOfImage"/>
             </main>
        </mains>
     </sequencer-routines>

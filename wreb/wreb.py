@@ -13,11 +13,13 @@ import rebxml
 import numpy as np
 import pyfits
 
+
 def generate_tag(number):
     today = time.gmtime()
     tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
     tag = int(tagstr,16)
     return tag
+
 
 def get_sequencer_hdu(seq):
     """
@@ -33,9 +35,9 @@ def get_sequencer_hdu(seq):
     output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
     duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
 
-    for ifunc in range(16):
+    for ifunc in seq.functions.iterkeys():
         func = seq.get_function(ifunc)
-        for islice in range(16):
+        for islice in func.outputs.keys():
             i = ifunc * 16 + islice
             slicenum[i] = hex(i)[2:]
             output[i] = bin(func.outputs[islice])[2:]
@@ -73,12 +75,15 @@ class TestREB(object):
 
     def __init__(self, rriaddress = 2):
         self.f = fpga.FPGA(ctrl_host = None, reb_id = rriaddress)
-        #self.load_sequencer()
-        self.imgtag = generate_tag(0)
-        self.f.set_time(self.imgtag)
+        self.f.stop_clock()  # stops the clocks to use as image tag
+        self.imgtag = 0
+        self.f.set_time(generate_tag(self.imgtag))
         self.f.write(0x400006, 0)  # pattern generator off
         self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
         self.config = {}
+        self.seq = None  # until loaded
+        # load 0 on default state to prep for REB start-up
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
     def set_stripes(self, liststripes):
         self.stripes = []
@@ -97,18 +102,25 @@ class TestREB(object):
 
         self.nchannels = 16*len(self.stripes)
 
-    def load_sequencer(self):
+    def load_sequencer(self, xmlfile = None):
         """
         Loads all sequencer content.
         :return:
         """
+        if xmlfile:
+            self.xmlfile = xmlfile
+
         self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
         self.f.send_sequencer(self.seq)
-        self.exptime = self.get_exposure_time()
+        try:
+            self.exptime = self.get_exposure_time()
+        except:
+            print("Warning: could not find exposure subroutine in %s" % xmlfile)
 
     def select_subroutine(self, subname, repeat = 1):
         """
-        Modify the main subroutine to be a call (JSR) to the subroutine.
+        Old: Modify the main subroutine to be a call (JSR) to the subroutine.
+        TODO: New: use the pointer to the program start. Need to separate in rebxml.py and process in fpga.py
         """
         if self.seq.program == None:
             raise ValueError("No program with identified subroutines yet.")
@@ -129,8 +141,14 @@ class TestREB(object):
         self.seq.program.instructions[0x0] = first_instr # to keep it in sync
 
     def update_filetag(self, t):
-        self.imgtag = generate_tag(t)
-        self.f.set_time(self.imgtag)
+        """
+        Updates the filetag to the FPGA timer.
+        :param t: int new numerical tag
+        :return:
+        """
+        self.imgtag = t
+        hextag = generate_tag(t)
+        self.f.set_time(hextag)
 
     def send_cabac_config(self, params):
         """
@@ -185,8 +203,6 @@ class TestREB(object):
         To be executed at power-up to safeguard CABAC1.
         :return:
         """
-        #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
         # power-up the CABAC low voltages
         self.f.cabac_power(True)
         # power-up the clock rails (in V)
@@ -197,7 +213,7 @@ class TestREB(object):
         self.f.cabac_safety()
         if not self.useCABACbias:
             # put CABAC biases just below power supply to VddOD
-            self.send_cabac_config({"OD": 10, "GD": 10, "RD": 10, "OG": 10, "SPA": 10})
+            self.send_cabac_config({"OD": 5, "GD": 5, "RD": 5, "OG": 5, "SPA": 5})
         # else: all values are at 0, VddOD must not be too high
 
     def CCDpowerup(self):
@@ -206,8 +222,18 @@ class TestREB(object):
         """
 
         #starting drain voltages
-        drains = {"OD": 10, "GD": 9, "RD": 8}
-        self.set_biases(drains)
+        # safety: OD-RD < 20 V, but preferably also OD>RD
+        if self.useCABACbias:
+            #two steps
+            drains = {"OD": 18, "GD": 18}
+            self.set_biases(drains)
+            self.set_biases({"RD": 18})
+            drains = {"OD": 30, "GD": 24}
+            self.set_biases(drains)
+        else:
+            # simultaneous activation works fine
+            drains = {"RD": 18, "OD": 30, "GD": 24}
+            self.set_biases(drains)
 
         time.sleep(0.5)
 
@@ -228,8 +254,11 @@ class TestREB(object):
             self.f.set_current_source(dacOS, s)
         self.config.update(dacOS)
 
-        #rewrite default state of sequencer (to avoid reloading all functions)
-        self.f.send_function(0, self.seq.get_function(0))
+        #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
+        if self.seq:
+            self.f.send_function(0, self.seq.get_function(0))
+        else:
+            self.load_sequencer()
 
         # see control of BSS
 
@@ -238,6 +267,9 @@ class TestREB(object):
         Sequence to shutdown power to the CCD.
         """
         # see control of BSS here
+
+        #sets the default sequencer clock states to 0
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
         #shuts current on CS gate
         dacOS = {"I_OS": 0}
@@ -270,12 +302,14 @@ class TestREB(object):
         """
         # need to bring down VddOD here to < 15V
         # clock rails first (in V)
-        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
+        rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
         self.f.set_clock_voltages(rails)
         self.config.update(rails)
         # shutdown the CABAC low voltages
         self.f.cabac_power(False)
         # need to shutdown VddOD right here
+        #sets the default sequencer clock states to 0
+        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
     def config_aspic(self):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
@@ -298,7 +332,7 @@ class TestREB(object):
             time.sleep(0.1)
             self.config.update(self.f.get_cabac_config(stripe, check=True))
 
-        elif param in ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH"]:
+        elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
             self.f.set_clock_voltages({param: value})
             self.config.update({param: value})
 
@@ -367,19 +401,20 @@ class TestREB(object):
         :param exposuretime:
         :return:
         """
-                # load new exposure time here (better: with XML parameter ?)
-        if exposuretime:
-            self.set_exposure_time(exposuretime)
-            self.exptime = exposuretime
-        else:
-            # else use preset exposure time
-            darktime = (name == "Dark")
-            self.exptime = self.get_exposure_time(darktime)
 
         if name == "Bias":
             self.delay = 0
+            self.exptime = 0
         else:
             self.delay = 100
+            # load new exposure time here (better: with XML parameter ?)
+            if exposuretime:
+                self.set_exposure_time(exposuretime)
+                self.exptime = exposuretime
+            else:
+                # else use preset exposure time
+                darktime = (name == "Dark")
+                self.exptime = self.get_exposure_time(darktime)
 
         self.timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # acquisition date
 
@@ -387,6 +422,7 @@ class TestREB(object):
         self.select_subroutine(name)
         # starts the sequencer
         self.f.start()
+        print("Starting %s sequence with %f exposure time." % (name, self.exptime))
         #freeze until image output (do not send commands while the COB is acquiring)
         time.sleep(self.exptime+3)
 
@@ -408,7 +444,7 @@ class TestREB(object):
         # Reading raw file to array
         dt = np.dtype('i4')
         buff = np.fromfile(imgname, dtype=dt)
-        # Readies to save next file (could be moved to acquisition function)
+        # Readies to save next file
         self.update_filetag(self.imgtag + 1)
 
         # for 18-bit data:
@@ -549,9 +585,10 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
         primaryhdu.header["IMGTYPE"] = 'Bias'  # TODO: update with actual test running
         # TODO: add keyword comments
         # information from REB itself
-        primaryhdu.header.update(R.get_meta())
+        # todo: test, does not work as is
+        #primaryhdu.header.update(R.get_meta())
         # also need info from 'localheader.txt'
-        localheader = pyfits.Header.fromtextfile("camera/localheader.txt")
+        localheader = pyfits.Header.fromtextfile("localheader.txt")
         primaryhdu.header.update(localheader)
         # add other instruments here
         #exthdu = pyfits.ImageHDU(name="TEST_COND")
@@ -572,6 +609,9 @@ if __name__ == "__main__":
     time.sleep(0.1)
     R.CCDpowerup()
     R.config_aspic()
-    R.load_sequencer()
-    #R.execute_sequence("Acquisition")
+    #R.load_sequencer()
+    #R.execute_sequence("Bias")
     #save_to_fits(R)
+    #R.f.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
+    #R.f.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux
+    # TO BE CHECKED: only one of each mux outputs should be active at any time over all CABACs ?!?!
