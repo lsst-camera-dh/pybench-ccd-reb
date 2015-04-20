@@ -112,11 +112,14 @@ class Bench(Borg):
         and graft new methods on the Bench instance (on the class in
         fact).
         """
-        source = open(script).read()
-        code = compile(source = source, 
-                       filename = '/dev/stderr', 
-                       mode = 'exec')
-        eval(code)
+        # source = open(script).read()
+        # code = compile(source = source, 
+        #                filename = '/dev/stderr', 
+        #                mode = 'exec')
+        # eval(code)
+
+        script_module = importlib.import_module(
+            "lsst.testbench.script.%s" % script)
 
         return True
           
