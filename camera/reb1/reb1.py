@@ -5,43 +5,71 @@
 """
 Testbench driver for REB (through direct calls to rriClient)
 """
-from py.camera.generic import *
-import fpga0 as fpga
-import rebxml
+import py.camera.generic.reb as reb
+import py.camera.generic.rebxml as rebxml
+import fpga0
 import time
 import string
-import numpy as N
-import pyfits
+import os
 
 # =======================================================================
 
-class REB(object):
-    xmlfile = "sequencer-soi.xml"
-    rawimgdir = "/data/raw/"
-    fitstopdir = "/data/frames/"
-    nchannels = 16
-    imgtag = 0
-    # to be loaded from XML later
-    imglines = 2020
-    imgcols = 550
-    exposuresub = "Exposure"
-    darksub = "DarkExposure"
-    exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
-    min_exposure = int(0.1 / exposure_unit)  # minimal shutter opening time (not used for darks)
+class REB(reb.REB):
 
     # ===================================================================
 
-    def __init__(self, reb_id = 2,  ctrl_host = None, stripe_id = 0):
-
-        self.fpga = fpga.FPGA(ctrl_host, reb_id)
-        self.set_stripe(stripe_id)  # stripe in use
-
-        self.seq = None  # will be filled when loading the sequencer
-
+    def __init__(self, reb_id = 2,  ctrl_host = None, stripe_id = [0]):
+        reb.REB.__init__(reb_id, ctrl_host, stripe_id)
+        self.fpga = fpga0.FPGA0(ctrl_host, reb_id)
+        self.full18bits = True
+        self.set_stripes(stripe_id)  # stripe in use
         self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
 
+    # --------------------------------------------------------------------
+
+    def set_stripes(self, liststripes):
+        self.stripes = []
+        bitval = 0
+        for s in liststripes:
+            if self.f.check_location(s):
+                self.stripes.append(s)
+                bitval += 1 << s
+        self.f.write(0x400007, bitval)
+
+        if self.stripes == []:
+            print("Warning: no stripe selected.")
+        if self.full18bits == True and len(self.stripes) > 2 :
+            print("Warning: attempting to read 18-bit data for 3 stripes, full image will not fit")
+            self.imglines = 1000
+
+        self.nchannels = 16*len(self.stripes)
 
     # --------------------------------------------------------------------
+    def update_filetag(self, t):
+        """
+        Updates the filetag to the FPGA timer.
+        :param t: int new numerical tag
+        :return:
+        """
+        hextag = reb.generate_tag(t)
+        self.imgtag = t
+        self.fpga.set_time(hextag)
+
+    def recover_filetag(self):
+        """
+        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
+        Returns the tag.
+        :return: string
+        """
+        t = self.fpga.get_time()
+        tagstr = '0x%016x' % t
+        todaystr = time.strftime('%Y%m%d', time.gmtime())
+        if string.find(tagstr, todaystr) > -1:
+            self.imgtag = int(tagstr[-5:], base=10)
+
+        return tagstr
+
+   # --------------------------------------------------------------------
     def REBpowerup(self):
         """
         Operations after powering the REB
@@ -52,7 +80,7 @@ class REB(object):
 
         self.load_sequencer()
         #sets the default sequencer clock states to 0
-        self.fpga.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        self.fpga.send_function(0, fpga0.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
         print("REB ready to connect to CCD")
 
@@ -86,7 +114,8 @@ class REB(object):
         time.sleep(1)
 
         #puts current on CS gate
-        self.fpga.set_current_source(0xfff, self.stripe)
+        for stripe in self.stripes:
+            self.fpga.set_current_source(0xfff, stripe)
 
         #rewrite default state of sequencer (to avoid reloading functions)
         self.fpga.send_function(0, self.seq.get_function(0))
@@ -107,12 +136,13 @@ class REB(object):
         time.sleep(3)
 
         #current source
-        self.fpga.set_current_source(0, self.stripe)
+        for stripe in self.stripes:
+            self.fpga.set_current_source(0, stripe)
 
         time.sleep(0.5)
 
         #clock states to 0
-        self.fpga.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        self.fpga.send_function(0, fpga0.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
         #currents on CABAC clocks to 0
         self.send_cabac_config({"IC": 0})
         #clock rails to 0
@@ -132,17 +162,6 @@ class REB(object):
 
     # --------------------------------------------------------------------
 
-    def set_stripe(self, strip_id=0):
-        """
-        Set which REB stripe is read out. For this bench, does not accept more than one stripe.
-        """
-        if strip_id not in [0, 1, 2]:
-            raise ValueError("Incorrect stripe number: %d" % strip_id)
-
-        self.stripe = strip_id
-        self.fpga.write(0x400007, 1 << strip_id)
-
-    # --------------------------------------------------------------------
     def load_sequencer(self, xmlfile=None):
         """
         Loads all sequencer content.
@@ -169,8 +188,8 @@ class REB(object):
         if not (self.seq.program.subroutines.has_key(subname)):
             raise ValueError("No subroutine '%s' in the FPGA program." % subname)
 
-        first_instr = fpga.Instruction(
-            opcode=fpga.Instruction.OP_JumpToSubroutine,
+        first_instr = fpga0.Instruction0(
+            opcode=fpga0.Instruction0.OP_JumpToSubroutine,
             address=self.seq.program.subroutines[subname],
             repeat=repeat)
 
@@ -226,33 +245,6 @@ class REB(object):
         newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
         self.fpga.send_program_instruction(darkadd, newinstruction)
 
-    # --------------------------------------------------------------------
-
-    def recover_filetag(self):
-        """
-        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
-        Returns the tag.
-        :return: string
-        """
-        t = self.fpga.get_time()
-        tagstr = '0x%016x' % t
-        todaystr = time.strftime('%Y%m%d', time.gmtime())
-        if string.find(tagstr, todaystr) > -1:
-            self.imgtag = int(tagstr[-5:], base=10)
-
-        return tagstr
-
-    def update_filetag(self, t):
-        """
-        Updates the filetag to the FPGA timer.
-        :param t: int new numerical tag
-        :return:
-        """
-        self.imgtag = t
-        today = time.gmtime()
-        tagstr = time.strftime('%Y%m%d', today) + '%05d' % t
-        hextag = int(tagstr, 16)
-        self.fpga.set_time(hextag)
 
     # --------------------------------------------------------------------
 
@@ -265,7 +257,8 @@ class REB(object):
         """
         read CABAC configuration.
         """
-        self.fpga.get_cabac_config(self.stripe)
+        for stripe in self.stripes:
+            self.fpga.get_cabac_config(stripe)
 
     # --------------------------------------------------------------------
 
@@ -273,17 +266,18 @@ class REB(object):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
         """
-        for param in iter(params):
-            self.fpga.set_cabac_value(param, params[param])
+        for stripe in self.stripes:
+            for param in iter(params):
+                self.fpga.set_cabac_value(param, params[param], stripe)
 
-        self.fpga.send_cabac_config(self.stripe)
+            self.fpga.send_cabac_config(stripe)
 
-        time.sleep(0.1)
+            time.sleep(0.1)
 
-        self.get_cabac_config()
+            self.fpga.get_cabac_config(stripe)
 
-        for param in iter(params):
-            self.fpga.check_cabac_value(param, params[param])
+            for param in iter(params):
+                self.fpga.check_cabac_value(param, params[param], stripe)
 
     # --------------------------------------------------------------------
 
@@ -291,7 +285,8 @@ class REB(object):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
         """
-        self.fpga.reset_cabac(self.stripe)
+        for stripe in self.stripes:
+            self.fpga.reset_cabac(stripe)
 
         time.sleep(0.1)
 
@@ -349,101 +344,8 @@ class REB(object):
             except KeyboardInterrupt:
                 keepwaiting = False
 
-    def conv_to_fits(self, imgname, channels=None):
-        """
-        Creates the fits object from the acquired data.
-        """
+    # --------------------------------------------------------------------
 
-        # Reading raw file to array
-        dt = N.dtype('i4')
-        buff = N.fromfile(imgname, dtype=dt)
-        # Readies to save next file
-        self.update_filetag(self.imgtag + 1)
+    def make_img_name(self):
+        return os.path.join(self.rawimgdir,'0x%016x.img' % self.f.get_time())
 
-        # for 18-bit data:
-        # negative numbers are translated, sign is inverted on all data, also make all values positive
-        # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
-        rawdata = N.choose(buff & 0x20000, (0x1ffff-buff, 0x5ffff-buff))
-        # reshape by channel
-        length = self.imglines * self.imgcols
-        rawdata = rawdata.reshape(length, self.nchannels)
-
-        # Creating FITS HDUs:
-        # Create empty primary HDU and fills header
-        primaryhdu = pyfits.PrimaryHDU()
-        # Create HDU list
-        hdulist = pyfits.HDUList([primaryhdu])
-
-        # Add extensions for channels HDUs
-        for num in range(self.nchannels):
-            if channels:  # to skip non-useful channels
-                if num not in channels:
-                    continue
-            chan = rawdata[0:length,num]
-            chan = chan.reshape(self.imglines, self.imgcols)
-            y = chan.astype(N.int32)
-            # create extension to fits file for each channel
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
-            self.get_extension_header(num, exthdu)
-            avchan = N.mean(y[11:self.imgcols-50,2:self.imglines-20])
-            exthdu.header["AVERAGE"] = avchan
-            hdulist.append(exthdu)
-
-        return hdulist
-
-    def get_extension_header(self, CCDchan, fitshdu, borders = True):
-        """
-        Builds FITS extension header with position information for each channel.
-
-        :param REBchannel: int
-        :return:
-        """
-        extheader = fitshdu.header
-        extheader["NAXIS1"] = self.imgcols
-        extheader["NAXIS2"] = self.imglines
-
-        if borders == False:
-            parstringlow = '1:2002'
-            parstringhigh = '4004:2003'
-            colwidth = 512
-            extheader['DETSIZE'] = '[1:4096,1:4004]'
-            extheader['DATASEC'] = '[11:522,1:2002]'
-        else :
-            parstringlow = '1:%d' % self.imglines
-            parstringhigh = '%d:%d' % (2*self.imglines, self.imglines+1)
-            colwidth = self.imgcols
-            extheader['DETSIZE'] = '[1:%d,1:%d]' % (self.imgcols*self.nchannels/2, 2*self.imglines)
-            extheader['DATASEC'] = '[1:%d,1:%d]' % (self.imgcols, self.imglines)
-
-        if CCDchan < 8:
-            pdet = parstringlow
-            si = colwidth*(CCDchan+1)
-            sf = colwidth*CCDchan+1
-        else :
-            pdet = parstringhigh
-            si = colwidth*(CCDchan-8)+1
-            sf = colwidth*(CCDchan-8+1)
-
-        extheader['DETSEC'] = '[%d:%d,%s]' % (si,sf,pdet)
-
-    # ===================================================================
-    #  Meta data / state of the instrument
-    # ===================================================================
-
-
-
-# needed elsewhere
-
-#def mock_acquire():
-    # stuff to put elsewhere for a full acquisition with header
-    #primeheader = {}
-    #primeheader["TESTTYPE"] = "Test" DARK:FLAT:OBS:PPUMP:QE:SFLAT
-    #DATE
-    #TEMP_SET	-95.00
-#CCDTEMP	-95.12
-#MONDIODE	143.12
-#MONOWL	550.00
-#FILTER	‘550LP’
-#FILENAME	[Original name of the file]
-#exthdu = get_sequencer_hdu(self.reb.fpga)
