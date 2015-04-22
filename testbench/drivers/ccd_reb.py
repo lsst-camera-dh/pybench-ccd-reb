@@ -6,7 +6,7 @@
 Testbench driver for REB (through direct calls to rriClient)
 """
 
-import lsst.camera.reb as reb
+import lsst.camera.reb1.reb1 as reb
 
 from driver import Driver
 
@@ -43,11 +43,11 @@ class Instrument(Driver):
 
         self.reb_id = reb_id
         self.host = host
-        self.strip_id = 0 ## To change !!
+        self.stripe_id = 0 ## To change !!
 
         self.reb = reb.REB(reb_id = self.reb_id, 
                            ctrl_host = self.host, 
-                           strip_id = self.strip_id)
+                           strip_id = self.stripe_id)
 
         # exporting the REB functions?
 
@@ -65,7 +65,7 @@ class Instrument(Driver):
         """
         Open the hardware connection.
         """
-        pass
+        print("Remember to launch imageClient in %s" % self.reb.rawimgdir)
 
 
     def is_connected(self):
@@ -90,7 +90,7 @@ class Instrument(Driver):
         Return it or None.
         """
         try:
-            answer = self.reb.read(0x2)
+            answer = self.reb.fpga.read(0x2)
         except IOError:
             answer = None
 
@@ -123,46 +123,21 @@ class Instrument(Driver):
         Read a FPGA register and return its value.
         if n > 1, returns a list of values as a dictionary.
         """
-        return self.reb.read(address = address, n = n, check = check)
+        return self.reb.fpga.read(address = address, n = n, check = check)
 
     def write(self, address, value, check = True):
         """
         Write a given value into a FPGA register.
         """
-        return self.reb.write(address = address, value = value, check = check)
-
-    # ----------------------------------------------------------
-
-    def get_schema(self):
-        return self.reb.get_schema()
-
-    schema = property(get_schema, "FPGA address map version")
-
-    # ----------------------------------------------------------
-
-    def get_version(self):
-        return self.reb.get_version()
-
-    version = property(get_version, "FPGA VHDL version")
-
-    # ----------------------------------------------------------
-
-    def get_sci_id(self):
-        return self.reb.get_sci_id()
-
-    sci_id = property(get_sci_id, "SCI's own address")
-
-    # ----------------------------------------------------------
+        return self.reb.fpga.write(address = address, value = value, check = check)
 
     def get_state(self):
-        return self.reb.get_state()
+        return self.reb.fpga.get_state()
 
-    state = property(get_state, "FPGA state")
-
-    # ----------------------------------------------------------
+   # ----------------------------------------------------------
 
     def set_trigger(self, trigger):
-        self.reb.set_trigger(trigger)
+        self.reb.fpga.set_trigger(trigger)
 
     # --------------------------------------------------------------------
 
@@ -170,42 +145,39 @@ class Instrument(Driver):
         """
         Start the FPGA internal clock counter.
         """
-        self.reb.start_clock()
+        self.reb.fpga.start_clock()
 
     def stop_clock(self):
         """
         Stop the FPGA internal clock counter.
         """
-        self.reb.stop_clock()
+        self.reb.fpga.stop_clock()
 
     def get_time(self):
-        return self.reb.get_time()
+        return self.reb.fpga.get_time()
 
     def set_time(self, t):
-        self.reb.set_time(t)
-
-    time = property(get_time, set_time, 
-                    "FPGA current time (internal clock, in 10ns units)")
+        self.reb.fpga.set_time(t)
 
     # --------------------------------------------------------------------
 
-    def start(self):
+    def execute_sequence(self):
         """
         Start the sequencer program.
         """
-        self.reb.start()
+        self.reb.execute_sequence()
 
     def stop(self):
         """
         Send the command STOP.
         """
-        self.reb.stop()
+        self.reb.fpga.stop()
 
     def step(self):
         """
         Send the command STEP.
         """
-        self.reb.step()
+        self.reb.fpga.step()
 
     # --------------------------------------------------------------------
 
@@ -214,25 +186,26 @@ class Instrument(Driver):
         Send the function <function> into the FPGA memory 
         at the #function_id slot.
         """
-        self.reb.send_function(function_id, function)
+        self.reb.fpga.send_function(function_id, function)
 
     def send_functions(self, functions):
         """
         Load all functions from dict <functions> into the FPGA memory.
         """
-        self.reb.send_functions(functions)
+        self.reb.fpga.send_functions(functions)
 
     def dump_function(self, function_id):
         """
         Dump the function #function_id from the FPGA memory.
         """
-        return self.reb.dump_function(function_id)
+        return self.reb.fpga.dump_function(function_id)
 
     def dump_functions(self):
         """
         Dump all functions from the FPGA memory.
+        NOTE: Stop doing that.
         """
-        return self.reb.dump_functions()
+        return self.reb.fpga.dump_functions()
         
     # --------------------------------------------------------------------
 
@@ -241,79 +214,61 @@ class Instrument(Driver):
         Load the program instruction <instr> at relative address <addr> 
         into the FPGA program memory.
         """
-        self.reb.send_program_instruction(addr, instr)
+        self.reb.fpga.send_program_instruction(addr, instr)
 
     def send_program(self, program, clear = True):
         """
         Load the compiled program <program> into the FPGA program memory.
         """
-        self.reb.send_program(program, clear = clear)
+        self.reb.fpga.send_program(program, clear = clear)
 
     def load_program(self, program = default_program, clear = True):
         """
         Load the compiled program <program> into the FPGA program memory.
         The program may also be provided as an uncompiled text string.
         """
-        self.reb.send_program(program, clear = clear)
+        self.reb.fpga.send_program(program, clear = clear)
 
     def dump_program(self):
         """
         Dump the FPGA sequencer program. Return the program.
         """
-        return self.reb.dump_program()
+        return self.reb.fpga.dump_program()
 
     def clear_program(self):
         """
         Clear the FPGA sequencer program memory.
         """
-        self.reb.clear_program()
+        self.reb.fpga.clear_program()
 
-    def run_program(self):
+    def config_sequence(self, subname, exptime=1, shutdelay=100):
         """
-        Trigger the FPGA sequencer program.
+        Configure the programmed sequence.
         """
-        self.reb.start()
-
-    
-    def select_subroutine(self, subname, repeat = 1): 
-        """
-        Modify the main subroutine to be a call (JSR) to the subroutine.
-        """
-        self.reb.select_subroutine(subname, repeat=repeat)
-
-
-    def run_subroutine(self, subname, repeat = 1): 
-        """
-        Select and run the specified subroutine
-        """
-        self.reb.run_subroutine(subname, repeat = repeat)
+        self.reb.config_sequence(subname, exptime, shutdelay)
 
     # --------------------------------------------------------------------
 
-    def send_sequencer(self, seq, clear = True):
+    def load_sequencer(self, xmlfile=None):
         """
-        Load the functions and the program at once.
+        Load the functions and the program from a file (by default if none given).
         """
-        self.reb.send_sequencer(seq, clear = clear)
+        self.reb.load_sequencer(self, xmlfile)
 
-    def dump_sequencer(self):
-        """
-        Dump the sequencer program and the 16 functions from the FPGA memory.
-        """
-        return self.reb.dump_sequencer()
 
     # --------------------------------------------------------------------
 
-    def set_strip(self, strip_id=0):
+    def set_stripe(self, stripe_id=0):
         """
         Set which REB strip is read out. For now, does not accept more than one strip.
         """
-        self.reb.set_strip(strip_id)
+        self.reb.set_stripe(stripe_id)
+
 
     # --------------------------------------------------------------------
 
     def get_board_temperatures(self):
-        return self.reb.get_board_temperatures()
+        return self.reb.fpga.get_board_temperatures()
 
     # --------------------------------------------------------------------
 
@@ -322,12 +277,21 @@ class Instrument(Driver):
 
     # --------------------------------------------------------------------
 
-    def set_dacs(self, dacs):
+    def set_clock_voltages(self, dacs):
         """
-        Sets CS gate or clock voltage DACs, but not both at the same time (for extra safety).
+        Sets clock voltage DACs.
+        :param dacs: dict
         """
-        self.reb.set_dacs(dacs)
+        self.reb.fpga.set_clock_voltages(dacs)
 
+    # --------------------------------------------------------------------
+
+    def set_current_source(self, dac):
+        """
+        Sets CS gate DACs.
+        :param dac: int
+        """
+        self.reb.fpga.set_current_source(dac)
     # --------------------------------------------------------------------
 
     def get_cabac_config(self): 
@@ -350,8 +314,10 @@ class Instrument(Driver):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
         """
-        self.reb.reset_cabac()
+        self.reb.cabac_reset()
 
+
+#TODO: add rest of the function in reb1
 
     # ===================================================================
     #  Meta data / state of the instrument 
@@ -361,24 +327,63 @@ class Instrument(Driver):
     def get_meta(self):
         """
         Returns meta data describing the current state
-        of the instrument. 
+        of the instrument.
         Useful to fill the FITS headers.
         """
 
         # keys : specify the key order
-        keys = ['MODEL',
-                'DRIVER']
+        keys = ['DATE-OBS', 'LSST_LAB', 'TSTAND', 'INSTRUME', 'CCD_CTRL',
+            'CTRL_SYS', 'CTRL_ID', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'IMGTYPE',
+            'EXPTIME', 'SHUT_DEL', 'CTRLCFG', 'IMAGETAG', 'DETSIZE', 'WIDTH', 'HEIGHT', 'SYSGAIN']
 
         # comments : meaning of the keys
         comments = {
-            'MODEL'  : 'Instrument model',
-            'DRIVER' : 'Instrument software driver' 
-            }
+            'DATE-OBS': 'Date of the observation (image acquisition), UTC',
+            'LSST_LAB': 'Which site acquired the data',
+            'TSTAND': 'Which Test stand at the site was used',
+            'INSTRUME': 'CCD Controller type',
+            'CCD_CTRL': 'Duplicates INSTRUME',
+            'CTRL_SYS': 'Instrument software driver',
+            'CTRL_ID': 'CCD Controller Serial Number',
+            'CCD_MANU': 'CCD Manufacturer: E2V, ITL',
+            'CCD_TYPE': 'CCD Model Number',
+            'CCD_SERN': 'LSST Assigned CCD Number ',
+            'IMGTYPE': 'Image type',
+            'EXPTIME': 'Exposure Time in Seconds',
+            'SHUT_DEL': 'Delay between shutter close command and readout in ms',
+            'CTRLCFG': 'Sequencer XML file',
+            'IMAGETAG': 'Image tag',
+            'DETSIZE': 'NOAO MOSAIC keywords',
+            'WIDTH': 'CCD columns per channel',
+            'HEIGHT': 'CCD lines per channel',
+            'SYSGAIN': 'Rough guess at overall system gain in e/DN'
+        }
 
         values = {
-            'MODEL'  : self.get_serial(),
-            'DRIVER' : 'keithley-server / keithley' 
-            }
+            'DATE-OBS': self.reb.tstamp,
+            'LSST_LAB': 'LPNHE',
+            'TSTAND': 'ISO7',
+            'INSTRUME': 'REB1',
+            'CCD_CTRL': 'REB1',
+            'CTRL_SYS': 'PYREB',
+            'CTRL_ID': 2,
+            'CCD_MANU': 'E2V',
+            'CCD_TYPE': 'E2V250',
+            'CCD_SERN': '100-00',
+            'IMGTYPE': self.reb.name,
+            'EXPTIME': self.reb.exptime,
+            'SHUT_DEL': self.reb.shutdelay,
+            'CTRLCFG': self.reb.xmlfile,
+            'IMAGETAG': self.reb.imgtag,
+            'DETSIZE': '[0:%d,0:%d]' % (self.reb.imgcols * self.reb.nchannels / 2, 2 * self.reb.imglines),
+            'WIDTH': self.reb.imgcols,
+            'HEIGHT': self.reb.imglines,
+            'SYSGAIN': 0.7
+        }
+        fitsheader = self.get_cabac_config()
+        fitsheader.update(self.reb.fpga.get_clock_voltages())
+        fitsheader.update(self.reb.fpga.get_current_source())
 
         return keys, values, comments
 
+#TODO: add more meta to put in secondary headers

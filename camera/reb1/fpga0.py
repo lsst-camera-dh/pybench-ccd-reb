@@ -919,15 +919,6 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def set_image_size(self, size):
-        """
-        Set image size (in ADC count).
-        """
-        # rriClient 2 write 0x400005 0x0010F3D8
-        self.write(0x400005, size)
-
-    # --------------------------------------------------------------------
-
     def send_sequencer(self, seq, clear = True):
         """
         Load the functions and the program at once.

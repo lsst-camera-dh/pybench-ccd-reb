@@ -16,10 +16,10 @@ from driver import Driver
 
 # =======================================================================
 
-class Instrument(Driver):
+class REB(object):
     xmlfile = "sequencer-soi.xml"
-    rawimgdir = "/home/lsst/test_images"
-    fitstopdir = "/home/lsst/test_frames"
+    rawimgdir = "/data/raw/"
+    fitstopdir = "/data/frames/"
     nchannels = 16
     imgtag = 0
     # to be loaded from XML later
@@ -31,72 +31,16 @@ class Instrument(Driver):
     min_exposure = int(0.1 / exposure_unit)  # minimal shutter opening time (not used for darks)
 
     # ===================================================================
-    #  Generic methods (init, open, etc)
-    # ===================================================================
 
-    def __init__(self, identifier, **kargs):
-        Driver.__init__(self, identifier, **kargs)
+    def __init__(self, reb_id = 2,  ctrl_host = None, stripe_id = 0):
 
-        if "reb_id" not in kargs.keys():
-            raise ValueError("reb_id is requested")
+        self.fpga = fpga.FPGA(ctrl_host, reb_id)
+        self.set_stripe(stripe_id)  # stripe in use
 
-        if "host" not in kargs.keys():
-            kargs["host"] = None
+        self.seq = None  # will be filled when loading the sequencer
 
-        self.fpga = fpga.FPGA(ctrl_host=kargs["host"], reb_id=kargs["reb_id"])
-        self.set_stripe(0)  # stripe in use
+        self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
 
-        self.seq = None
-
-        self.recover_filetag()
-
-    def open(self):
-        """
-        Open the hardware connection.
-        """
-        print("Remember to launch imageClient in %s" % self.rawimgdir)
-
-    def is_connected(self):
-        """
-        Check if the connection is established with the hardware.
-        Returns True if the hardware answers, False otherwise.
-        """
-        answer = self.checkConnection()
-
-        if answer == None:
-            return False
-
-        if answer != self.reb_id:
-            return False
-
-        return True
-
-    def checkConnection(self):
-        """
-        Get the REB id from the REB itself.
-        Return it or None.
-        """
-        try:
-            answer = self.fpga.read(0x2)
-        except IOError:
-            answer = None
-
-        return answer
-
-    def register(self, bench):
-        self.open()
-        connected = self.is_connected()
-        if not (connected):
-            raise IOError(
-                "REB #%d not connected.\n You should run this on the computer connected to the crate." % self.reb_id)
-
-        Driver.register(self, bench)
-
-    def close(self):
-        """
-        Close the hardware connection.
-        """
-        pass
 
     # --------------------------------------------------------------------
     def REBpowerup(self):
@@ -106,6 +50,7 @@ class Instrument(Driver):
         """
         #specific to REB1
         self.cabac_reset()
+
         self.load_sequencer()
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
@@ -487,70 +432,6 @@ class Instrument(Driver):
     #  Meta data / state of the instrument
     # ===================================================================
 
-
-    def get_meta(self):
-        """
-        Returns meta data describing the current state
-        of the instrument.
-        Useful to fill the FITS headers.
-        """
-
-        # keys : specify the key order
-        keys = ['DATE-OBS', 'LSST_LAB', 'TSTAND', 'INSTRUME', 'CCD_CTRL',
-            'CTRL_SYS', 'CTRL_ID', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'IMGTYPE',
-            'EXPTIME', 'SHUT_DEL', 'CTRLCFG', 'IMAGETAG', 'DETSIZE', 'WIDTH', 'HEIGHT', 'SYSGAIN']
-
-        # comments : meaning of the keys
-        comments = {
-            'DATE-OBS': 'Date of the observation (image acquisition), UTC',
-            'LSST_LAB': 'Which site acquired the data',
-            'TSTAND': 'Which Test stand at the site was used',
-            'INSTRUME': 'CCD Controller type',
-            'CCD_CTRL': 'Duplicates INSTRUME',
-            'CTRL_SYS': 'Instrument software driver',
-            'CTRL_ID': 'CCD Controller Serial Number',
-            'CCD_MANU': 'CCD Manufacturer: E2V, ITL',
-            'CCD_TYPE': 'CCD Model Number',
-            'CCD_SERN': 'LSST Assigned CCD Number ',
-            'IMGTYPE': 'Image type',
-            'EXPTIME': 'Exposure Time in Seconds',
-            'SHUT_DEL': 'Delay between shutter close command and readout in ms',
-            'CTRLCFG': 'Sequencer XML file',
-            'IMAGETAG': 'Image tag',
-            'DETSIZE': 'NOAO MOSAIC keywords',
-            'WIDTH': 'CCD columns per channel',
-            'HEIGHT': 'CCD lines per channel',
-            'SYSGAIN': 'Rough guess at overall system gain in e/DN'
-        }
-
-        values = {
-            'DATE-OBS': self.tstamp,
-            'LSST_LAB': 'LPNHE',
-            'TSTAND': 'ISO7',
-            'INSTRUME': 'REB1',
-            'CCD_CTRL': 'REB1',
-            'CTRL_SYS': 'PYREB',
-            'CTRL_ID': 2,
-            'CCD_MANU': 'E2V',
-            'CCD_TYPE': 'E2V250',
-            'CCD_SERN': '100-00',
-            'IMGTYPE': self.name,
-            'EXPTIME': self.exptime,
-            'SHUT_DEL': self.shutdelay,
-            'CTRLCFG': self.xmlfile,
-            'IMAGETAG': self.imgtag,
-            'DETSIZE': '[0:%d,0:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines),
-            'WIDTH': self.imgcols,
-            'HEIGHT': self.imglines,
-            'SYSGAIN': 0.7
-        }
-        fitsheader = self.get_cabac_config()
-        fitsheader.update(self.fpga.get_clock_voltages())
-        fitsheader.update(self.fpga.get_current_source())
-
-        return keys, values, comments
-
-#TODO: add more meta to put in secondary headers
 
 
 # needed elsewhere
