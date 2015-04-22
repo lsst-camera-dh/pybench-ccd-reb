@@ -22,7 +22,9 @@ def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py',
-                  'singleton.py', 'bench.py', 'config.py'], 
+                  'singleton.py', 'bench.py', 
+                  'wm.py',
+                  'config.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench')
 
     bld.recurse(submodules)

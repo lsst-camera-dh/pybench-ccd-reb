@@ -1,142 +1,122 @@
 #!/usr/bin/env python
-
+#-----------------------------------------------------------------------------
 #
 # Startup script for the LSST CCD testbench at LPNHE
 #
+# L. Le Guillou
+#-----------------------------------------------------------------------------
 
 import sys
 import os, os.path
+import getopt
 import subprocess
+import time
 
+#-----------------------------------------------------------------------------
+
+import lsst.testbench.wm as wm
+
+from lsst.testbench.clients import *
+
+#-----------------------------------------------------------------------------
 
 def usage():
-      print >>sys.stderr, \
-"""
-usage: bench-start [elements [elements [...]]]
-"""
+      print >>sys.stderr, "usage: bench-start [elements [elements [...]]]"
+
+def help():
+      print >>sys.stderr, "usage: bench-start [elements [elements [...]]]"
+      print ""
+      print "Options:"
+      print "     -h, --help             give this help message."
+      print ""
+      print "LSST LPNHE bench start script. This will start the various"
+      print "sub-systems control clients requested."
+      print ""
+
+#-----------------------------------------------------------------------------
+
+def launch(subs):
+      for sub in subs:
+            print "launching %s ..." % sub
+            # Does this element exists?
+            if not(clients.has_key(sub)):
+                  print >>sys.stderr, (
+                        "warning: client/subsystem %s is unknown. " +
+                        "It will be ignored." ) % sub
+                  continue
+            
+            client = clients[sub]
+
+            # Is it a list of elements/subsystems?
+            if isinstance(client, list):
+                  # run all the sub elements
+                  launch(client)
+
+            # otherwise it is a dictionary
+            if isinstance(client, dict):
+                  # run the element
+                  cmd    = client['commandline']
+                  cmd_parts = cmd.split()
+                  program = cmd_parts[0]
+                  arguments = cmd_parts[1:]
+                  screen = client['screen']
+                  screen_id = screens[screen]['desktop']
+                  position = client['position']
+
+                  print cmd, screen_id, position
+
+                  wm.launch(program,
+                            arguments,
+                            desktop = screen_id,
+                            x = position['x'],
+                            y = position['y'],
+                            w = position['w'],
+                            h = position['h'])
+
+
+#-----------------------------------------------------------------------------
+# Parse command-line
+
+try:
+      opts, args = \
+                   getopt.getopt(sys.argv[1:], "h", \
+                                 ["help"])
+except getopt.GetoptError:
+      # print help information and exit
+      usage()
+      sys.exit(1)
+        
+# print opts
+# print args
+
+for option, arg in opts:
+      if option in ("-h", "--help"):
+            help()
+            sys.exit(0)
+
+if len(args) <= 0:
+      usage()
       sys.exit(1)
 
+subsystems = args[:]
 
+#-----------------------------------------------------------------------------
+# First Create the screens
 
-class WMManager(object):
+n_screens = len(screens)
+wm.setndesktop(n_screens)
 
-      wmctrl="/usr/bin/wmctrl"
+for s_name, s_properties in screens.iteritems():
+      desktop = s_properties['desktop']
+      if s_properties.has_key('background'):
+            bgfile = os.path.join('data', s_properties['background']) # path
+            print "setting background of desktop %d with file %s" % (desktop, bgfile)
+            wm.setbackground(desktop, bgfile)
 
-      def __init__(self):
-            # First check the geometry
+#-----------------------------------------------------------------------------
+# Then launch the requested clients (recursively)
 
-            s = subprocess.check_output([self.wmctrl, "-d"])
-            # A remplacer par une regexp
-            elts = s.split()
+launch(subsystems)
 
-            wgeom  = elts[3]
-            welts = wgeom.split('x')
-            wx = int(welts[0])
-            wy = int(welts[1])
-            
-            dgeom = elts[8]
-            delts = dgeom.split('x')
-            dx = int(delts[0])
-            dy = int(delts[1])
-            
-            print wx, wy, dx, dy
-            
-            # For an unknown reason wx,wy are not multiple of dx,dy
-            nx = wx/dx
-            vx = wx/nx
-            
-            ny = wy/dy
-            vy = wy/ny
-            
-            print nx, ny, vx, vy
-
-            # wx,wy = whole geometry
-            # vx,vy = viewport geometry
-            # nx,ny = number of virtual screens
-
-            self.wx = wx
-            self.wy = wy
-
-            self.vx = vx
-            self.vy = vy
-
-            self.nx = nx
-            self.ny = ny
-
-
-      def getwindows(self):
-            """
-            Return the list of all windows
-            """
-            s = subprocess.check_output([self.wmctrl, "-l", "-G", "-p"])
-            
-            # 0x0260000a  0 2510   0    0    1366 768  lpnlp171 Bureau
-            # 0x0340000c  0 2486   -420 -300 320  200  lpnlp171 Hud
-            # 0x02c000ab  0 3258   610  52   756  707  lpnlp171 emacs@lpnlp171
-
-            wins = []
-            lines = s.split('\n')
-
-            for line in lines:
-                  parts = line.split()
-                  if len(parts) < 9:
-                        continue
-                  winid = parts[0]
-                  deskid = parts[1]
-                  pid = int(parts[2])
-                  x = int(parts[3])
-                  y = int(parts[4])
-                  w = int(parts[5])
-                  h = int(parts[6])
-                  host = parts[7]
-                  title = " ".join(parts[8:])
-
-                  win = {'winid': winid,
-                         'deskid': deskid,
-                         'pid': pid,
-                         'x': x,
-                         'y': y,
-                         'w': w,
-                         'h': h,
-                         'host': host,
-                         'title': title}
-                  wins.append(dict(win))
-
-            return wins
-
-
-      def switch(self, ix, iy=0):
-            """
-            Switch to Viewport ix,iy
-            """
-
-            dest_x = ix * self.vx
-            dest_y = iy * self.vy
-
-            s = subprocess.call([self.wmctrl, "-o %d,%d" % (dest_x, dest_y)])
-
-
-      def launch(self, program, args=[], ix=None, iy=None, x=None, y=None):
-            """
-            Switch to Viewport ix,iy and run program 'program'
-            at position x,y on that viewport.
-
-            example:
-              WM.launch("xclock", ["-bg", "black"], 0, 0, 1, 0)
-
-            """
-
-            if ix == None: ix = 0
-            if iy == None: iy = 0
-            if x  == None: x = 0
-            if y  == None: y = 0
-            
-            self.switch(ix, iy)
-            arguments = [program]
-            if args:
-                  arguments.extend(args)
-            print arguments
-            pid = subprocess.Popen(arguments).pid
-
-            print pid
-
+#-----------------------------------------------------------------------------
+                  
