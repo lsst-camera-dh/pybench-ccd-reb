@@ -184,11 +184,25 @@ void executeCommand(char buffer[], int & index)
                  instruction[2] = buffer[k];
                  instruction[3] = buffer[k+1];
                  
-                 unsigned char a;
-                 unsigned int d;
+                 Serial.print("Check the buffer : ");
+                 Serial.print(instruction[2],HEX);
+                 Serial.print("   ");
+                 Serial.println(instruction[3],HEX);
+                 
+                 unsigned char a = 0;
+                 Serial.print("a and d before sscanf : ");
+                 Serial.print(a,HEX);
+                 unsigned int d = 0;
+                 Serial.print("   ");
+                 Serial.println(d,HEX);
                  sscanf(instruction, "%x", &d);
                  
+                 Serial.print("a and d after sscanf : ");
                  a = (unsigned char)d;
+                 
+                 Serial.print(a,HEX);
+                 Serial.print("   ");
+                 Serial.println(d,HEX);
                  
                  Serial.print("Command : ");
                  Serial.print(a, HEX);
