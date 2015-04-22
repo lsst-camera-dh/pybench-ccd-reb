@@ -186,14 +186,14 @@ void executeCommand(char buffer[], int & index)
                  
                  unsigned char a;
                  unsigned int d;
-                 sscanf(instruction, "%s", &d);
+                 sscanf(instruction, "%x", &d);
                  
                  a = (unsigned char)d;
                  
                  Serial.print("Command : ");
                  Serial.print(a, HEX);
-                 Serial.println("  Answer : ");
-                 Serial.print(send(a), HEX);
+                 Serial.print("  Answer : ");
+                 Serial.println(send(a), HEX);
                  delay(1500);
                  if(secure == 150)
                  {
@@ -216,6 +216,12 @@ void eraseBuffer(char buffer[], int & index)
 }
 
 void loop() {
+  isr();
+  //Serial.print("state, det = ");
+  //Serial.print(state, DEC); 
+  //Serial.print(det, DEC); 
+  //Serial.println(""); 
+  //delay(200);
   if (det != state){
      if (det == LOW){
         delay(1000);
