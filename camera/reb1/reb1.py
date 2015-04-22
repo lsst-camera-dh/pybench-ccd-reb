@@ -5,14 +5,13 @@
 """
 Testbench driver for REB (through direct calls to rriClient)
 """
-
+from py.camera.generic import *
 import fpga0 as fpga
 import rebxml
 import time
 import string
 import numpy as N
 import pyfits
-from driver import Driver
 
 # =======================================================================
 
