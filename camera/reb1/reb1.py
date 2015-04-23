@@ -19,55 +19,9 @@ class REB(reb.REB):
     # ===================================================================
 
     def __init__(self, reb_id = 2,  ctrl_host = None, stripe_id = [0]):
-        reb.REB.__init__(reb_id, ctrl_host, stripe_id)
+        reb.REB.__init__(self, reb_id, ctrl_host, stripe_id)
         self.fpga = fpga0.FPGA0(ctrl_host, reb_id)
-        self.full18bits = True
-        self.set_stripes(stripe_id)  # stripe in use
-        self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
 
-    # --------------------------------------------------------------------
-
-    def set_stripes(self, liststripes):
-        self.stripes = []
-        bitval = 0
-        for s in liststripes:
-            if self.f.check_location(s):
-                self.stripes.append(s)
-                bitval += 1 << s
-        self.f.write(0x400007, bitval)
-
-        if self.stripes == []:
-            print("Warning: no stripe selected.")
-        if self.full18bits == True and len(self.stripes) > 2 :
-            print("Warning: attempting to read 18-bit data for 3 stripes, full image will not fit")
-            self.imglines = 1000
-
-        self.nchannels = 16*len(self.stripes)
-
-    # --------------------------------------------------------------------
-    def update_filetag(self, t):
-        """
-        Updates the filetag to the FPGA timer.
-        :param t: int new numerical tag
-        :return:
-        """
-        hextag = reb.generate_tag(t)
-        self.imgtag = t
-        self.fpga.set_time(hextag)
-
-    def recover_filetag(self):
-        """
-        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
-        Returns the tag.
-        :return: string
-        """
-        t = self.fpga.get_time()
-        tagstr = '0x%016x' % t
-        todaystr = time.strftime('%Y%m%d', time.gmtime())
-        if string.find(tagstr, todaystr) > -1:
-            self.imgtag = int(tagstr[-5:], base=10)
-
-        return tagstr
 
    # --------------------------------------------------------------------
     def REBpowerup(self):
@@ -161,26 +115,10 @@ class REB(reb.REB):
         print("CCD shutdown complete")
 
     # --------------------------------------------------------------------
-
-    def load_sequencer(self, xmlfile=None):
-        """
-        Loads all sequencer content.
-        :return:
-        """
-        if xmlfile:
-            self.xmlfile = xmlfile
-
-        self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
-        self.fpga.send_sequencer(self.seq)
-        try:
-            self.exptime = self.get_exposure_time()
-        except:
-            print("Warning: could not find exposure subroutine in %s" % xmlfile)
-        self.name = ""  # there is actually no way to access that from self.seq
-
     def select_subroutine(self, subname, repeat=1):
         """
         Modify the main subroutine to be a call (JSR) to the subroutine.
+        Overwrites parent function because of sequencer change.
         """
         if self.seq.program == None:
             raise ValueError("No program with identified subroutines yet.")
@@ -189,7 +127,7 @@ class REB(reb.REB):
             raise ValueError("No subroutine '%s' in the FPGA program." % subname)
 
         first_instr = fpga0.Instruction0(
-            opcode=fpga0.Instruction0.OP_JumpToSubroutine,
+            opcode="JSR",
             address=self.seq.program.subroutines[subname],
             repeat=repeat)
 
@@ -198,60 +136,7 @@ class REB(reb.REB):
         self.seq.program.instructions[0x0] = first_instr  # to keep it in sync
         self.name = subname
 
-    def get_exposure_time(self, darktime=False):
-        """
-        Gets the exposure time from the subroutines in memory.
-        (input in seconds). If darktime is set to true, gives the dark 'exposure' time instead.
-        :param darktime: boolean
-        """
-
-        # look up address of exposure subroutine
-        # then get current instruction
-        if darktime:
-            darkadd = self.seq.program.subroutines[self.darksub]
-            instruction = self.seq.program.instructions[darkadd]
-        else:
-            exposureadd = self.seq.program.subroutines[self.exposuresub]
-            instruction = self.seq.program.instructions[exposureadd]
-        iter = instruction.repeat
-
-        return float(iter) * self.exposure_unit  # in seconds
-
-    def set_exposure_time(self, exptime):
-        """
-        Modifies exposure subroutines to last the given exposure time
-        (input in seconds).
-        :param exptime: float
-        """
-        newiter = int(exptime / self.exposure_unit)
-        # look up address of exposure subroutine
-        # then get current instruction and rewrite the number of iterations only
-        exposureadd = self.seq.program.subroutines[self.exposuresub]
-        newinstruction = self.seq.program.instructions[exposureadd]
-        newinstruction.repeat = int(max(newiter, self.min_exposure))  # This does rewrite the seq.program too
-        self.fpga.send_program_instruction(exposureadd, newinstruction)
-
-    def set_dark_time(self, exptime):
-        """
-        Modifies 'dark' exposure (shutter closed) subroutines to last the given exposure time
-        (input in seconds).
-        :param exptime:
-        """
-        newiter = int(exptime / self.exposure_unit)
-        # look up address of exposure subroutine
-        # then get current instruction and rewrite the number of iterations only
-        darkadd = self.seq.program.subroutines[self.darksub]
-        newinstruction = self.seq.program.instructions[darkadd]
-        newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
-        self.fpga.send_program_instruction(darkadd, newinstruction)
-
-
-    # --------------------------------------------------------------------
-
-    def get_input_voltages_currents(self):
-        return self.fpga.get_input_voltages_currents()
-
-    # --------------------------------------------------------------------
+   # --------------------------------------------------------------------
 
     def get_cabac_config(self):
         """
@@ -293,59 +178,5 @@ class REB(reb.REB):
         self.get_cabac_config()
 
 
-    # --------------------------------------------------------------------
-    def wait_end_sequencer(self):
-        """
-        Waits until the sequencer is not running anymore.
-        """
-        while self.fpga.get_state() & 4:  # sequencer status bit in the register
-            time.sleep(1)
 
-    def config_sequence(self, name, exptime, shutdelay=100):
-        """
-        Configure the programmed sequence. Used also to record parameters.
-        """
-        self.wait_end_sequencer()
-        self.select_subroutine(name)
-
-        if name in ["Bias", "Test", "Wait"]:
-            self.shutdelay = 0
-            self.exptime = 0
-        else:
-            self.shutdelay = shutdelay
-            self.exptime = exptime
-            if name == "Dark":
-                self.set_dark_time(exptime)
-            else:
-                self.set_exposure_time(exptime)
-
-    def execute_sequence(self):
-        """
-        Executes the currently loaded sequence.
-        """
-        self.wait_end_sequencer()
-        self.tstamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
-        self.fpga.start()
-        print("Starting %s sequence with %f exposure time." % (self.name, self.exptime))
-        #freeze until image output (do not send commands while the COB is acquiring)
-        time.sleep(self.exptime+3)
-
-    def waiting_sequence(self, name="Wait"):
-        """
-        Lets CCD wait by clearing periodically until keyboard interrupt is sent.
-
-        """
-        self.config_sequence(name, 0)
-        keepwaiting = True
-        while keepwaiting:
-            try:
-                self.execute_sequence()
-                time.sleep(60)
-            except KeyboardInterrupt:
-                keepwaiting = False
-
-    # --------------------------------------------------------------------
-
-    def make_img_name(self):
-        return os.path.join(self.rawimgdir,'0x%016x.img' % self.f.get_time())
 

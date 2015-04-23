@@ -7,11 +7,9 @@
 __author__ = 'juramy'
 
 import py.camera.generic.reb as reb
-import py.camera.generic.rebxml as rebxml
 import time
 import os
 import fpga
-import string
 import pyfits
 
 class TestREB(reb.REB):
@@ -20,99 +18,14 @@ class TestREB(reb.REB):
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.f = fpga.FPGA1(ctrl_host, rriaddress)
-        self.set_stripes(stripe_id)
         self.f.stop_clock()  # stops the clocks to use as image tag
         self.f.write(0x400006, 0)  # pattern generator off
-        self.full18bits = True  # TODO: check if version of the firmware is 16-bit or 18-bit
-        self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
         self.config = {}
         self.xmlfile = "sequencer-wreb.xml"
         # load 0 on default state to prep for REB start-up
         self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
-    def set_stripes(self, liststripes):
-        self.stripes = []
-        bitval = 0
-        for s in liststripes:
-            if self.f.check_location(s):
-                self.stripes.append(s)
-                bitval += 1 << s
-        self.f.write(0x400007, bitval)
-
-        if self.stripes == []:
-            print("Warning: no stripe selected.")
-        if self.full18bits == True and len(self.stripes) > 2 :
-            print("Warning: attempting to read 18-bit data for 3 stripes, full image will not fit")
-            self.imglines = 1000
-
-        self.nchannels = 16*len(self.stripes)
-
-    # --------------------------------------------------------------------
-
-    def update_filetag(self, t):
-        """
-        Updates the filetag to the FPGA timer.
-        :param t: int new numerical tag
-        :return:
-        """
-        hextag = reb.generate_tag(t)
-        self.f.set_time(hextag)
-        self.imgtag = t
-
-    def recover_filetag(self):
-        """
-        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
-        Returns the tag.
-        :return: string
-        """
-        t = self.f.get_time()
-        tagstr = '0x%016x' % t
-        todaystr = time.strftime('%Y%m%d', time.gmtime())
-        if string.find(tagstr, todaystr) > -1:
-            self.imgtag = int(tagstr[-5:], base=10)
-
-        return tagstr
-
-    def load_sequencer(self, xmlfile = None):
-        """
-        Loads all sequencer content.
-        :return:
-        """
-        if xmlfile:
-            self.xmlfile = xmlfile
-
-        self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
-        self.f.send_sequencer(self.seq)
-        try:
-            self.exptime = self.get_exposure_time()
-        except:
-            print("Warning: could not find exposure subroutine in %s" % xmlfile)
-        self.name = ""  # there is actually no way to access that from self.seq
-
-    def select_subroutine(self, subname, repeat = 1):
-        """
-        Old: Modify the main subroutine to be a call (JSR) to the subroutine.
-        TODO: New: use the pointer to the program start. Need to separate in rebxml.py and process in fpga.py
-        """
-        if self.seq.program == None:
-            raise ValueError("No program with identified subroutines yet.")
-
-        if not(self.seq.program.subroutines.has_key(subname)):
-            raise ValueError("No subroutine '%s' in the FPGA program." % subname)
-
-        first_instr = fpga.Instruction(
-            opcode = fpga.Instruction.OP_JumpToSubroutine,
-            address = self.seq.program.subroutines[subname],
-            repeat = repeat)
-
-        # print first_instr
-        # print first_instr.bytecode()
-
-        # load it at the very beginning of the program (rel addr 0x0)
-        self.f.send_program_instruction(0x0, first_instr)
-        self.seq.program.instructions[0x0] = first_instr # to keep it in sync
-
-    # --------------------------------------------------------------------
+     # --------------------------------------------------------------------
 
     def send_cabac_config(self, params):
         """
@@ -310,90 +223,6 @@ class TestREB(reb.REB):
             print("Warning: unidentified parameter for the REB: %s" % param)
 
     # --------------------------------------------------------------------
-
-    def set_exposure_time(self, exptime):
-        """
-        Modifies exposure subroutines to last the given exposure time
-        (input in seconds).
-        :param exptime: float
-        """
-        newiter = int(exptime / self.exposure_unit)
-        # look up address of exposure subroutine
-        # then get current instruction and rewrite the number of iterations only
-        exposureadd = self.seq.program.subroutines[self.exposuresub]
-        newinstruction = self.seq.program.instructions[exposureadd]
-        newinstruction.repeat = int(max(newiter, self.min_exposure))  # This does rewrite the seq.program too
-        self.f.send_program_instruction(exposureadd, newinstruction)
-
-    def set_dark_time(self, exptime):
-        """
-        Modifies 'dark' exposure (shutter closed) subroutines to last the given exposure time
-        (input in seconds).
-        :param exptime:
-        """
-        newiter = int(exptime / self.exposure_unit)
-        # look up address of exposure subroutine
-        # then get current instruction and rewrite the number of iterations only
-        darkadd = self.seq.program.subroutines[self.darksub]
-        newinstruction = self.seq.program.instructions[darkadd]
-        newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
-        self.f.send_program_instruction(darkadd, newinstruction)
-
-    def wait_end_sequencer(self):
-        """
-        Waits until the sequencer is not running anymore.
-        """
-        while self.f.get_state() & 4:  # sequencer status bit in the register
-            time.sleep(1)
-
-    def config_sequence(self, name, exptime, shutdelay=100):
-        """
-        Configure the programmed sequence. Used also to record parameters.
-        """
-        self.wait_end_sequencer()
-        self.select_subroutine(name)
-
-        if name in ["Bias", "Test", "Wait"]:
-            self.shutdelay = 0
-            self.exptime = 0
-        else:
-            self.shutdelay = shutdelay
-            self.exptime = exptime
-            if name == "Dark":
-                self.set_dark_time(exptime)
-            else:
-                self.set_exposure_time(exptime)
-
-    def execute_sequence(self):
-        """
-        Executes a named sequence.
-        """
-        self.wait_end_sequencer()
-        self.tstamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
-        # starts the sequencer
-        self.f.start()
-        print("Starting sequence with %f exposure time." % (self.name, self.exptime))
-        #freeze until image output (do not send commands while the COB is acquiring)
-        time.sleep(self.exptime+3)
-
-    def waiting_sequence(self, name="Wait"):
-        """
-        Lets CCD wait by clearing periodically until keyboard interrupt is sent.
-
-        """
-        self.config_sequence(name, 0)
-        keepwaiting = True
-        while keepwaiting:
-            try:
-                self.execute_sequence()
-                time.sleep(60)
-            except KeyboardInterrupt:
-                keepwaiting = False
-
-    # --------------------------------------------------------------------
-
-    def make_img_name(self):
-        return os.path.join(self.rawimgdir,'0x%016x.img' % self.f.get_time())
 
 
 def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of REB class, will call other instruments
