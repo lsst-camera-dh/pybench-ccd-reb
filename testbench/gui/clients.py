@@ -10,11 +10,10 @@ screens = {
                 'background': 'bg-ccd-grey.png' },
     'lights': { 'title': "Light Sources",
                 'desktop': 1,
-                # 'background': 'bg-lights-grey.png' },
-                'background': 'bg-ccd-grey.png' },
+                'background': '/tmp/bg-light-sources.png' },
     'cryo':   { 'title': "Cryogeny & Vacuum",
                 'desktop': 2,
-                'background': 'bg-cryo-grey.png' },
+                'background': '/tmp/bg-cryo-pumps.png' },
     'logs':   { 'title': "Logs",
                 'desktop': 3,
                 'background': 'bg-ccd-grey.png' },
@@ -38,19 +37,18 @@ clients = {
     #
     'all-lights': ['laser', 'ttl', 'QTH', 'XeHg'],
     #
-    'blurb': ['laser', 'QTH'],
+    'blurb': ['laser', 'ttl'],
     #
     'laser': { 'host': 'lpnlsstbench',
-               # 'commandline': 'laserthorlabs',
-               'commandline': 'xclock -digital',
+               'commandline': 'laserthorlabs',
                'screen': 'lights',
-               'position': {'x': 100.0, 'y': 150.0, 'w': 200.0, 'h': 200.0} 
+               'position': {'x': 1950, 'y': 750, 'w': 420, 'h': 420} 
            },
     #
-    'QTH':   { 'host': 'lpnlsstbench',
-               'commandline': 'xterm -bg blue',
+    'ttl':   { 'host': 'lpnlsstbench',
+               'commandline': 'ttl',
                'screen': 'divers',
-               'position': {'x': 500.0, 'y': 150.0, 'w': 200.0, 'h': 200.0} 
+               'position': {'x': 1400, 'y': 150, 'w': 490.0, 'h': 300} 
            } #,
     # 'xyz': 
     #
