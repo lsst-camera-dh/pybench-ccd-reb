@@ -48,7 +48,7 @@ clients = {
     'ttl':   { 'host': 'lpnlsstbench',
                'commandline': 'ttl',
                'screen': 'divers',
-               'position': {'x': 1400, 'y': 150, 'w': 490.0, 'h': 300} 
+               'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
            } #,
     # 'xyz': 
     #
