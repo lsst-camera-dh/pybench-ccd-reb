@@ -1,28 +1,31 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-camera'
+APPNAME = 'lsst-camera-reb1'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['reb','reb1','wreb']
-
 def options(ctx):
     ctx.load('python')        
     ctx.load('compiler_c')
+    # ctx.sub_options(submodules)
 
 def configure(ctx):
     ctx.load('python')
     ctx.load('compiler_c')
     ctx.check_python_headers()
+    # ctx.sub_config(submodules)
     
 def build(ctx):
     ctx(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/camera')
+        source = ['__init__.py',
+                  'bidi.py',
+                  'reb1.py','fpga0.py','rebxml.py','cabac0.py',
+                  ],
+        install_path = '${PYTHONDIR}/lsst/camera/reb1')
 
-    ctx.recurse(submodules)
+    # ctx.recurse(submodules)
 
 
     

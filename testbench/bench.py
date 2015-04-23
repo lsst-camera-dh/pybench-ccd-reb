@@ -1,10 +1,12 @@
 
+import os, os.path
+import datetime
 import logging ## critical: common logging system (all devices should log through it)
+
+import importlib
  
 from singleton import Borg
-
 from config import config
-
 import drivers
 
 # find a better way, to dynamically load the modules associated (from config.py)
@@ -19,13 +21,31 @@ class Bench(Borg):
     This object *MUST* be a singleton.
     """
 
+    def log(self, message, level=logging.INFO):
+        print message
+        logging.log(level, message)
+
     def __init__(self):
         Borg.__init__(self)
         # Be careful here: do not reset any existing member
         if not(self.__dict__.has_key("name")):
-            self.name = "LSST CCD Testbench"
+            self.name = "LSST CCD Testbench -- LPNHE, Paris"
         if not(self.__dict__.has_key("registry")):
             self.registry = {}
+
+        now = datetime.datetime.now()
+        logname = "bench-%s.log" % now.isoformat().split('T')[0]
+        logdir = os.path.join(os.getenv("HOME"), 'logs')
+        try:
+            os.mkdir(logdir)
+        except:
+            pass
+        logfile = os.path.join(logdir, logname)
+        logging.basicConfig(filename = logfile, 
+                            level = logging.DEBUG, 
+                            format = '%(asctime)s: %(message)s')
+
+        self.log("Bench singleton instance initialised.")
 
     def __str__(self): 
         return self.name
@@ -51,8 +71,8 @@ class Bench(Borg):
         #
         if (self.registry.has_key(identifier) and
             not(kargs.get('force_reload', False))):
-            print "Instrument", identifier, "is already registered"
-            return
+            self.log("Instrument %s is already registered." % identifier)
+            return True
         
         params = {}
         
@@ -66,32 +86,36 @@ class Bench(Borg):
         # Dynamically load the module
         # eval('import %s' % instrument_module)
         
-        code = compile("import drivers.%s" % params['driver'], 
-                       filename = '/dev/stderr',
-                       mode = 'exec')
-        eval(code)
-        
+        # code = compile("import drivers.%s" % params['driver'], 
+        #                filename = '/dev/stderr',
+        #                mode = 'exec')
+        # eval(code)
         # Create an instance of the instrument
 
-        # print "[A]"
-        instrument_module   = getattr(drivers, params['driver'])
-        print instrument_module
-        # print "[B]"
+        # instrument_module   = getattr(drivers, params['driver'])
+        # print instrument_module
+
+        self.log("Loading driver %s" % params['driver'])
+
+        ## TODO: improve!
+        instrument_module = importlib.import_module(
+            "lsst.testbench.drivers.%s" % params['driver'])
+        # "drivers.%s" % params['driver'], package = 'lsst.testbench')
+
         instrument_class    = getattr(instrument_module, 'Instrument')
-        print instrument_class
-        # print "[C]"
+        # print instrument_class
+
         instrument_instance = instrument_class(identifier, **params)
-        print instrument_instance
-        print dir(instrument_instance)
-        # print "[D]"
-        
+        # print instrument_instance
+        # print dir(instrument_instance)
+
         # register actions: try to open and connect to the instrument
         # will raise an exception if it fails
         try:
-            # print "[EA]"
             instrument_instance.register(self)
-            # print "[EE]"
         except:
+            logging.error("Failed to connect to instrument %s. Stop." %
+                          identifier)
             raise IOError("Failed to connect to instrument %s. Stop." %
                           identifier)
 
@@ -102,6 +126,9 @@ class Bench(Borg):
         self.registry[identifier]['instance'] = instrument_instance
         self.__dict__[identifier] = instrument_instance
 
+        self.log("Instrument %s is now attached to the Bench instance." 
+                     % identifier)
+
         return True
 
 
@@ -111,11 +138,16 @@ class Bench(Borg):
         and graft new methods on the Bench instance (on the class in
         fact).
         """
-        source = open(script).read()
-        code = compile(source = source, 
-                       filename = '/dev/stderr', 
-                       mode = 'exec')
-        eval(code)
+        # source = open(script).read()
+        # code = compile(source = source, 
+        #                filename = '/dev/stderr', 
+        #                mode = 'exec')
+        # eval(code)
+
+        self.log("Loading script %s." % script)
+
+        script_module = importlib.import_module(
+            "lsst.testbench.scripts.%s" % script)
 
         return True
           

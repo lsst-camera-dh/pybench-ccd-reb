@@ -25,6 +25,7 @@ Testbench driver for the Thorlabs Laser (through Edo software and XML-RPC)
 from driver import Driver
 
 import xmlrpclib
+import logging
 
 # =======================================================================
 
@@ -90,6 +91,7 @@ class Instrument(Driver):
 
     def register(self, bench):
         self.open()
+        time.sleep(2)
         connected = self.is_connected()
         if not(connected):
             raise IOError("Laser Thorlabs not connected.")
@@ -117,9 +119,13 @@ class Instrument(Driver):
         """
 
         if abs(channel) not in self.allchannels:
+            logging.error("Invalid Laser Thorlabs channel id. Should be in %s"
+                          % str(self.allchannels))
             raise ValueError(
                 "Invalid Laser Thorlabs channel id. Should be in %s" % 
                 str(self.allchannels))
+
+        logging.info("selecting Laser channel %d" % channel)
         return self.xmlrpc.select(channel)
 
 
@@ -131,6 +137,8 @@ class Instrument(Driver):
             raise ValueError(
                 "Invalid Laser Thorlabs channel id. Should be in %s" %
                 str(self.allchannels))
+
+        logging.info("disabling Laser channel %d" % channel)
         return self.xmlrpc.select(-channel)
 
 

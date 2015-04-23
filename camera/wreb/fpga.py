@@ -3,66 +3,18 @@
 # LSST
 # Python minimal interface for the REB FPGA
 #
-# This one is for REB1 with DREB1. This means CABAC0, ASPIC2 (not managed by the FPGA),
-# and first version of the sequencer (with no pointers).
-# Take from wreb for more advanced REBs and DREBs.
+#
 
 import sys
-import os, os.path
+import time
 import re
 import subprocess
 
-import cabac0 as cabac
-import time
+import cabac
+import aspic
 import bidi
-import pyfits
-import numpy as np
 
 ## -----------------------------------------------------------------------
-def generate_tag(number):
-    today = time.gmtime()
-    tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
-    tag = int(tagstr,16)
-    return tag
-
-
-def get_sequencer_hdu(seq):
-    """
-    Builds table HDU for FITS file containing sequencer dump
-        :param seq: Sequencer
-        :return: pyfits.TableHDU
-        """
-    prog = seq.program
-    progaddr = prog.instructions.keys()
-    prognum = 256 + len(progaddr)
-
-    slicenum = np.ndarray(shape=(prognum,), dtype=np.dtype('a4'))
-    output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
-    duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
-
-    for ifunc in seq.functions.iterkeys():
-        func = seq.get_function(ifunc)
-        for islice in func.outputs.keys():
-            i = ifunc * 16 + islice
-            slicenum[i] = hex(i)[2:]
-            output[i] = bin(func.outputs[islice])[2:]
-            duration[i] = func.timelengths[islice]
-
-    for i, addr in enumerate(sorted(progaddr)):
-        slicenum[i+256] = '30' + hex(addr)[2:]
-        output[i+256] = prog.instructions[addr].__repr__()[:20]
-        duration[i+256] = prog.instructions[addr].repeat
-
-    slicecol = pyfits.Column(name="Address", format='A4', array=slicenum)
-    outputcol = pyfits.Column(name="Output", format='A32', array=output)
-    durationcol = pyfits.Column(name="Time", format='I8', array=duration)
-
-    exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
-    # add name to extension here
-    exthdu.header["EXTNAME"] = "SEQ_CFG"
-
-    return exthdu
-
 
 class Program(object):
     """
@@ -116,9 +68,9 @@ Prg = Program
 class Instruction(object):
 
     OP_CallFunction          = 0x1
-    OP_JumpToSubroutine      = 0x2
-    OP_ReturnFromSubroutine  = 0x3
-    OP_EndOfProgram          = 0x4
+    OP_JumpToSubroutine      = 0x5
+    OP_ReturnFromSubroutine  = 0xE
+    OP_EndOfProgram          = 0xF
 
     OP_names = { OP_CallFunction          : "CALL",
                  OP_JumpToSubroutine      : "JSR",
@@ -172,11 +124,11 @@ class Instruction(object):
                 self.repeat = 0
             else:
                 self.infinite_loop = False
-                self.repeat = int(repeat) & ((1<<23) - 1)
+                self.repeat = int(repeat) & 0x3fffff
 
         elif self.opcode == self.OP_JumpToSubroutine:
             if address != None:
-                self.address = int(address) & ((1<<10) - 1)
+                self.address = int(address) & 0x3ff
             elif subroutine != None:
                 self.subroutine = subroutine
             else:
@@ -184,7 +136,7 @@ class Instruction(object):
                                  "no address or subroutine to jump")
                 
             # self.infinite_loop = bool(infinite_loop)
-            self.repeat = int(repeat) & ((1<<17) - 1)
+            self.repeat = int(repeat) & 0xffff
 
 
     def __repr__(self):
@@ -224,14 +176,14 @@ class Instruction(object):
             if self.infinite_loop:
                 bc |= 1 << 23
             else:
-                bc |= (self.repeat & ((1<<23) - 1))
+                bc |= (self.repeat & 0x3fffff)
                 
         elif self.opcode == self.OP_JumpToSubroutine:
             if self.address == None:
                 raise ValueError("Unassembled JSR instruction. No bytecode")
 
-            bc |= (self.address & ((1<<10) - 1)) << 18
-            bc |= (self.repeat & ((1<<17) - 1))
+            bc |= (self.address & 0x3ff) << 16
+            bc |= (self.repeat & 0xffff)
 
         elif self.opcode in [ self.OP_ReturnFromSubroutine, 
                               self.OP_EndOfProgram]:
@@ -327,7 +279,7 @@ class Instruction(object):
             function_id = (bc >> 24) & 0xf
             infinite_loop = (bc & (1 << 23)) != 0
             # print infinite_loop
-            repeat = (bc & ((1 << 23) - 1))
+            repeat = (bc & 0x3fffff)
             # print repeat
 
             if infinite_loop:
@@ -344,9 +296,9 @@ class Instruction(object):
                 
                 
         elif opcode == cls.OP_JumpToSubroutine:
-            address = (bc >> 18) & ((1 << 10) - 1)
+            address = (bc >> 16) & 0x3ff
             # print address
-            repeat  = bc & ((1 << 17) - 1)
+            repeat  = bc & 0xffff
             # print repeat
 
             return Instruction(opcode = opcode,
@@ -670,9 +622,11 @@ class FPGA(object):
     outputs_base_addr = 0x100000
     slices_base_addr  = 0x200000
     program_base_addr = 0x300000
-    program_mem_size  = 1024 # ???
-    serial_conv = 0.00306 #rough conversion for DACs, no guarantee
-    parallel_conv = 0.00348
+    program_mem_size  = 0x3ff
+    clock_conv = 0.00357 # conversion for DAC (V/LSB)
+    bias_conv = 0.00725  # conversion for alternative biases
+    od_conv = 0.0195  # placeholder for alternative OD
+    og_conv = 0.00122  # placeholder for alternative OG
 
     # --------------------------------------------------------------------
 
@@ -683,7 +637,9 @@ class FPGA(object):
         # (at least we will want to initialize to 0)
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
-        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
+        self.aspic_top = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
+        self.aspic_bottom = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
+        self.dacs = {}
 
     # def open(self):
     #     "Opening the connection ?"
@@ -735,7 +691,7 @@ class FPGA(object):
             if line == '': continue
             matches = re.match("Register ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)\: ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)", line)
             if not(matches):
-                raise IOError("Failed to read register 0x%0x on REB %d" % (address, reb))
+                raise IOError("Failed to read register 0x%0x on FPGA" % address)
             r = int(matches.group(1), base=16)
             v = int(matches.group(4), base=16)
 
@@ -777,6 +733,26 @@ class FPGA(object):
         # out : 
         # '  Register 0x4 (4): 0x9164efa8 (-1855656024)\n'
         # print err
+        # printout for debug
+        #print command
+
+    def write_spi(self, address, stripe, position, register, write=False):
+        """
+        Writes to an SPI serial link through the FPGA in the format defined for ASPIC and CABAC.
+        Position = 1 for bottom, 2 for top.
+        :param address: int
+        :param stripe: int
+        :param position: int
+        :param register: int
+        :return:
+        """
+        stripecode = 1 << (26+stripe)
+        positioncode = position << 24
+        if write:
+            regcode = ((1 << 23) | register) & 0xffffff
+        else:
+            regcode = register & 0x7fffff
+        self.write(address, stripecode + positioncode + regcode)
 
     # --------------------------------------------------------------------
 
@@ -916,15 +892,6 @@ class FPGA(object):
         for i in xrange(16):
             funcs[i] = self.dump_function(i)
         return funcs
-
-    # --------------------------------------------------------------------
-
-    def set_image_size(self, size):
-        """
-        Set image size (in ADC count).
-        """
-        # rriClient 2 write 0x400005 0x0010F3D8
-        self.write(0x400005, size)
 
     # --------------------------------------------------------------------
 
@@ -1068,7 +1035,7 @@ class FPGA(object):
         Send the command to stop incrementing the ADC sampling time and reset the shift.
         """
         self.write(0x330000, 0)
-        self.write(0x340000, 0)
+        self.write(0x330001, 0)
 
     # ----------------------------------------------------------
 
@@ -1117,24 +1084,28 @@ class FPGA(object):
     
     def set_clock_voltages(self, voltages):
         """
-        Sets voltages as defined in the input dictionary, 
-        keeps others as previously defined.
+        Sets voltages as defined in the input dictionary, keeps others as previously defined.
+        Note that order in which they are programmed does not matter as they are all activated together.
         """
-        
-        #values to be set in the register for each output
-        outputnum = {"V_SL":0,"V_SH":1,"V_RGL":2,"V_RGH":3,"V_PL":4,"V_PH":5,"HEAT1":6,"HEAT2":7}
-
+        #values to be set in the register for each output (shift will be +1)
+        outputnum = {"SL":0, "SU":2, "RGL":4, "RGU":6, "PL":16, "PU":18}
+        # shift: output will follow positive dac minus (factor tbc) shift dac
         for key in iter(voltages):
-            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                self.dacs[key] = int(voltages[key]/self.serial_conv)& 0xfff
-            elif key in ["V_PL", "V_PH"]:
-                self.dacs[key] = int(voltages[key]/self.parallel_conv)& 0xfff
-            elif key in ["HEAT1", "HEAT2"]:
-                self.dacs[key] = int(voltages[key]) & 0xfff
+            key_shift = key+"_S"
+            if key in ["SL","SU","RGL","RGU","PL", "PU"]:
+                if voltages[key] > 0:
+                    self.dacs[key] = int(voltages[key]/self.clock_conv)& 0xfff
+                    self.dacs[key_shift] = 0
+                else:
+                    self.dacs[key] = 0
+                    self.dacs[key_shift] = int(-voltages[key]/self.clock_conv)& 0xfff
+            # TODO: check factor for shift
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
-            
-            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12) )
+
+            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12))
+            # shift at address+1
+            self.write(0x400000, self.dacs[key_shift] + ((outputnum[key]+1) << 12))
          
         # activates DAC outputs
         self.write(0x400001, 1)
@@ -1146,16 +1117,10 @@ class FPGA(object):
         No readback available, using values stored in fpga object.
         """
         fitsheader = {}
-        for key in iter(self.dacs):
-            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
-                fitsheader[key]= self.dacs[key]*self.serial_conv
-            elif key in ["V_PL", "V_PH"]:
-                # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
-                fitsheader[key]= self.dacs[key]*self.parallel_conv
-            else:
-                # fitsheader[key]= "{:d}".format(self.dacs[key])
-                fitsheader[key]= self.dacs[key]
+        for key in ["SL","SU","RGL","RGU","PL", "PU"]:
+            # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
+            fitsheader[key]= (self.dacs[key]-self.dacs[key+"_S"])*self.clock_conv
+            #TODO: check appropriate factor for shift
 
         return fitsheader
 
@@ -1164,13 +1129,18 @@ class FPGA(object):
     def set_current_source(self, currents, ccdnum = 0):
         """
         Sets current source DAC value for given CCD (0, 1, 2).
+        The same FPGA registers are also used to write OD and FS if used, see set_bias_voltages()
         """
         
         key = "I_OS"
-
-        self.dacs[key] = currents[key] & 0xfff
-
-        self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
+        
+        if key in currents:
+            self.dacs[key] = currents[key] & 0xfff
+        else:
+            raise ValueError(
+                "No key found for current source (%s), could not be set." % key)
+            
+        self.write(0x400010, self.dacs[key] + (ccdnum <<12))
                 
         #activates DAC output
         self.write(0x400011, 1)
@@ -1188,6 +1158,59 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
+    def set_bias_voltages(self, biases):
+        """
+        For WREB: sets the alternative bias voltages.
+        :param biases: dict
+        :return:
+        """
+        outputnum = {"GD":0,"RD":1,"OG":2,"OGS":3}
+        # OG seen by CCD will be the difference OG-OGS
+        outputnum1 = {"FSB": 3, "OD": 6}
+        for key in iter(biases):
+            if key in ["GD","RD"]:
+                self.dacs[key] = int(biases[key]/self.bias_conv)& 0xfff
+                self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
+            elif key == "OD":
+                self.dacs[key] = int(biases[key]/self.od_conv)& 0xfff
+                self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
+            elif key == "OG":
+                if biases[key] > 0:
+                    self.dacs[key] = int(biases[key]/self.og_conv)& 0xfff
+                    self.dacs["OGS"] = 0
+                else:
+                    self.dacs[key] = 0
+                    self.dacs["OGS"] = int(-biases[key]/self.og_conv)& 0xfff
+                self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
+                self.write(0x400100, self.dacs["OGS"] + (outputnum["OGS"]<<12))
+            elif key == "FSB":
+                self.dacs[key] = int(biases[key]/self.clock_conv)& 0xfff
+                self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
+            else:
+                raise ValueError("Unknown voltage key: %s, could not be set" % key)
+
+        # activates DAC outputs
+        self.write(0x400011, 1)
+        self.write(0x400101, 1)
+
+    # ----------------------------------------------------------
+    def cabac_power(self, enable):
+        """
+        Enables/disables power to CABAC low voltage power supplies and VEE (specific to WREB).
+        :param enable: bool
+        :return:
+        """
+        if enable:
+            # staged
+            self.write(0xD00001, 0x4)  # VEE (CABAC substrate) alone first
+            time.sleep(0.2)
+            self.write(0xD00001, 0x1F)
+        else:
+            # reverse order
+            self.write(0xD00001, 0x4)
+            time.sleep(0.2)
+            self.write(0xD00001, 0)
+
     def check_location(self, s, loc = 3):
         if s not in [0,1,2]:
             raise ValueError("Invalid REB stripe (%d)" % s)
@@ -1195,86 +1218,156 @@ class FPGA(object):
             raise ValueError("Invalid Location code (%d)" % loc)
         return True
 
-    def get_cabac_config(self, s): # stripe 's'
+    def get_cabac_config(self, s, check=True): # stripe 's'
         """
         read CABAC configuration for stripe <s>,
         store it in the CABAC objects and the header string.
         """
+
         self.check_location(s)
 
-        self.write(0x500001, s) # starts the CABAC config readout
+        topconfig = {}
+        bottomconfig = {}
 
-        top_config    = self.read(0x500110, 5) # 0 - 4
-        bottom_config = self.read(0x500120, 5) # 0 - 4
+        for address in range(22):
+            regaddress = address << 16
+            # send for reading top CABAC
+            self.write_spi(0x500000, s, 2, regaddress)
+            # read answer to dict
+            #time.sleep(0.05)
+            topconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
+            # send for reading bottom CABAC
+            self.write_spi(0x500000, s, 1, regaddress)
+            # read answer to dict
+            #time.sleep(0.05)
+            bottomconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
 
-        self.cabac_top[s].set_from_registers(top_config)
-        self.cabac_bottom[s].set_from_registers(bottom_config)
+        self.cabac_top[s].read_all_registers(topconfig, check)
+        self.cabac_bottom[s].read_all_registers(bottomconfig, check)
 
         config = self.cabac_top[s].get_header("%dT" % s)
         config.update(self.cabac_bottom[s].get_header("%dB" % s))
-            
+
         return config
 
     # ----------------------------------------------------------
 
-    def send_cabac_config(self, s=0): # stripe 's'
+    def set_cabac_value(self, param, value, s=0, loc=3):
         """
-        Writes the current CABAC objects of the given stripe to the FPGA registers
+        Sets the CABAC parameter at the appropriate stripe and location (1 for bottom, 2 for top, 3 for both).
+        Default values for retro-compatibility.
         """
-        self.check_location(s)
+        self.check_location(s, loc)
 
-        regs_top = self.cabac_top[s].write_to_registers()
-        regs_bottom = self.cabac_bottom[s].write_to_registers()
-        
-        for regnum in range(0,5):
-            self.write(0x500010 + regnum, regs_top[regnum])
-            self.write(0x500020 + regnum, regs_bottom[regnum])
-        
-        self.write(0x500000, s) # starts the CABAC configuration
+        if loc==1 or loc==3:
+            # bottom CABAC
+            regs = self.cabac_bottom[s].set_cabac_fromstring(param, value)
+            for reg in regs:
+                self.write_spi(0x500000, s, 1, reg, True)
+        if loc==2 or loc==3:
+            # top CABAC
+            regs = self.cabac_top[s].set_cabac_fromstring(param, value)
+            for reg in regs:
+                self.write_spi(0x500000, s, 2, reg, True)
 
     # ----------------------------------------------------------
 
-    def set_cabac_value(self, param, value, s=0):
+    def cabac_safety(self, s=0):
         """
-        Sets the CABAC parameter at the given value on both CABACs of the given stripe.
-        Default value for retro-compatibility.
+        Removes CABAC1 safety at the given stripe (required at CABAC1 start-up).
         """
         self.check_location(s)
-        self.cabac_top[s].set_cabac_fromstring(param, value)
-        self.cabac_bottom[s].set_cabac_fromstring(param, value)
 
-    # ----------------------------------------------------------
-
-    def check_cabac_value(self, param, value, s=0):
-        """
-        Gets the current value of the CABAC objects for the given parameter on the given stripe
-        and checks that it is correct.
-        """
-        prgm = ( self.cabac_top[s].get_cabac_fromstring(param) +
-                 self.cabac_bottom[s].get_cabac_fromstring(param) )
-
-        for prgmval in prgm:
-            if (abs(prgmval - value)>0.2):
-                raise StandardError(
-                    "CABAC readback different from setting for %s: %f != %f" %
-                    (param, prgmval, value) )
-
+        regs = self.cabac_bottom[s].safety_off()
+        for reg in regs:
+            self.write_spi(0x500000, s, 1, reg, True)
+        regs = self.cabac_top[s].safety_off()
+        for reg in regs:
+            self.write_spi(0x500000, s, 2, reg, True)
 
      # ----------------------------------------------------------
 
     def reset_cabac(self, s=0): # stripe 's'
         """
-        Writes 0 to all the FPGA CABAC registers for stripe s
+        Use CABAC reset for stripe s
         """
         self.check_location(s)
 
-        for regnum in range(0,5):
-            self.write(0x500010 + regnum, 0)
-            self.write(0x500020 + regnum, 0)
+        self.write(0x500001, s) # starts the CABAC reset
 
-        self.write(0x500000, s) # starts the CABAC configuration
+    # ----------------------------------------------------------
 
-    # ASPIC stuff: not needed for REB1+ASPIC2. Take from wreb for REB2/WGREB+ASPIC3.
+    def get_aspic_config(self, s=0, check=False):
+        """
+        Read ASPIC configurations for the given stripe and updates objects in class.
+        If check is true then it checks that the readback is the same as the expected value.
+        :param s:
+        """
+        self.check_location(s)
+
+        topconfig = {}
+        bottomconfig = {}
+
+        for address in range(3):
+            # send for reading top ASPIC
+            self.write_spi(0xB00000, s, 2, address << 16)
+            # read answer
+            topconfig[address] = self.read(0xB00010+s, 1)[0xB00010+s]
+            # send for reading bottom ASPIC
+            self.write_spi(0xB00000, s, 1, address << 16)
+            # read answer
+            bottomconfig[address] = self.read(0xB00010+s, 1)[0xB00010+s]
+
+        self.aspic_top[s].read_all_registers(topconfig, True)
+        self.aspic_bottom[s].read_all_registers(bottomconfig, True)
+
+        config = self.aspic_top[s].get_header("%dT" % s)
+        config.update(self.aspic_bottom[s].get_header("%dB" % s))
+
+        return config
+
+    def set_aspic_value(self, param, value, s=0, loc=3):
+        """
+        Sets the ASPIC parameter at the given value on ASPICs of the given stripe at the given location and stores in
+        object.
+        """
+        self.check_location(s, loc)
+
+        if loc==1 or loc==3:
+            # bottom ASPIC
+            reg = self.aspic_bottom[s].set_aspic_fromstring(param, value)
+            self.write_spi(0xB00000, s, 1, reg, True)
+        if loc==2 or loc==3:
+            # top ASPIC
+            reg = self.aspic_top[s].set_aspic_fromstring(param, value)
+            self.write_spi(0xB00000, s, 2, reg, True)
+
+    def apply_aspic_config(self, s=0, loc=3):
+        """
+        Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
+        (1 for bottom, 2 for top, 3 for both).
+        """
+        self.check_location(s, loc)
+
+        if loc==1 or loc==3:
+            # bottom ASPIC
+            AspicData = self.aspic_bottom[s].write_all_registers()
+            for address in range(2):
+                self.write_spi(0xB00000, s, 1, AspicData[address], True)
+        if loc==2 or loc==3:
+            # top ASPIC
+            AspicData = self.aspic_top[s].write_all_registers()
+            for address in range(2):
+                self.write_spi(0xB00000, s, 2, AspicData[address], True)
+
+    def reset_aspic(self, s=0):
+        """
+        Sends the reset command to the ASPICs of the appropriate stripe(s).
+        :return:
+        """
+        self.check_location(s)
+
+        self.write(0xB00001, s)
 
 
 
