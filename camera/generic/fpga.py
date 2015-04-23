@@ -65,6 +65,9 @@ class Program(object):
 Prg = Program
 
 
+#class OPcode(object):
+
+
 class Instruction(object):
 
     OP_CallFunction          = 0x1
@@ -72,12 +75,10 @@ class Instruction(object):
     OP_ReturnFromSubroutine  = 0xE
     OP_EndOfProgram          = 0xF
 
-    OP_names = { OP_CallFunction          : "CALL",
-                 OP_JumpToSubroutine      : "JSR",
-                 OP_ReturnFromSubroutine  : "RTS",
-                 OP_EndOfProgram          : "END" }
+    OP_names = ["CALL", "JSR", "RTS", "END"]
 
-    OP_codes = dict(zip(OP_names.values(), OP_names.keys()))
+    OP_codes = bidi.BidiMap(OP_names,
+                            [OP_CallFunction, OP_JumpToSubroutine, OP_ReturnFromSubroutine, OP_EndOfProgram])
 
     pattern_CALL = re.compile(
         "CALL\s+func\((\d+)\)\s+repeat\(((\d+)|infinity)\)")
@@ -87,30 +88,40 @@ class Instruction(object):
         "JSR\s+([\dA-Za-z0-9\_]+)\s+repeat\((\d+)\)")
 
     def __init__(self, 
-                 opcode, 
+                 opcode,
                  function_id = None, 
                  infinite_loop = False,
                  repeat = 1,
                  address = None,
                  subroutine = None):
-        
+        """
+        The input opcode is the name of the operation or the code value.
+        The name goes to self.name, self.opcode is the actual code.
+        :param opcode: string
+        :param function_id: int
+        :param infinite_loop: bool
+        :param repeat: int
+        :param address: int
+        :param subroutine: string
+        :return:
+        """
         self.function_id = 0
         self.address = None
         self.subroutine = None
         self.unassembled = False
         self.repeat = 0
         self.infinite_loop = False
+        self.opcode = None
+        self.name = None
 
-        if opcode in self.OP_codes.keys():
-            opcode = self.OP_codes[opcode]
-
-        if opcode not in [self.OP_CallFunction, 
-                          self.OP_JumpToSubroutine, 
-                          self.OP_ReturnFromSubroutine,
-                          self.OP_EndOfProgram]:
-            raise ValueError("Invalid FPGA Opcode")
-
-        self.opcode = opcode
+        if opcode in self.OP_names:
+            self.name = opcode
+            self.opcode = self.OP_codes[opcode]
+        elif self.OP_codes.has_key(opcode):
+            self.opcode = opcode
+            self.name = self.OP_codes[opcode]
+        else:
+            raise ValueError("Invalid FPGA OPcode " + opcode.__repr__())
 
         if self.opcode == self.OP_CallFunction:
             if function_id not in range(16):
@@ -141,15 +152,15 @@ class Instruction(object):
 
     def __repr__(self):
         s = ""
-        s += "%-4s" % Instruction.OP_names[self.opcode]
+        s += "%-4s" % self.name
 
-        if self.opcode == self.OP_CallFunction:
+        if self.name == self.OP_names[1]:
             s += "    %-11s" % ("func(%d)" % self.function_id) 
             if self.infinite_loop:
                 s += "    " + "repeat(infinity)"
             else:
                 s += "    " + ("repeat(%d)" % self.repeat)
-        elif self.opcode == self.OP_JumpToSubroutine:
+        elif self.name == self.OP_names[2]:
             if self.address != None:
                 s += "    %-11s" % ("0x%03x" % self.address) 
             else:
@@ -218,26 +229,24 @@ class Instruction(object):
         # CALL
         m = cls.pattern_CALL.match(s)
         if m != None:
-            opcode = Instruction.OP_CallFunction
             function_id = int(m.group(1))
             if m.group(2) == "infinity":
-                return Instruction(opcode = Instruction.OP_CallFunction,
+                return Instruction(opcode = "CALL",
                                    function_id = function_id,
                                    infinite_loop = True)
             else:
                 repeat = int(m.group(2))
-                return Instruction(opcode = Instruction.OP_CallFunction,
+                return Instruction(opcode = "CALL",
                                    function_id = function_id,
                                    repeat = repeat)
         
         # JSR addr
         m = cls.pattern_JSR_addr.match(s)
         if m != None:
-            opcode = Instruction.OP_JumpToSubroutine
             print m.groups()
             address = int(m.group(1), base=16)
             repeat = int(m.group(3))
-            return Instruction(opcode = Instruction.OP_JumpToSubroutine,
+            return Instruction(opcode = "JSR",
                                address = address,
                                repeat = repeat)
 
@@ -245,24 +254,21 @@ class Instruction(object):
         m = cls.pattern_JSR_name.match(s)
         print m, s
         if m != None:
-            opcode = Instruction.OP_JumpToSubroutine
             subroutine = m.group(1)
             repeat = int(m.group(2))
-            return Instruction(opcode = Instruction.OP_JumpToSubroutine,
+            return Instruction(opcode = "JSR",
                                subroutine = subroutine,
                                repeat = repeat)
 
         # RTS
         if s == "RTS":
-            opcode = Instruction.OP_ReturnFromSubroutine
-            return Instruction(opcode = Instruction.OP_ReturnFromSubroutine)
+            return Instruction(opcode = s)
 
         # END
         if s == "END":
-            opcode = Instruction.OP_EndOfProgram
-            return Instruction(opcode = Instruction.OP_EndOfProgram)
+            return Instruction(opcode = s)
 
-        raise ValueError("Unknown instruction")
+        raise ValueError("Unknown instruction %s" % s)
 
 
     @classmethod
@@ -364,16 +370,15 @@ class Program_UnAssembled(object):
         for addr in addrs:
             instr = result.instructions[addr]
             # print addr, instr
-            if instr.opcode == Instruction.OP_JumpToSubroutine:
+            if instr.name == "JSR":
                 if not(subroutines_addr.has_key(instr.subroutine)):
-                    raise ValueError("Undefine subroutine %s" % 
+                    raise ValueError("Undefined subroutine %s" %
                                      instr.subroutine)
                 # instr.subroutine = None
                 instr.address = subroutines_addr[instr.subroutine]
             # print addr, instr
         
         return result
-
 
     @classmethod
     def fromstring(cls, s):

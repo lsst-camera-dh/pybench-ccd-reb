@@ -24,12 +24,8 @@ class Instruction0(Instruction):
     OP_ReturnFromSubroutine  = 0x3
     OP_EndOfProgram          = 0x4
 
-    OP_names = { OP_CallFunction          : "CALL",
-                 OP_JumpToSubroutine      : "JSR",
-                 OP_ReturnFromSubroutine  : "RTS",
-                 OP_EndOfProgram          : "END" }
-
-    OP_codes = dict(zip(OP_names.values(), OP_names.keys()))
+    OP_codes = bidi.BidiMap(Instruction.OP_names,
+                            [OP_CallFunction, OP_JumpToSubroutine, OP_ReturnFromSubroutine, OP_EndOfProgram])
 
     def __init__(self,
                  opcode, 
@@ -39,27 +35,6 @@ class Instruction0(Instruction):
                  address = None,
                  subroutine = None):
         Instruction.__init__(self, opcode, function_id, infinite_loop, repeat, address, subroutine)
-
-    def __repr__(self):
-        s = ""
-        s += "%-4s" % Instruction0.OP_names[self.opcode]
-
-        if self.opcode == self.OP_CallFunction:
-            s += "    %-11s" % ("func(%d)" % self.function_id) 
-            if self.infinite_loop:
-                s += "    " + "repeat(infinity)"
-            else:
-                s += "    " + ("repeat(%d)" % self.repeat)
-        elif self.opcode == self.OP_JumpToSubroutine:
-            if self.address != None:
-                s += "    %-11s" % ("0x%03x" % self.address) 
-            else:
-                s += "    %-11s" % self.subroutine
-
-            s += "    " + ("repeat(%d)" % self.repeat)
-
-        return s
-        
 
     def bytecode(self):
         """
@@ -119,26 +94,24 @@ class Instruction0(Instruction):
         # CALL
         m = cls.pattern_CALL.match(s)
         if m != None:
-            opcode = Instruction0.OP_CallFunction
             function_id = int(m.group(1))
             if m.group(2) == "infinity":
-                return Instruction0(opcode = Instruction0.OP_CallFunction,
+                return Instruction0(opcode = "CALL",
                                    function_id = function_id,
                                    infinite_loop = True)
             else:
                 repeat = int(m.group(2))
-                return Instruction0(opcode = Instruction0.OP_CallFunction,
+                return Instruction0(opcode = "CALL",
                                    function_id = function_id,
                                    repeat = repeat)
-        
+
         # JSR addr
         m = cls.pattern_JSR_addr.match(s)
         if m != None:
-            opcode = Instruction0.OP_JumpToSubroutine
             print m.groups()
             address = int(m.group(1), base=16)
             repeat = int(m.group(3))
-            return Instruction0(opcode = Instruction0.OP_JumpToSubroutine,
+            return Instruction0(opcode = "JSR",
                                address = address,
                                repeat = repeat)
 
@@ -146,25 +119,21 @@ class Instruction0(Instruction):
         m = cls.pattern_JSR_name.match(s)
         print m, s
         if m != None:
-            opcode = Instruction0.OP_JumpToSubroutine
             subroutine = m.group(1)
             repeat = int(m.group(2))
-            return Instruction0(opcode = Instruction0.OP_JumpToSubroutine,
+            return Instruction0(opcode = "JSR",
                                subroutine = subroutine,
                                repeat = repeat)
 
         # RTS
         if s == "RTS":
-            opcode = Instruction0.OP_ReturnFromSubroutine
-            return Instruction0(opcode = Instruction0.OP_ReturnFromSubroutine)
+            return Instruction0(opcode = s)
 
         # END
         if s == "END":
-            opcode = Instruction0.OP_EndOfProgram
-            return Instruction0(opcode = Instruction0.OP_EndOfProgram)
+            return Instruction0(opcode = s)
 
-        raise ValueError("Unknown instruction")
-
+        raise ValueError("Unknown instruction %s" % s)
 
     @classmethod
     def frombytecode(cls, bc):
@@ -218,53 +187,6 @@ class Program0_UnAssembled(Program_UnAssembled):
         Program_UnAssembled.__init__(self)
     # I/O XML -> separate python file
     # I/O text
-
-    def compile(self):
-        """
-        Compile the program and return the compiled version.
-        """
-        # subroutines alignment on 0x??0
-        alig = 0x010
-        
-        result = Program()
-        subroutines_addr = {}
-        
-        current_addr = 0x000
-        
-        # first, the main program
-        for instr in self.instructions:
-            result.instructions[current_addr] = instr
-            current_addr += 1
-
-        # then, each subroutine
-        # for subr_name, subr in self.subroutines.iteritems():
-        for subr_name in self.subroutines_names:
-            subr = self.subroutines[subr_name]
-            # alignment
-            if current_addr > 0:
-                current_addr = (current_addr / alig + 1) * alig
-            subroutines_addr[subr_name] = current_addr
-            result.subroutines[subr_name] = current_addr
-            for instr in subr.instructions:
-                result.instructions[current_addr] = instr
-                current_addr += 1
-
-        # now setting addresses into JSR_name instructions
-
-        addrs = result.instructions.keys()
-        addrs.sort()
-        for addr in addrs:
-            instr = result.instructions[addr]
-            # print addr, instr
-            if instr.opcode == Instruction0.OP_JumpToSubroutine:
-                if not(subroutines_addr.has_key(instr.subroutine)):
-                    raise ValueError("Undefine subroutine %s" % 
-                                     instr.subroutine)
-                # instr.subroutine = None
-                instr.address = subroutines_addr[instr.subroutine]
-            # print addr, instr
-        
-        return result
 
 
     @classmethod
@@ -352,28 +274,6 @@ class FPGA0(FPGA):
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
 
     # --------------------------------------------------------------------
-
-    def send_program(self, program, clear = True):
-        """
-        Load the program <program> into the FPGA program memory.
-        """
-
-        # Second, clear the whole memory to avoid mixing with remains
-        # of the previous programs
-
-        if clear:
-            self.clear_program()
-        
-        # Load the instructions
-
-        instrs = program.instructions
-        addrs = instrs.keys()
-        addrs.sort()
-        
-        for addr in addrs:
-            self.send_program_instruction(addr, instrs[addr])
-
-
 
     def dump_program(self):
         """
