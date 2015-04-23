@@ -5,7 +5,8 @@ VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['reb','reb1','wreb']
+# submodules = ['reb','reb1','wreb'] # just for tests (LLG)
+submodules = ['reb']
 
 def options(ctx):
     ctx.load('python')        

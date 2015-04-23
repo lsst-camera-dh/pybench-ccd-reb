@@ -1,0 +1,36 @@
+# -*- mode: python; -*- 
+
+APPNAME = 'lsst.testbench.gui'
+VERSION = '0.0.2'
+top = '.'
+build = 'build'
+
+def options(opt):
+    opt.load('python')        
+    # opt.load('compiler_c')
+    # opt.sub_options(submodules)
+
+def configure(conf):
+    conf.load('python')
+    # conf.load('compiler_c')
+    # conf.check_python_headers()
+    # conf.sub_config(submodules)
+    
+def build(bld):
+    bld(features = 'py',
+        source = ['__init__.py',
+                  'wm.py',
+                  'clients.py'],
+        install_path = '${PYTHONDIR}/lsst/testbench/gui')
+
+    bld.install_as('${PREFIX}/bin/bench-start',
+                   'bench-start',
+                   chmod=0755)
+
+    # bgimages = bld.path.ant_glob('data/*.png')
+
+
+
+
+
+    

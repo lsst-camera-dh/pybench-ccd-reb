@@ -5,7 +5,7 @@ VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-submodules = ['drivers', 'scripts']
+submodules = ['drivers', 'scripts', 'gui']
 
 def options(opt):
     opt.load('python')        
@@ -23,7 +23,6 @@ def build(bld):
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py',
                   'singleton.py', 'bench.py', 
-                  'wm.py',
                   'config.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench')
 

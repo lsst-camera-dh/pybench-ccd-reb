@@ -14,9 +14,11 @@ import time
 
 #-----------------------------------------------------------------------------
 
-import lsst.testbench.wm as wm
+import lsst.testbench.gui.wm as wm
 
-from lsst.testbench.clients import *
+from lsst.testbench.gui.clients import *
+
+print os.path.dirname(os.path.realpath(__file__))
 
 #-----------------------------------------------------------------------------
 
