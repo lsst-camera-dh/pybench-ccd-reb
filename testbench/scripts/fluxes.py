@@ -10,17 +10,37 @@ B = lsst.testbench.Bench()
 B.register("laser")
 B.register("ttl")
 
-# TODO: improve for the Keithleys -> register
+lsst.testbench.config['DKD'] = dict(lsst.testbench.config['keithley'])
+lsst.testbench.config['PhD'] =  dict(lsst.testbench.config['keithley'])
+lsst.testbench.config['PhD']['port'] = 8212
 
-B.DKD = xmlrpclib.ServerProxy("http://lpnlsstbench:8087/")
+B.register("DKD")
+B.register("PhD")
 
-B.DKD.connect()
+B.DKD.send("*RST")
+B.DKD.send("SYST:ZCH ON")
+B.DKD.send("FUNC 'CURR:DC'")
+# B.DKD.send("CURR:RANG 2e-8")
+B.DKD.send("CURR:RANG 2e-6")
+B.DKD.send("SYST:ZCOR ON")
+B.DKD.send("SYST:ZCH OFF")
 
-# Photodiode on the integral sphere
+B.DKD.send("*RST")
+B.DKD.send("SYST:ZCH ON")
+B.DKD.send("FUNC 'CURR:DC'")
+# B.DKD.send("CURR:RANG 2e-8")
+B.DKD.send("CURR:RANG 2e-6")
+B.DKD.send("SYST:ZCOR ON")
+B.DKD.send("SYST:ZCH OFF")
 
-B.PhD = xmlrpclib.ServerProxy("http://lpnlsstbench:8900/")
 
-B.PhD.connect()
+
+elts = s.split(",")
+if len(elts) < 3:
+    print >>sys.stderr, "error: no data from the Keithley, stop."
+    sys.exit(3)
+mesure = float(elts[0])
+
 
 # # First turn off all the channels, in case
 # B.laser.disable()
@@ -94,10 +114,10 @@ def flux_ramp(self):
 
             for i in xrange(1):
                 # read-out
-                self.PhD.startSequence(32)
-                self.DKD.startSequence(32)
+                self.PhD.startSequence(5)
+                self.DKD.startSequence(5)
                 while (self.DKD.status() != 0) or (self.PhD.status() != 0):
-                    time.sleep(1)
+                       time.sleep(1)
                 print self.PhD.getSequence()
                 print self.DKD.getSequence()
 
