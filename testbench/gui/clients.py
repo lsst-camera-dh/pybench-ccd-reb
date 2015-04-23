@@ -39,6 +39,7 @@ clients = {
     #
     'blurb': ['laser', 'ttl'],
     #
+
     'laser': { 'host': 'lpnlsstbench',
                'commandline': 'laserthorlabs',
                'screen': 'lights',
