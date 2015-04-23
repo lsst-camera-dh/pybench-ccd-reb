@@ -1,0 +1,8 @@
+Remy Le Breton
+2015-04
+
+Some comments on the canon objective :
+
+- If we want to initiate properly the objective and make it move, be careful how we fix it on its "ring". There is a little angular space when it seems to be fixed so it can continue to move. To avoid this problem, you have to turn the objective the more anticlockwise you can.
+
+- If a manual command is launch before using one in focus move, the manual command does not work. Clue : vpowPin ?
