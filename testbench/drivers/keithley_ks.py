@@ -3,7 +3,8 @@
 # Author: Laurent Le Guillou
 #
 """
-Testbench driver for the Keithley multimeter (through keithley-server and XML-RPC)
+Testbench driver for the Keithley multimeter 
+(through keithley-server and XML-RPC).
 """
 
 # XML-RPC interface:
@@ -167,6 +168,8 @@ class Instrument(Driver):
         logging.info("Keithley.send() done.")
         esr = self.xmlrpc.get_error_status()
         if esr != 0:
+            logging.error("Keithley command [%s] failed: error code ESR = %d." 
+                          % (command, esr))
             raise IOError("Keithley command [%s] failed: error code ESR = %d." 
                           % (command, esr))
         return answer
@@ -195,6 +198,42 @@ class Instrument(Driver):
         logging.info("Keithley.scroll_text() done.")
         return result
 
+
+    # ----------------------- Higher level methods ----------------------
+
+    def setup_current_measurements(self, current_range):
+        """
+        Reset the Keithley and set it up for current measurements,
+        using the specified current range (float).
+        Useful when using photodiodes (DKD, NIST, etc).
+        """
+        logging.info("Keithley.setup_current_measurements() called.")
+        self.send("*RST")
+        self.send("SYST:ZCH ON")
+        self.send("FUNC 'CURR:DC'")
+        self.send("CURR:RANG %.2g" % current_range)
+        self.send("SYST:ZCOR ON")
+        self.send("SYST:ZCH OFF")
+        logging.info("Keithley.setup_current_measurements() done.")
+
+
+    def read_measurement(self):
+        """
+        Proceed to an individual measurement (READ?) and parse
+        the resulting output (trying to take into account the
+        various Keithley idiosyncracies).
+        """
+        logging.info("Keithley.read_measurements() called.")
+        s = self.send("READ?")
+        elts = s.split(",")
+        if len(elts) < 2: # has at minimum 2 fields, sometimes three...
+            logging.error("READ?: no/incomplete data from the Keithley.")
+            raise IOError("READ?: no/incomplete data from the Keithley.")
+
+        measure = float(elts[0].replace('A', '')) # sometime the unit is there
+        logging.info("   measure = %g" % measure)
+        logging.info("Keithley.read_measurements() done.")
+        return measure
 
     # ===================================================================
     #  Meta data / state of the instrument 
