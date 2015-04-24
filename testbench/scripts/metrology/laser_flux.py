@@ -12,7 +12,7 @@ B.register("ttl")
 B.register("DKD")
 B.register("PhD")
 
-def flux_ramp(self, channels = [1,2,3,4]):
+def laser_flux_ramp(self, channels = [1,2,3,4]):
     ramps = { 
         #1: { 'Imin': 15.0, 'Imax': 35.20, 'Istep': 1. },
         #2: { 'Imin': 40.0, 'Imax': 64.20, 'Istep': 1. },
@@ -82,6 +82,6 @@ def flux_ramp(self, channels = [1,2,3,4]):
     time.sleep(2)
 
 # B.flux_ramp = types.MethodType(flux_ramp, B)
-lsst.testbench.Bench.flux_ramp = flux_ramp
+lsst.testbench.Bench.laser_flux_ramp = laser_flux_ramp
 
 
