@@ -1,5 +1,7 @@
 # -*- mode: python; -*- 
 
+import os.path
+
 APPNAME = 'lsst.testbench.gui'
 VERSION = '0.0.2'
 top = '.'
@@ -27,7 +29,13 @@ def build(bld):
                    'bench-start',
                    chmod=0755)
 
-    # bgimages = bld.path.ant_glob('data/*.png')
+    # Copy images
+    background_images = ['images/bg-light-sources.png',
+                         'images/bg-cryo-pumps.png']
+    # for image in background_images:
+    #     bld.install_as(os.path.join('${PREFIX}/share', image)
+    #                    image,
+    #                    chmod=0644)
 
 
 

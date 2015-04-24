@@ -41,7 +41,7 @@ clients = {
     #
 
     # lamps
-    'lamps': ['QTH', 'XeHg', 'ttl']
+    'lamps': ['QTH', 'XeHg', 'ttl'],
 
     #-------------------------------------------------------------
     # Thorlabs Laser (4 channels)
@@ -74,7 +74,7 @@ clients = {
     },
     'xyz-log-console': { 
         'host': 'lpnlsstbench',
-        'commandline': 'gnome-terminal '
+        'commandline': 'gnome-terminal -x tail -f $HOME/logs/xyz-server.log',
         'screen': 'lights',
         'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
     }

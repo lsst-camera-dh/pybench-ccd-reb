@@ -18,8 +18,6 @@ import lsst.testbench.gui.wm as wm
 
 from lsst.testbench.gui.clients import *
 
-print os.path.dirname(os.path.realpath(__file__))
-
 #-----------------------------------------------------------------------------
 
 def usage():
@@ -106,6 +104,8 @@ subsystems = args[:]
 
 n_screens = len(screens)
 wm.setndesktop(n_screens)
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
 for s_name, s_properties in screens.iteritems():
       desktop = s_properties['desktop']

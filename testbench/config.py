@@ -223,7 +223,7 @@ config = {
         'driver'      : 'keithley_ks',
         'port'        : 8211,
         'commandline' : 'keithley-server -d'
-        }
+        },
 
     # =====================================================================
     #
@@ -237,7 +237,7 @@ config = {
         'driver'      : 'keithley_ks',
         'port'        : 8211,
         'commandline' : 'keithley-server -d'
-        }
+        },
 
     # =====================================================================
     #
