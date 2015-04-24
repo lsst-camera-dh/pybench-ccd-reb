@@ -70,7 +70,9 @@ def setbackground(desktop, imagefile):
       Set the wallpaper for desktop <desktop>.
       """
       s = subprocess.call([wmsetbg, "-w", "%d" % desktop, 
-                           imagefile])
+                           "-t", imagefile])
+      # '-t' : 'tile': if the image is larger than the screen
+      # it continues on the next screen ! (Yes!)
 
 
 def getwindows():
