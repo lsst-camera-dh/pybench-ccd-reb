@@ -51,7 +51,7 @@ clients = {
         'host': 'lpnlsstbench',
         'commandline': 'laserthorlabs',
         'screen': 'lights',
-        'position': {'x': 1950, 'y': 750, 'w': 420, 'h': 420} 
+        'position': {'x': 1950, 'y': 700, 'w': 520, 'h': 420} 
     },
     #-------------------------------------------------------------
     # TTL control (filter wheel, shutters, flipping mirror)
