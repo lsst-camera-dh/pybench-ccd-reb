@@ -19,8 +19,8 @@ class REB(reb.REB):
         reb.REB.__init__(self, reb_id, ctrl_host, stripe_id)
         self.fpga = fpga0.FPGA0(ctrl_host, reb_id)
 
-
    # --------------------------------------------------------------------
+
     def REBpowerup(self):
         """
         Operations after powering the REB
@@ -110,28 +110,6 @@ class REB(reb.REB):
         self.send_cabac_config({"OD": 0, "GD": 0, "RD": 0})
 
         print("CCD shutdown complete")
-
-    # --------------------------------------------------------------------
-    def select_subroutine(self, subname, repeat=1):
-        """
-        Modify the main subroutine to be a call (JSR) to the subroutine.
-        Overwrites parent function because of sequencer change.
-        """
-        if self.seq.program == None:
-            raise ValueError("No program with identified subroutines yet.")
-
-        if not (self.seq.program.subroutines.has_key(subname)):
-            raise ValueError("No subroutine '%s' in the FPGA program." % subname)
-
-        first_instr = fpga0.Instruction0(
-            opcode="JSR",
-            address=self.seq.program.subroutines[subname],
-            repeat=repeat)
-
-        # load it at the very beginning of the program (rel addr 0x0)
-        self.fpga.send_program_instruction(0x0, first_instr)
-        self.seq.program.instructions[0x0] = first_instr  # to keep it in sync
-        self.name = subname
 
    # --------------------------------------------------------------------
 

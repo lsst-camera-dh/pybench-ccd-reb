@@ -3,11 +3,12 @@
 # Author: Claire Juramy, Laurent Le Guillou
 #
 """
-Generic REB object. The specific details for each board should be
-added in their specific object.
-REB talks to the generic FPGA object. This should be overwritten
-in children REB objects to talk to the appropriate FPGA.
+Generic REB object. The specific operations for each board should be added in their specific object
+inheriting from this one.
+Generic REB talks to the generic FPGA object. This should be overwritten in inheritor REB objects to
+talk to the appropriate FPGAs (which will inherit from the generic FPGA object).
 """
+
 import time
 import os
 import string
@@ -86,11 +87,12 @@ class REB(object):
         self.imgtag = 0
         self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
         self.xmlfile = "sequencer-soi.xml"
+        # initialize parameters for frames
         self.seq = None  # will be filled when loading the sequencer
         self.exptime = 0
         self.shutdelay = 0
         self.tstamp = 0
-        self.name = ""  # there is actually no way to access that from self.seq, filled when called by name
+        self.seqname = ""  # there is actually no way to access that from self.seq, filled when called by name
 
     def set_stripes(self, liststripes):
         self.stripes = []
@@ -168,7 +170,7 @@ class REB(object):
         # load it at the very beginning of the program (rel addr 0x0)
         self.fpga.send_program_instruction(0x0, first_instr)
         self.seq.program.instructions[0x0] = first_instr  # to keep it in sync
-        self.name = subname
+        self.seqname = subname
 
     def get_exposure_time(self, darktime=False):
         """
@@ -256,7 +258,7 @@ class REB(object):
         self.wait_end_sequencer()
         self.tstamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
         self.fpga.start()
-        print("Starting %s sequence with %f exposure time." % (self.name, self.exptime))
+        print("Starting %s sequence with %f exposure time." % (self.seqname, self.exptime))
         #freeze until image output (do not send commands while the COB is acquiring)
         time.sleep(self.exptime+3)
 
@@ -365,6 +367,7 @@ class REB(object):
             os.mkdir(fitsdir)
         fitsname = os.path.join(fitsdir, imgstr + '.fits')
         return fitsname
+
     # ===================================================================
     #  Meta data / state of the instrument
     # ===================================================================

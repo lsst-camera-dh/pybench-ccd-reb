@@ -12,7 +12,8 @@ import os
 import fpga
 import pyfits
 
-class TestREB(reb.REB):
+
+class WREB(reb.REB):
     useCABACbias = False
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
@@ -49,6 +50,10 @@ class TestREB(reb.REB):
             time.sleep(0.1)
             self.config.update(self.f.get_aspic_config(s, check=True))
 
+    def config_aspic(self):
+        settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
+        self.send_aspic_config(settings)
+
     def set_biases(self, params):
         """
         Specific to CABAC1: safe change in bias values. Manages alternative biases.
@@ -74,6 +79,34 @@ class TestREB(reb.REB):
         else:
             self.f.set_bias_voltages(params)
         self.config.update(params)
+
+    def set_parameter(self, param, value, stripe = 0, location = 3):
+        """
+        Generic interface to set any single parameter of the REB, and check the readback if possible.
+        :param param:
+        :param value:
+        :return:
+        """
+        if param in self.f.aspic_top[0].params:
+            self.f.set_aspic_value(param, value, stripe, location)
+            time.sleep(0.1)
+            self.config.update(self.f.get_aspic_config(stripe, check=True))
+
+        elif param in self.f.cabac_top[0].params:
+            self.f.set_cabac_value(param, value, stripe, location)
+            time.sleep(0.1)
+            self.config.update(self.f.get_cabac_config(stripe, check=True))
+
+        elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
+            self.f.set_clock_voltages({param: value})
+            self.config.update({param: value})
+
+        elif param == "I_OS":
+            self.f.set_current_source({param: value}, stripe)
+            self.config.update({param: value})
+
+        else:
+            print("Warning: unidentified parameter for the REB: %s" % param)
 
     # --------------------------------------------------------------------
 
@@ -190,38 +223,6 @@ class TestREB(reb.REB):
         #sets the default sequencer clock states to 0
         self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
 
-    def config_aspic(self):
-        settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
-        self.send_aspic_config(settings)
-
-    def set_parameter(self, param, value, stripe = 0, location = 3):
-        """
-        Generic interface to set any single parameter of the REB, and check the readback if possible.
-        :param param:
-        :param value:
-        :return:
-        """
-        if param in self.f.aspic_top[0].params:
-            self.f.set_aspic_value(param, value, stripe, location)
-            time.sleep(0.1)
-            self.config.update(self.f.get_aspic_config(stripe, check=True))
-
-        elif param in self.f.cabac_top[0].params:
-            self.f.set_cabac_value(param, value, stripe, location)
-            time.sleep(0.1)
-            self.config.update(self.f.get_cabac_config(stripe, check=True))
-
-        elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
-            self.f.set_clock_voltages({param: value})
-            self.config.update({param: value})
-
-        elif param == "I_OS":
-            self.f.set_current_source({param: value}, stripe)
-            self.config.update({param: value})
-
-        else:
-            print("Warning: unidentified parameter for the REB: %s" % param)
-
     # --------------------------------------------------------------------
 
 
@@ -278,7 +279,7 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
 
 if __name__ == "__main__":
 
-    R = TestREB(rriaddress=0xFF, stripe_id=[0])
+    R = WREB(rriaddress=0xFF, stripe_id=[0])
 
     # here power on other voltages
     R.REBpowerup()

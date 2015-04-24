@@ -11,208 +11,6 @@ from py.camera.generic.fpga import *
 
 import cabac0 as cabac
 
-## -----------------------------------------------------------------------
-
-# shortcut
-Prg = Program
-
-
-class Instruction0(Instruction):
-
-    OP_CallFunction          = 0x1
-    OP_JumpToSubroutine      = 0x2
-    OP_ReturnFromSubroutine  = 0x3
-    OP_EndOfProgram          = 0x4
-
-    OP_codes = bidi.BidiMap(Instruction.OP_names,
-                            [OP_CallFunction, OP_JumpToSubroutine, OP_ReturnFromSubroutine, OP_EndOfProgram])
-    SubAddressShift = 18
-
-    def __init__(self,
-                 opcode, 
-                 function_id = None, 
-                 infinite_loop = False,
-                 repeat = 1,
-                 address = None,
-                 subroutine = None):
-        Instruction.__init__(self, opcode, function_id, infinite_loop, repeat, address, subroutine)
-
-    @classmethod
-    def fromstring(cls, s):
-        """
-        Create an instruction from a string (without label).
-        Return None for an empty string.
-        Raise an exception if the syntax is wrong.
-        """
-
-        # looking for a comment part and remove it
-
-        pos = s.find('#')
-        if pos != -1:
-            s = s[:pos]
-
-        s = s.strip()
-
-        if len(s) == 0:
-            return None
-
-        # CALL
-        m = cls.pattern_CALL.match(s)
-        if m != None:
-            function_id = int(m.group(1))
-            if m.group(2) == "infinity":
-                return Instruction0(opcode = "CALL",
-                                   function_id = function_id,
-                                   infinite_loop = True)
-            else:
-                repeat = int(m.group(2))
-                return Instruction0(opcode = "CALL",
-                                   function_id = function_id,
-                                   repeat = repeat)
-
-        # JSR addr
-        m = cls.pattern_JSR_addr.match(s)
-        if m != None:
-            print m.groups()
-            address = int(m.group(1), base=16)
-            repeat = int(m.group(3))
-            return Instruction0(opcode = "JSR",
-                               address = address,
-                               repeat = repeat)
-
-        # JSR name
-        m = cls.pattern_JSR_name.match(s)
-        print m, s
-        if m != None:
-            subroutine = m.group(1)
-            repeat = int(m.group(2))
-            return Instruction0(opcode = "JSR",
-                               subroutine = subroutine,
-                               repeat = repeat)
-
-        # RTS
-        if s == "RTS":
-            return Instruction0(opcode = s)
-
-        # END
-        if s == "END":
-            return Instruction0(opcode = s)
-
-        raise ValueError("Unknown instruction %s" % s)
-
-    @classmethod
-    def frombytecode(cls, bc):
-        # Opcode
-        opcode = (bc >> 28) 
-        if opcode not in [cls.OP_CallFunction, 
-                          cls.OP_JumpToSubroutine, 
-                          cls.OP_ReturnFromSubroutine,
-                          cls.OP_EndOfProgram]:
-            raise ValueError("Invalid FPGA bytecode (invalid opcode)")
-
-        if opcode == cls.OP_CallFunction:
-            function_id = (bc >> 24) & 0xf
-            infinite_loop = (bc & (1 << 23)) != 0
-            # print infinite_loop
-            repeat = (bc & ((1 << 23) - 1))
-            # print repeat
-
-            if infinite_loop:
-                # print "infinity"
-                return Instruction0(opcode = opcode,
-                                   function_id = function_id,
-                                   infinite_loop = infinite_loop,
-                                   repeat = 0)
-            else:
-                # print "repeat", repeat
-                return Instruction0(opcode = opcode,
-                                   function_id = function_id,
-                                   repeat = repeat)
-                
-                
-        elif opcode == cls.OP_JumpToSubroutine:
-            address = (bc >> 18) & ((1 << 10) - 1)
-            # print address
-            repeat  = bc & ((1 << 17) - 1)
-            # print repeat
-
-            return Instruction0(opcode = opcode,
-                               address = address,
-                               repeat = repeat)
-
-        return Instruction0(opcode = opcode)
-
-
-class Program0_UnAssembled(Program_UnAssembled):
-    
-    def __init__(self):
-        Program_UnAssembled.__init__(self)
-    # I/O XML -> separate python file
-    # I/O text
-
-
-    @classmethod
-    def fromstring(cls, s):
-        """
-        Create a new UnAssembledProgram from a string of instructions.
-        """
-        lines = s.split("\n")
-        nlines = len(lines)
-        current_subroutine = None
-
-        prg = Program0_UnAssembled()
-
-        print lines
-
-        for iline in xrange(nlines):
-            print iline+1
-            line = lines[iline]
-            print line
-            elts = line.split()
-
-            if len(elts) < 1:
-                # empty line
-                continue
-            
-            # label
-            if elts[0][-1] == ':':
-                # first elt is a label -> start of a subroutine
-                subroutine_name = elts[0][:-1]
-                prg.subroutines[subroutine_name] = Subroutine()
-                prg.subroutines_names.append(subroutine_name)
-                current_subroutine = prg.subroutines[subroutine_name]
-                elts = elts[1:]
-            
-            if len(elts) < 1:
-                # empty label
-                continue
-
-            s = " ".join(elts)
-
-            instr = Instruction0.fromstring(s)
-            print "INSTR = ", instr
-            if instr == None:
-                continue
-
-            if current_subroutine != None:
-                current_subroutine.instructions.append(instr)
-            else:
-                prg.instructions.append(instr)
-                
-            if instr.opcode == Instruction0.OP_ReturnFromSubroutine:
-                current_subroutine = None
-
-        return prg
-
-
-    # @classmethod
-    # def fromxmlstring(cls, s):
-    #     """
-    #     Create a new UnAssembledProgram from a XML string.
-    #     """
-    #     pass
-
-## -----------------------------------------------------------------------
 
 class FPGA0(FPGA):
 
@@ -231,7 +29,17 @@ class FPGA0(FPGA):
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
-        # TODO: modify class Instruction so that it uses the right opcodes and bit shifts
+        # modify class Instruction so that it uses the right opcodes and bit shifts
+        Instruction.OP_CallFunction = 0x1
+        Instruction.OP_JumpToSubroutine = 0x2
+        Instruction.OP_ReturnFromSubroutine = 0x3
+        Instruction.OP_EndOfProgram = 0x4
+        Instruction.OP_codes = bidi.BidiMap(Instruction.OP_names,
+                                            [Instruction.OP_CallFunction,
+                                             Instruction.OP_JumpToSubroutine,
+                                             Instruction.OP_ReturnFromSubroutine,
+                                             Instruction.OP_EndOfProgram])
+        Instruction.SubAddressShift = 18
 
     # --------------------------------------------------------------------
 
@@ -251,7 +59,7 @@ class FPGA0(FPGA):
             bc = prg_mem[addr]
             if (bc != 0x0):
                 print "%0x" % addr, "%0x" % bc
-                instr = Instruction0.frombytecode(bc)
+                instr = Instruction.frombytecode(bc)
                 rel_addr = addr - prg_addr 
                 prg.instructions[rel_addr] = instr
 

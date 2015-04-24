@@ -46,7 +46,6 @@ class CABAC(object):
     params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IC", "SPA",
               "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
     # TODO: manage rise and fall currents
-    settings = {}
     conv = {'OD0EM': ODconv,
             'OD1EM': ODconv,
             'OD0RM': ODconv,
@@ -63,12 +62,13 @@ class CABAC(object):
         "P0": 0, "P1": 1, "P2": 2, "P3": 3, "S0": 4, "S1": 5, "S2": 6, "RG": 7,
         "MUX": 16, "OFMUX": 17, "EXPCK": 18, "HIZ": 19, "SAFE": 20, "PULS": 21})
     # Mux maps: see function for use due to complications
-    mux0map = bidi.BidiMap(["TEMP", "SPA", "OG", "GD", "RD", "OD0", "OD1"], range(1,8))
+    mux0map = bidi.BidiMap(["TEMP", "SPA", "OG", "GD", "RD", "OD0", "OD1"], range(1, 8))
     mux0map.update({"ATIME": 15})
     mux1map = bidi.BidiMap(["EXT0", "EXT1"], [6, 7])
-    clockmap = bidi.BidiMap(["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"], range(8,16))
+    clockmap = bidi.BidiMap(["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"], range(8, 16))
 
     def __init__(self):
+        self.settings = {}
         for param in self.params:
             self.settings[param] = 0
         self.settings["SAFE"] = 1
