@@ -223,6 +223,34 @@ config = {
         'driver'      : 'keithley_ks',
         'port'        : 8211,
         'commandline' : 'keithley-server -d'
+        },
+
+    # =====================================================================
+    #
+    # Keithley 6514 multimeter (8211) connected on the DKD photodiode
+    # keithley-server -d 
+    #
+    'DKD' : {
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
+        'devices'     : ['/dev/ttyS1'],
+        'driver'      : 'keithley_ks',
+        'port'        : 8211,
+        'commandline' : 'keithley-server -d'
+        },
+
+    # =====================================================================
+    #
+    # Keithley 6514 multimeter (8212) connected on the PhD photodiode
+    # keithley-server -d
+    #
+    'PhD' : {
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
+        'devices'     : ['/dev/ttyS3'],
+        'driver'      : 'keithley_ks',
+        'port'        : 8212,
+        'commandline' : 'keithley-server -d'
         }
 
     # =====================================================================

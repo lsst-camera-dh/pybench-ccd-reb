@@ -18,8 +18,6 @@ import lsst.testbench.gui.wm as wm
 
 from lsst.testbench.gui.clients import *
 
-print os.path.dirname(os.path.realpath(__file__))
-
 #-----------------------------------------------------------------------------
 
 def usage():
@@ -61,19 +59,18 @@ def launch(subs):
                   cmd_parts = cmd.split()
                   program = cmd_parts[0]
                   arguments = cmd_parts[1:]
-                  screen = client['screen']
-                  screen_id = screens[screen]['desktop']
-                  position = client['position']
+                  screen = client.get('screen', None)
+                  screen_id = None
+                  if screen!=None: 
+                        screen_id = screens[screen]['desktop']
+                  position = client.get('position', None)
 
                   print cmd, screen_id, position
 
                   wm.launch(program,
                             arguments,
                             desktop = screen_id,
-                            x = position['x'],
-                            y = position['y'],
-                            w = position['w'],
-                            h = position['h'])
+                            position = position)
 
 
 #-----------------------------------------------------------------------------
@@ -107,6 +104,8 @@ subsystems = args[:]
 
 n_screens = len(screens)
 wm.setndesktop(n_screens)
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
 for s_name, s_properties in screens.iteritems():
       desktop = s_properties['desktop']
