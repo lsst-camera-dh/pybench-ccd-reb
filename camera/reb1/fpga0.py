@@ -26,6 +26,7 @@ class Instruction0(Instruction):
 
     OP_codes = bidi.BidiMap(Instruction.OP_names,
                             [OP_CallFunction, OP_JumpToSubroutine, OP_ReturnFromSubroutine, OP_EndOfProgram])
+    SubAddressShift = 18
 
     def __init__(self,
                  opcode, 
@@ -35,42 +36,6 @@ class Instruction0(Instruction):
                  address = None,
                  subroutine = None):
         Instruction.__init__(self, opcode, function_id, infinite_loop, repeat, address, subroutine)
-
-    def bytecode(self):
-        """
-        Return the 32 bits byte code for the FPGA instruction
-        """
-        
-        bc = 0x00000000
-
-        # Opcode
-        bc |= (self.opcode & 0xf) << 28
-
-        if self.opcode == self.OP_CallFunction:
-            bc |= (self.function_id & 0xf) << 24
-            
-            if self.infinite_loop:
-                bc |= 1 << 23
-            else:
-                bc |= (self.repeat & ((1<<23) - 1))
-                
-        elif self.opcode == self.OP_JumpToSubroutine:
-            if self.address == None:
-                raise ValueError("Unassembled JSR instruction. No bytecode")
-
-            bc |= (self.address & ((1<<10) - 1)) << 18
-            bc |= (self.repeat & ((1<<17) - 1))
-
-        elif self.opcode in [ self.OP_ReturnFromSubroutine, 
-                              self.OP_EndOfProgram]:
-            #OK
-            pass
-        
-        else:
-            raise ValueError("Invalid instruction")
-
-        return bc
-
 
     @classmethod
     def fromstring(cls, s):
@@ -178,9 +143,6 @@ class Instruction0(Instruction):
         return Instruction0(opcode = opcode)
 
 
-# shortcut
-Instr = Instruction0
-
 class Program0_UnAssembled(Program_UnAssembled):
     
     def __init__(self):
@@ -250,9 +212,6 @@ class Program0_UnAssembled(Program_UnAssembled):
     #     """
     #     pass
 
-
-Prg_NA = Program0_UnAssembled
-
 ## -----------------------------------------------------------------------
 
 class FPGA0(FPGA):
@@ -272,6 +231,7 @@ class FPGA0(FPGA):
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
+        # TODO: modify class Instruction so that it uses the right opcodes and bit shifts
 
     # --------------------------------------------------------------------
 

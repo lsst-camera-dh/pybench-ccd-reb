@@ -14,12 +14,15 @@ import string
 import numpy as N
 import pyfits
 import fpga
+import rebxml
+
 
 def generate_tag(number):
     today = time.gmtime()
     tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
-    tag = int(tagstr,16)
+    tag = int(tagstr, 16)
     return tag
+
 
 def get_sequencer_hdu(seq):
     """
@@ -57,16 +60,14 @@ def get_sequencer_hdu(seq):
     exthdu.header["EXTNAME"] = "SEQ_CFG"
 
     return exthdu
+
 # =======================================================================
 
+
 class REB(object):
-    xmlfile = "sequencer-soi.xml"
     rawimgdir = "/data/raw/"
     fitstopdir = "/data/frames/"
-    imgtag = 0
-    stripes = [0]
-    nchannels = 16
-    full18bits = True # TODO: check from version of the firmware
+    full18bits = True  # TODO: check from version of the firmware
     # to be loaded from XML later
     imglines = 2020
     imgcols = 550
@@ -79,9 +80,17 @@ class REB(object):
 
     def __init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0]):
         self.fpga = fpga.FPGA(ctrl_host, reb_id)
+        self.stripes = []
+        self.nchannels = 0
         self.set_stripes(stripe_id)  # stripe in use
+        self.imgtag = 0
         self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
+        self.xmlfile = "sequencer-soi.xml"
         self.seq = None  # will be filled when loading the sequencer
+        self.exptime = 0
+        self.shutdelay = 0
+        self.tstamp = 0
+        self.name = ""  # there is actually no way to access that from self.seq, filled when called by name
 
     def set_stripes(self, liststripes):
         self.stripes = []
@@ -92,9 +101,9 @@ class REB(object):
                 bitval += 1 << s
         self.fpga.write(0x400007, bitval)
 
-        if self.stripes == []:
+        if self.stripes:
             print("Warning: no stripe selected.")
-        if self.full18bits == True and len(self.stripes) > 2 :
+        if self.full18bits and len(self.stripes) > 2:
             print("Warning: attempting to read 18-bit data for 3 stripes, full image will not fit")
             self.imglines = 1000
 
@@ -125,7 +134,6 @@ class REB(object):
 
         return tagstr
 
-
    # --------------------------------------------------------------------
     def load_sequencer(self, xmlfile=None):
         """
@@ -141,16 +149,15 @@ class REB(object):
             self.exptime = self.get_exposure_time()
         except:
             print("Warning: could not find exposure subroutine in %s" % xmlfile)
-        self.name = ""  # there is actually no way to access that from self.seq
 
     def select_subroutine(self, subname, repeat=1):
         """
         Modify the main subroutine to be a call (JSR) to the subroutine.
         """
-        if self.seq.program == None:
+        if self.seq.program is None:
             raise ValueError("No program with identified subroutines yet.")
 
-        if not (self.seq.program.subroutines.has_key(subname)):
+        if subname not in self.seq.program.subroutines:
             raise ValueError("No subroutine '%s' in the FPGA program." % subname)
 
         first_instr = fpga.Instruction(
@@ -178,9 +185,9 @@ class REB(object):
         else:
             exposureadd = self.seq.program.subroutines[self.exposuresub]
             instruction = self.seq.program.instructions[exposureadd]
-        iter = instruction.repeat
+        iterexp = instruction.repeat
 
-        return float(iter) * self.exposure_unit  # in seconds
+        return float(iterexp) * self.exposure_unit  # in seconds
 
     def set_exposure_time(self, exptime):
         """
@@ -209,6 +216,7 @@ class REB(object):
         newinstruction = self.seq.program.instructions[darkadd]
         newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
         self.fpga.send_program_instruction(darkadd, newinstruction)
+
     # --------------------------------------------------------------------
 
     def get_input_voltages_currents(self):
@@ -267,8 +275,10 @@ class REB(object):
                 keepwaiting = False
 
     # --------------------------------------------------------------------
+
     def make_img_name(self):
-        return os.path.join(self.rawimgdir,'0x%016x.img' % self.f.get_time())
+        return os.path.join(self.rawimgdir, '0x%016x.img' % self.fpga.get_time())
+
     # --------------------------------------------------------------------
 
     def conv_to_fits(self, imgname, channels=None):
@@ -299,37 +309,39 @@ class REB(object):
             if channels:  # to skip non-useful channels
                 if num not in channels:
                     continue
-            chan = rawdata[0:length,num]
+            chan = rawdata[0:length, num]
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(N.int32)
             # create extension to fits file for each channel
             exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             self.get_extension_header(num, exthdu)
-            avchan = N.mean(y[11:self.imgcols-50,2:self.imglines-20])
+            avchan = N.mean(y[11:self.imgcols-50, 2:self.imglines-20])
             exthdu.header["AVERAGE"] = avchan
             hdulist.append(exthdu)
 
         return hdulist
 
-    def get_extension_header(self, CCDchan, fitshdu, borders = True):
+    def get_extension_header(self, CCDchan, fitshdu, borders=False):
         """
         Builds FITS extension header with position information for each channel.
-
-        :param REBchannel: int
+        If borders is True, includes all read pixels in DATASEC display.
+        :param CCDchan: int
+        :param fitshdu: pyfits.HDUList
+        :param borders: bool
         :return:
         """
         extheader = fitshdu.header
         extheader["NAXIS1"] = self.imgcols
         extheader["NAXIS2"] = self.imglines
 
-        if borders == False:
+        if borders:
             parstringlow = '1:2002'
             parstringhigh = '4004:2003'
             colwidth = 512
             extheader['DETSIZE'] = '[1:4096,1:4004]'
             extheader['DATASEC'] = '[11:522,1:2002]'
-        else :
+        else:
             parstringlow = '1:%d' % self.imglines
             parstringhigh = '%d:%d' % (2*self.imglines, self.imglines+1)
             colwidth = self.imgcols
@@ -340,18 +352,18 @@ class REB(object):
             pdet = parstringlow
             si = colwidth*(CCDchan+1)
             sf = colwidth*CCDchan+1
-        else :
+        else:
             pdet = parstringhigh
             si = colwidth*(CCDchan-8)+1
             sf = colwidth*(CCDchan-8+1)
 
-        extheader['DETSEC'] = '[%d:%d,%s]' % (si,sf,pdet)
+        extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 
     def make_fits_name(self, imgstr):
-        fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.gmtime()))
+        fitsdir = os.path.join(self.fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
         if not os.path.isdir(fitsdir):
             os.mkdir(fitsdir)
-        fitsname = os.path.join(fitsdir, imgstr +'.fits')
+        fitsname = os.path.join(fitsdir, imgstr + '.fits')
         return fitsname
     # ===================================================================
     #  Meta data / state of the instrument
@@ -370,6 +382,6 @@ class REB(object):
 #CCDTEMP	-95.12
 #MONDIODE	143.12
 #MONOWL	550.00
-#FILTER	‘550LP’
+#FILTER	'550LP'
 #FILENAME	[Original name of the file]
 #exthdu = get_sequencer_hdu(self.reb.fpga)

@@ -16,6 +16,7 @@ import bidi
 
 ## -----------------------------------------------------------------------
 
+
 class Program(object):
     """
     Internal representation of a 'compiled' FPGA program.
@@ -33,7 +34,7 @@ class Program(object):
 
         last_addr = None
         for addr in addrs:
-            if ((last_addr!=None) and (addr != (last_addr + 1))): 
+            if last_addr is not None and (addr != (last_addr + 1)):
                 # empty memory area
                 s += "\n"
             s += "0x%03x:     " % addr 
@@ -61,12 +62,6 @@ class Program(object):
 
         return bcs
 
-# shortcut
-Prg = Program
-
-
-#class OPcode(object):
-
 
 class Instruction(object):
 
@@ -80,6 +75,8 @@ class Instruction(object):
     OP_codes = bidi.BidiMap(OP_names,
                             [OP_CallFunction, OP_JumpToSubroutine, OP_ReturnFromSubroutine, OP_EndOfProgram])
 
+    SubAddressShift = 16
+
     pattern_CALL = re.compile(
         "CALL\s+func\((\d+)\)\s+repeat\(((\d+)|infinity)\)")
     pattern_JSR_addr = re.compile(
@@ -89,17 +86,17 @@ class Instruction(object):
 
     def __init__(self, 
                  opcode,
-                 function_id = None, 
-                 infinite_loop = False,
-                 repeat = 1,
-                 address = None,
-                 subroutine = None):
+                 function_id=None,
+                 infinite_loop=False,
+                 repeat=1,
+                 address=None,
+                 subroutine=None):
         """
         The input opcode is the name of the operation or the code value.
         The name goes to self.name, self.opcode is the actual code.
-        :param opcode: string
+        :param opcode: string or int
         :param function_id: int
-        :param infinite_loop: bool
+        :param infinite_loop: bool or int
         :param repeat: int
         :param address: int
         :param subroutine: string
@@ -126,7 +123,7 @@ class Instruction(object):
         if self.opcode == self.OP_CallFunction:
             if function_id not in range(16):
                 raise ValueError("Invalid Function ID")
-            if infinite_loop not in [0,1,True,False]:
+            if infinite_loop not in [0, 1, True, False]:
                 raise ValueError("Invalid Infinite Loop flag")
                 
             self.function_id = int(function_id) & 0xf
@@ -138,9 +135,9 @@ class Instruction(object):
                 self.repeat = int(repeat) & 0x3fffff
 
         elif self.opcode == self.OP_JumpToSubroutine:
-            if address != None:
+            if address is not None:
                 self.address = int(address) & 0x3ff
-            elif subroutine != None:
+            elif subroutine is not None:
                 self.subroutine = subroutine
             else:
                 raise ValueError("Invalid JSR instruction: " +
@@ -193,10 +190,10 @@ class Instruction(object):
             if self.address == None:
                 raise ValueError("Unassembled JSR instruction. No bytecode")
 
-            bc |= (self.address & 0x3ff) << 16
-            bc |= (self.repeat & 0xffff)
+            bc |= (self.address & 0x3ff) << self.SubAddressShift
+            bc |= (self.repeat & ((1 << self.SubAddressShift) - 1))
 
-        elif self.opcode in [ self.OP_ReturnFromSubroutine, 
+        elif self.opcode in [self.OP_ReturnFromSubroutine,
                               self.OP_EndOfProgram]:
             #OK
             pass
@@ -228,7 +225,7 @@ class Instruction(object):
 
         # CALL
         m = cls.pattern_CALL.match(s)
-        if m != None:
+        if m is not None:
             function_id = int(m.group(1))
             if m.group(2) == "infinity":
                 return Instruction(opcode = "CALL",
@@ -242,7 +239,7 @@ class Instruction(object):
         
         # JSR addr
         m = cls.pattern_JSR_addr.match(s)
-        if m != None:
+        if m is not None:
             print m.groups()
             address = int(m.group(1), base=16)
             repeat = int(m.group(3))
@@ -253,7 +250,7 @@ class Instruction(object):
         # JSR name
         m = cls.pattern_JSR_name.match(s)
         print m, s
-        if m != None:
+        if m is not None:
             subroutine = m.group(1)
             repeat = int(m.group(2))
             return Instruction(opcode = "JSR",
@@ -290,38 +287,36 @@ class Instruction(object):
 
             if infinite_loop:
                 # print "infinity"
-                return Instruction(opcode = opcode,
-                                   function_id = function_id,
-                                   infinite_loop = infinite_loop,
-                                   repeat = 0)
+                return Instruction(opcode=opcode,
+                                   function_id=function_id,
+                                   infinite_loop=infinite_loop,
+                                   repeat=0)
             else:
                 # print "repeat", repeat
-                return Instruction(opcode = opcode,
-                                   function_id = function_id,
-                                   repeat = repeat)
+                return Instruction(opcode=opcode,
+                                   function_id=function_id,
+                                   repeat=repeat)
                 
                 
         elif opcode == cls.OP_JumpToSubroutine:
-            address = (bc >> 16) & 0x3ff
+            address = (bc >> cls.SubAddressShift) & 0x3ff
             # print address
-            repeat  = bc & 0xffff
+            repeat  = bc & ((1 << cls.SubAddressShift) - 1)
             # print repeat
 
-            return Instruction(opcode = opcode,
-                               address = address,
-                               repeat = repeat)
+            return Instruction(opcode=opcode,
+                               address=address,
+                               repeat=repeat)
 
-        return Instruction(opcode = opcode)
+        return Instruction(opcode=opcode)
 
-
-# shortcut
-Instr = Instruction
 
 class Subroutine(object):
 
     def __init__(self):
         self.name = None
-        self.instructions = [] # subroutine instruction list
+        self.instructions = []  # subroutine instruction list
+
 
 class Program_UnAssembled(object):
     
@@ -420,10 +415,10 @@ class Program_UnAssembled(object):
 
             instr = Instruction.fromstring(s)
             print "INSTR = ", instr
-            if instr == None:
+            if instr is None:
                 continue
 
-            if current_subroutine != None:
+            if current_subroutine is not None:
                 current_subroutine.instructions.append(instr)
             else:
                 prg.instructions.append(instr)
@@ -445,6 +440,7 @@ class Program_UnAssembled(object):
 Prg_NA = Program_UnAssembled
 
 ## -----------------------------------------------------------------------
+
 
 class Sequencer(object):
     # 32 outputs are available
@@ -524,11 +520,11 @@ class Sequencer(object):
                                       for v in default_channels_desc.values()] )
 
     def __init__(self, 
-                 channels = default_channels, 
-                 channels_desc = default_channels_desc, 
-                 functions = {}, 
-                 functions_desc = {}, 
-                 program = Program()):
+                 channels=default_channels,
+                 channels_desc=default_channels_desc,
+                 functions={},
+                 functions_desc={},
+                 program=Program()):
         #
         self.channels = channels
         self.channels_desc = channels_desc
@@ -596,9 +592,9 @@ class Function(object):
         s += ( 73 * "-" ) + "\n"
         for sl in xrange(16):
             bit_str = "%032d" % int(bin(self.outputs.get(sl, 0x0))[2:])
-            s += "%02d\t %8d\t\t\t %s\n" % ( sl, 
-                                             self.timelengths.get(sl, 0), 
-                                             bit_str )
+            s += "%02d\t %8d\t\t\t %s\n" % (sl,
+                                            self.timelengths.get(sl, 0),
+                                            bit_str)
         return s
 
     def is_on(self, channel, timeslice):
@@ -612,16 +608,18 @@ class Function(object):
             c = channel
 
         if self.timelengths.has_key(timeslice):
-            state = int( self.outputs[timeslice] & (1<<c) != 0)
+            state = int(self.outputs[timeslice] & (1 << c) != 0)
             return state
 
         return None
 
 ## -----------------------------------------------------------------------
+
+
 def check_location(s, loc = 3):
-    if s not in [0,1,2]:
+    if s not in [0, 1, 2]:
         raise ValueError("Invalid REB stripe (%d)" % s)
-    if loc not in [1,2,3]:
+    if loc not in [1, 2, 3]:
         raise ValueError("Invalid Location code (%d)" % loc)
     return True
 
@@ -654,7 +652,7 @@ class FPGA(object):
         # local/remote rriClient invocation... (for the moment)
         # to be replaced
 
-        command = ( "rriClient %d read 0x%0x %d" % (self.reb_id, address, n) )
+        command = ("rriClient %d read 0x%0x %d" % (self.reb_id, address, n))
 
         if self.ctrl_host == None:
             remote_command = command
@@ -667,8 +665,8 @@ class FPGA(object):
 
             
         proc = subprocess.Popen(remote_command, shell=True,
-                                stdout = subprocess.PIPE,
-                                stderr = subprocess.PIPE)
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
         (out, err) = proc.communicate()
         # print err
 
@@ -685,8 +683,9 @@ class FPGA(object):
         for line in lines:
             print line
             if line == '': continue
-            matches = re.match("Register ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)\: ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)", line)
-            if not(matches):
+            matches = re.match("Register ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)\: ([-+]?(0[xX])?[\dA-Fa-f]+) \(([-+]?\d+)\)",
+                               line)
+            if not matches:
                 raise IOError("Failed to read register 0x%0x on FPGA" % address)
             r = int(matches.group(1), base=16)
             v = int(matches.group(4), base=16)
@@ -697,11 +696,12 @@ class FPGA(object):
         # from the one requested, and check is True, raise an error
         if check and (len(result) < n):
             raise IOError("Failed to read all the requested registers from the FPGA memory")
+        if check and address not in result:
+            raise IOError("Failed to read FPGA memory at address " + str(address))
 
         return result
-                
-        
-    def write(self, address, value, check = True, fake = False):
+
+    def write(self, address, value, check=False, fake=False):
         """
         Write a given value into a FPGA register. 
         TODO : implement 'check'
@@ -709,28 +709,29 @@ class FPGA(object):
         # "rriClient invocation... (for the moment)
         # to be replaced
 
-        command = ( "rriClient %d write 0x%0x 0x%0x" % 
-                    (self.reb_id, address, value) )
+        command = ("rriClient %d write 0x%0x 0x%0x" %
+                   (self.reb_id, address, value))
 
         if fake:
             print >>sys.stderr, command
             return
 
-        if self.ctrl_host == None:
+        if self.ctrl_host is None:
             remote_command = command
         else:
             remote_command = "ssh %s %s" % (self.ctrl_host, command)
 
         proc = subprocess.Popen(remote_command, shell=True,
-                                stdout = subprocess.PIPE,
-                                stderr = subprocess.PIPE)
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
         (out, err) = proc.communicate()
         # print err
         # out : 
         # '  Register 0x4 (4): 0x9164efa8 (-1855656024)\n'
         # print err
         # printout for debug
-        #print command
+        if check:
+            print command
 
     def write_spi(self, address, stripe, position, register, write=False):
         """
@@ -760,8 +761,7 @@ class FPGA(object):
         bc = instr.bytecode()
         self.write(mem_addr, bc)
 
-
-    def send_program(self, program, clear = True):
+    def send_program(self, program, clear=True):
         """
         Load the program <program> into the FPGA program memory.
         """
@@ -781,8 +781,6 @@ class FPGA(object):
         for addr in addrs:
             self.send_program_instruction(addr, instrs[addr])
 
-
-
     def dump_program(self):
         """
         Dump the FPGA sequencer program. Return the program.
@@ -797,7 +795,7 @@ class FPGA(object):
         
         for addr in addrs:
             bc = prg_mem[addr]
-            if (bc != 0x0):
+            if bc != 0x0:
                 print "%0x" % addr, "%0x" % bc
                 instr = Instruction.frombytecode(bc)
                 rel_addr = addr - prg_addr 
@@ -812,7 +810,6 @@ class FPGA(object):
         prg_addr = self.program_base_addr
         for i in xrange(self.program_mem_size):
             self.write(prg_addr + i, 0) 
-       
 
     # --------------------------------------------------------------------
 
@@ -824,7 +821,7 @@ class FPGA(object):
         if function_id not in range(16):
             raise ValueError("Invalid Function ID")
 
-        slices_addr  = FPGA.slices_base_addr  | (function_id << 4)
+        slices_addr = FPGA.slices_base_addr | (function_id << 4)
         outputs_addr = FPGA.outputs_base_addr | (function_id << 4)
 
         # Set the given function slices and outputs
@@ -843,11 +840,9 @@ class FPGA(object):
                 output = 0
             self.write(output_addr, output)
 
-
     def send_functions(self, functions):
-        for i,f in functions.iteritems():
-            self.send_function(i,f)
-
+        for i, f in functions.iteritems():
+            self.send_function(i, f)
 
     def dump_function(self, function_id):
         """
@@ -860,11 +855,11 @@ class FPGA(object):
 
         # Get time slice lengths
 
-        slices_addr  = FPGA.slices_base_addr  | (function_id << 4)
+        slices_addr = FPGA.slices_base_addr | (function_id << 4)
         outputs_addr = FPGA.outputs_base_addr | (function_id << 4)
-        durations = self.read(slices_addr,  16)
+        durations = self.read(slices_addr, 16)
         print "durations = ", durations
-        outputs   = self.read(outputs_addr, 16)
+        outputs = self.read(outputs_addr, 16)
         print "outputs", outputs
 
         for sl in xrange(16):
@@ -891,13 +886,13 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def send_sequencer(self, seq, clear = True):
+    def send_sequencer(self, seq, clear=True):
         """
         Load the functions and the program at once.
         """
         # self.send_program(seq.program, clear = clear)
         print >>sys.stderr, "Loading the sequencer program..."
-        self.send_program(seq.program, clear = clear)
+        self.send_program(seq.program, clear=clear)
         print >>sys.stderr, "Loading the sequencer program done."
 
         print >>sys.stderr, "Loading the sequencer functions..."
@@ -921,9 +916,7 @@ class FPGA(object):
 
     def get_schema(self):
         addr = 0x0
-        result = self.read(address = addr)
-        if not(result.has_key(addr)):
-            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        result = self.read(address=addr)
         return result[addr]
 
     schema = property(get_schema, "FPGA address map version")
@@ -932,9 +925,7 @@ class FPGA(object):
 
     def get_version(self):
         addr = 0x1
-        result = self.read(address = addr)
-        if not(result.has_key(addr)):
-            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        result = self.read(address=addr)
         return result[addr]
 
     version = property(get_version, "FPGA VHDL version")
@@ -943,9 +934,7 @@ class FPGA(object):
 
     def get_sci_id(self):
         addr = 0x2
-        result = self.read(address = addr)
-        if not(result.has_key(addr)):
-            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        result = self.read(address=addr)
         return result[addr]
 
     sci_id = property(get_sci_id, "SCI's own address")
@@ -954,9 +943,7 @@ class FPGA(object):
 
     def get_state(self):
         addr = 0x8
-        result = self.read(address = addr)
-        if not(result.has_key(addr)):
-            raise IOError("Failed to read FPGA memory at address " + str(addr))
+        result = self.read(address=addr)
         return result[addr]
 
     state = property(get_state, "FPGA state")
@@ -985,15 +972,15 @@ class FPGA(object):
         self.set_trigger(st)
 
     def get_time(self):
-        result = self.read(address = 0x4, n = 2)
+        result = self.read(address=0x4, n=2)
         t = (result[0x5] << 32) | result[0x4]
         return t
 
     def set_time(self, t):
-        up_word = (t>>32) & ((1<<32) - 1)
-        lo_word = t & ((1<<32) - 1)
-        self.write(address = 0x4, value = lo_word)
-        self.write(address = 0x5, value = up_word)
+        up_word = (t >> 32) & ((1 << 32) - 1)
+        lo_word = t & ((1 << 32) - 1)
+        self.write(address=0x4, value=lo_word)
+        self.write(address=0x5, value=up_word)
 
     time = property(get_time, set_time, 
                     "FPGA current time (internal clock, in 10ns units)")
@@ -1041,24 +1028,24 @@ class FPGA(object):
         currents = {}
 
         # 0x600000 6V voltage
-        voltages["6V"]  = ((raw[0x600000] & 0xfff0)>>4) * 0.025 # 25 mV
+        voltages["6V"] = ((raw[0x600000] & 0xfff0) >> 4) * 0.025  # 25 mV
         # 0x600001 6V current
-        currents["6V"]  = ((raw[0x600001] & 0xfff0)>>4) * 250e-6 # 25 uA (250 uA in reality ?)
+        currents["6V"] = ((raw[0x600001] & 0xfff0) >> 4) * 250e-6  # 25 uA (250 uA in reality ?)
 
         # 0x600002 9V voltage
-        voltages["9V"]  = ((raw[0x600002] & 0xfff0)>>4) * 0.025 # 25 mV
+        voltages["9V"] = ((raw[0x600002] & 0xfff0) >> 4) * 0.025  # 25 mV
         # 0x600003 9V current
-        currents["9V"]  = ((raw[0x600003] & 0xfff0)>>4) * 250e-6 # 25 uA (250 uA in reality ?)
+        currents["9V"] = ((raw[0x600003] & 0xfff0) >> 4) * 250e-6  # 25 uA (250 uA in reality ?)
 
         # 0x600004 24V voltage
-        voltages["24V"] = ((raw[0x600004] & 0xfff0)>>4) * 0.025 # 25 mV
+        voltages["24V"] = ((raw[0x600004] & 0xfff0) >> 4) * 0.025  # 25 mV
         # 0x600005 24V current
-        currents["24V"] = ((raw[0x600005] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
+        currents["24V"] = ((raw[0x600005] & 0xfff0) >> 4) * 80e-6  # 8 uA (80 uA in reality ?)
 
         # 0x600006 40V voltage
-        voltages["40V"] = ((raw[0x600006] & 0xfff0)>>4) * 0.025 # 25 mV
+        voltages["40V"] = ((raw[0x600006] & 0xfff0) >> 4) * 0.025  # 25 mV
         # 0x600007 40V current
-        currents["40V"] = ((raw[0x600007] & 0xfff0)>>4) * 80e-6  # 8 uA (80 uA in reality ?)
+        currents["40V"] = ((raw[0x600007] & 0xfff0) >> 4) * 80e-6  # 8 uA (80 uA in reality ?)
 
         return raw, voltages, currents
 
