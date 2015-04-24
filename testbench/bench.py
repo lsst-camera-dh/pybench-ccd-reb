@@ -95,24 +95,30 @@ class Bench(Borg):
         # instrument_module   = getattr(drivers, params['driver'])
         # print instrument_module
 
-        self.log("Loading driver %s" % params['driver'])
+        self.log("Loading driver %s ..." % params['driver'])
 
-        ## TODO: improve!
         instrument_module = importlib.import_module(
             "lsst.testbench.drivers.%s" % params['driver'])
         # "drivers.%s" % params['driver'], package = 'lsst.testbench')
+        self.log("Loading driver %s done." % params['driver'])
 
-        instrument_class    = getattr(instrument_module, 'Instrument')
-        # print instrument_class
+        self.log("Getting %s.Instrument class..." % params['driver'])
+        # instrument_class    = getattr(instrument_module, 'Instrument')
+        instrument_class    = instrument_module.Instrument
+        self.log("  class = %s" % str(instrument_class))
+        self.log("Getting %s.Instrument class done." % params['driver'])
 
+        self.log("Creating %s.Instrument instance..." % params['driver'])
         instrument_instance = instrument_class(identifier, **params)
-        # print instrument_instance
-        # print dir(instrument_instance)
+        self.log("  instance = %s" % str(instrument_instance))
+        self.log("Creating %s.Instrument instance done." % params['driver'])
 
         # register actions: try to open and connect to the instrument
         # will raise an exception if it fails
         try:
+            self.log("Calling %s.Instrument.register..." % params['driver'])
             instrument_instance.register(self)
+            self.log("Calling %s.Instrument.register done." % params['driver'])
         except:
             logging.error("Failed to connect to instrument %s. Stop." %
                           identifier)
@@ -122,9 +128,12 @@ class Bench(Borg):
         # If (and only if) register() call is successful
         # Add the instrument to the registry.
 
+        self.log("Adding %s.Instrument in the registry..." % params['driver'])
         self.registry[identifier] = dict(params)
         self.registry[identifier]['instance'] = instrument_instance
         self.__dict__[identifier] = instrument_instance
+        self.log("Adding %s.Instrument in the registry done." 
+                 % params['driver'])
 
         self.log("Instrument %s is now attached to the Bench instance." 
                      % identifier)

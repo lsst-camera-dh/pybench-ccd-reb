@@ -24,6 +24,7 @@ Testbench driver for the Thorlabs Laser (through Edo software and XML-RPC)
 
 from driver import Driver
 
+import time
 import xmlrpclib
 import logging
 
@@ -72,6 +73,7 @@ class Instrument(Driver):
         Returns True if the hardware answers, False otherwise.
         """
         answer = self.checkConnection()
+        print answer
 
         if answer == "":
             return False
