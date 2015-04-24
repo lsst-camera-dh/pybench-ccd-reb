@@ -156,7 +156,7 @@ def switch(desktop):
 
 def launch(program, args=[], 
            desktop=None, 
-           x=None, y=None, w=None, h=None):
+           position=None):
       """
       Run program <program>, and move its window 
       on desktop <desktop> at the specified position.
@@ -176,6 +176,12 @@ def launch(program, args=[],
 
       time.sleep(0.5)
 
+      # if screen_id == None and position == None
+      # that's a non-window client
+      if (desktop == None) and (position == None):
+            # Nothing more to do
+            return
+
       # Find the window for this pid
       
       win = findwindow(pid)
@@ -185,7 +191,11 @@ def launch(program, args=[],
             return
 
       winid = win['winid']
-      movewindow(winid, desktop, x, y, w, h)
+      movewindow(winid, desktop, 
+                 x = position['x'], 
+                 y = position['y'], 
+                 w = position['w'], 
+                 h = position['h'])
 
 
             

@@ -35,22 +35,49 @@ clients = {
     'all': ['laser', 'lamps', 'ttl',
             'thermals', 'pumps'],
     #
-    'all-lights': ['laser', 'ttl', 'QTH', 'XeHg'],
+    'all-lights': ['laser', 'lamps'],
     #
     'blurb': ['laser', 'ttl'],
     #
 
-    'laser': { 'host': 'lpnlsstbench',
-               'commandline': 'laserthorlabs',
-               'screen': 'lights',
-               'position': {'x': 1950, 'y': 750, 'w': 420, 'h': 420} 
-           },
+    # lamps
+    'lamps': ['QTH', 'XeHg', 'ttl']
+
+    #-------------------------------------------------------------
+    # Thorlabs Laser (4 channels)
+    # 
     #
-    'ttl':   { 'host': 'lpnlsstbench',
-               'commandline': 'ttl',
-               'screen': 'divers',
-               'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
-           } #,
-    # 'xyz': 
+    'laser': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'laserthorlabs',
+        'screen': 'lights',
+        'position': {'x': 1950, 'y': 750, 'w': 420, 'h': 420} 
+    },
+    #-------------------------------------------------------------
+    # TTL control (filter wheel, shutters, flipping mirror)
+    # 
+    #
+    'ttl': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'ttl',
+        'screen': 'lights',
+        'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
+    },
+
+    #-------------------------------------------------------------
+    # XYZ mounting
+    # 
+    'xyz': ['xyz-server', 'xyz-log-console'],
+    'xyz-server': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'xyz-server -....'
+    },
+    'xyz-log-console': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'gnome-terminal '
+        'screen': 'lights',
+        'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
+    }
+    #-------------------------------------------------------------
     #
 }
