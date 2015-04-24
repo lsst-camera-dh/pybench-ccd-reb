@@ -1,8 +1,62 @@
 Remy Le Breton
-2015-04
 
 Some comments on the canon objective :
+
+2015-04-22
 
 - If we want to initiate properly the objective and make it move, be careful how we fix it on its "ring". There is a little angular space when it seems to be fixed so it can continue to move. To avoid this problem, you have to turn the objective the more anticlockwise you can.
 
 - If a manual command is launch before using one in focus move, the manual command does not work. Clue : vpowPin ?
+
+- 44 is the hexadecimal code for D, hence a problem with the command if it is note reinitialized each time.
+
+2015-04-23
+
+- Understood why a manual command work even if we do not put the vpowPin (power motor) to LOW : because in focus move, there is one digitalWrite(vpowPin, LOW); to power up the motor, but at the end to shut down the motor, it is also written digitalWrite(vpowPin, LOW); instead of digitalWrite(vpowPin, HIGH);.
+
+- To avoid the problem, need to power up and down the motor befor and after sending the command.
+
+- If the motor is always power up, possibility to obtain again the same position ater a shut down ? Because a priori it is no possible.
+
+2015-04-24
+
+- About mouvement : 4400 is to go toward the ring. From 00 to FF for the number of step. 44FF is to go the oposit way. From FF to 00 for the number of step. Need further investigation, for exemple 4401FF is the double of 4400FF ? Yes it seems to be the double. So 44FE00 should be the double in the oposit way ? Ok seems to be this way. Warning : if it is really the one's complement, FFFF should make a zero step ? Is there a shift ? Look at the focus_move() function.
+
+- Negative value correspond to a movement toward focus max (0x06)
+- Positive value correspond to a movement toward focus min (0x05)
+
+Number = binary = one's complement
+0 = 00000000 = 11111111 = FF = 0
+1 = 00000001 = 11111110 = FE = -1
+2 = 00000010 = 11111101 = FD = -2
+...
+
+True movement :
+1 = 0001
+-1 = FFFF
+
+The information is on two bytes ie : FF and FF 
+
+- When the objective is unpluged and then repluged, the position is set to 0.
+
+-Just by eye : we can't really make the difference between 1 step and 10 step. 44000A seems to be smaller than 440001. No, in fact it seems to be an hysteresis. When the objective go one way, and then the other way, if your first movement the other way is just one step, it seems bigger than ten because the "ring" have to move more. But then if you make another one step, it is smaller.
+
+- Hysteresis seems to be confirmed in the movement of the ring but not confirmed on the real movement of the objective.
+
+- Number of step on the whole range ? :
+   - Going down : 4x16x16 
+   - Going up : 4x16x16 
+
+- For the two ways : in fact it seems to be less (1024 is a max limit). Make more tests.
+
+- Down : 3x16x16 + 8x16 + 4x16
+- Up : 3x16x16 + 8x16 + 4x16
+
+- The movement seems to be reversible, ie there is the sme number of steps way down and way up (near 960)
+
+- Test with 900 : 
+- Down : 900 + 10 + 10 + (10 stop) seems to be 925 +- 5
+- Up : 920 +- 5
+
+- Test doing 920 up then down many times to see if there is always the same number of steps for a whole range. Ok, seems to always have a number of steps above 900 in each direction.
+ 
