@@ -15,6 +15,7 @@ import pyfits
 
 class WREB(reb.REB):
     useCABACbias = False
+    xmldir = "/home/lsst/py/camera/wreb/"
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)

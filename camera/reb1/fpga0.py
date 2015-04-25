@@ -13,22 +13,22 @@ import cabac0 as cabac
 
 
 class FPGA0(FPGA):
-
     # ctrl_host = "lpnws4122"
     # reb_id = 2
 
-    serial_conv = 0.00306 #rough conversion for DACs, no guarantee
+    serial_conv = 0.00306  # rough conversion for DACs, no guarantee
     parallel_conv = 0.00348
 
     # --------------------------------------------------------------------
 
-    def __init__(self, ctrl_host = None, reb_id = 2):
+    def __init__(self, ctrl_host=None, reb_id=2):
         FPGA.__init__(ctrl_host, reb_id)
         # declare two CABACs for each stripe even if they will not be used
         # (at least we will want to initialize to 0 if they exist)
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
         self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
-        self.dacs = {"V_SL":0,"V_SH":0,"V_RGL":0,"V_RGH":0,"V_PL":0,"V_PH":0,"HEAT1":0,"HEAT2":0,"I_OS":0}
+        self.dacs = {"V_SL": 0, "V_SH": 0, "V_RGL": 0, "V_RGH": 0, "V_PL": 0, "V_PH": 0, "HEAT1": 0, "HEAT2": 0,
+                     "I_OS": 0}
         # modify class Instruction so that it uses the right opcodes and bit shifts
         Instruction.OP_CallFunction = 0x1
         Instruction.OP_JumpToSubroutine = 0x2
@@ -40,30 +40,6 @@ class FPGA0(FPGA):
                                              Instruction.OP_ReturnFromSubroutine,
                                              Instruction.OP_EndOfProgram])
         Instruction.SubAddressShift = 18
-
-    # --------------------------------------------------------------------
-
-    def dump_program(self):
-        """
-        Dump the FPGA sequencer program. Return the program.
-        """
-        prg_addr = FPGA0.program_base_addr
-        prg_mem = self.read(prg_addr, self.program_mem_size) 
-        
-        prg = Program()
-
-        addrs = prg_mem.keys()
-        addrs.sort()
-        
-        for addr in addrs:
-            bc = prg_mem[addr]
-            if (bc != 0x0):
-                print "%0x" % addr, "%0x" % bc
-                instr = Instruction.frombytecode(bc)
-                rel_addr = addr - prg_addr 
-                prg.instructions[rel_addr] = instr
-
-        return prg
 
     # --------------------------------------------------------------------
 
@@ -81,6 +57,13 @@ class FPGA0(FPGA):
         self.write(0x330000, 0)
         self.write(0x340000, 0)
 
+    def increment_status(self):
+        """
+        Checks is the ADC incrementing is on.
+        :return:
+        """
+        return bool(self.read(0x330000, 1)[0x330000])
+
     # ----------------------------------------------------------
 
     def set_clock_voltages(self, voltages):
@@ -88,22 +71,22 @@ class FPGA0(FPGA):
         Sets voltages as defined in the input dictionary, 
         keeps others as previously defined.
         """
-        
-        #values to be set in the register for each output
-        outputnum = {"V_SL":0,"V_SH":1,"V_RGL":2,"V_RGH":3,"V_PL":4,"V_PH":5,"HEAT1":6,"HEAT2":7}
+
+        # values to be set in the register for each output
+        outputnum = {"V_SL": 0, "V_SH": 1, "V_RGL": 2, "V_RGH": 3, "V_PL": 4, "V_PH": 5, "HEAT1": 6, "HEAT2": 7}
 
         for key in iter(voltages):
-            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
-                self.dacs[key] = int(voltages[key]/self.serial_conv)& 0xfff
+            if key in ["V_SL", "V_SH", "V_RGL", "V_RGH"]:
+                self.dacs[key] = int(voltages[key] / self.serial_conv) & 0xfff
             elif key in ["V_PL", "V_PH"]:
-                self.dacs[key] = int(voltages[key]/self.parallel_conv)& 0xfff
+                self.dacs[key] = int(voltages[key] / self.parallel_conv) & 0xfff
             elif key in ["HEAT1", "HEAT2"]:
                 self.dacs[key] = int(voltages[key]) & 0xfff
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
-            
-            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12) )
-         
+
+            self.write(0x400000, self.dacs[key] + (outputnum[key] << 12))
+
         # activates DAC outputs
         self.write(0x400001, 1)
 
@@ -115,32 +98,32 @@ class FPGA0(FPGA):
         """
         fitsheader = {}
         for key in iter(self.dacs):
-            if key in ["V_SL","V_SH","V_RGL","V_RGH"]:
+            if key in ["V_SL", "V_SH", "V_RGL", "V_RGH"]:
                 # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
-                fitsheader[key]= self.dacs[key]*self.serial_conv
+                fitsheader[key] = self.dacs[key] * self.serial_conv
             elif key in ["V_PL", "V_PH"]:
                 # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.parallel_conv)
-                fitsheader[key]= self.dacs[key]*self.parallel_conv
+                fitsheader[key] = self.dacs[key] * self.parallel_conv
             else:
                 # fitsheader[key]= "{:d}".format(self.dacs[key])
-                fitsheader[key]= self.dacs[key]
-
+                fitsheader[key] = self.dacs[key]
+# TODO: put as MetaData
         return fitsheader
 
     # ----------------------------------------------------------
 
-    def set_current_source(self, current, ccdnum = 0):
+    def set_current_source(self, current, ccdnum=0):
         """
         Sets current source DAC value for given CCD (0, 1, 2).
         """
-        
+
         key = "I_OS"
 
         self.dacs[key] = current & 0xfff
 
-        self.write(0x400010, self.dacs[key] + (ccdnum <<12) )
-                
-        #activates DAC output
+        self.write(0x400010, self.dacs[key] + (ccdnum << 12))
+
+        # activates DAC output
         self.write(0x400011, 1)
 
     # ----------------------------------------------------------
@@ -149,36 +132,38 @@ class FPGA0(FPGA):
         """
         No readback available, using values stored in fpga object.
         """
-        
+
         key = "I_OS"
-    
+
+# TODO: put as MetaData
         return {key: self.dacs[key]}
 
     # ----------------------------------------------------------
 
-    def get_cabac_config(self, s): # stripe 's'
+    def get_cabac_config(self, s):  # stripe 's'
         """
         read CABAC configuration for stripe <s>,
         store it in the CABAC objects and the header string.
         """
         check_location(s)
 
-        self.write(0x500001, s) # starts the CABAC config readout
+        self.write(0x500001, s)  # starts the CABAC config readout
 
-        top_config    = self.read(0x500110, 5) # 0 - 4
-        bottom_config = self.read(0x500120, 5) # 0 - 4
+        top_config = self.read(0x500110, 5)  # 0 - 4
+        bottom_config = self.read(0x500120, 5)  # 0 - 4
 
         self.cabac_top[s].set_from_registers(top_config)
         self.cabac_bottom[s].set_from_registers(bottom_config)
 
         config = self.cabac_top[s].get_header("%dT" % s)
         config.update(self.cabac_bottom[s].get_header("%dB" % s))
-            
+
+# TODO: put as MetaData
         return config
 
     # ----------------------------------------------------------
 
-    def send_cabac_config(self, s=0): # stripe 's'
+    def send_cabac_config(self, s=0):  # stripe 's'
         """
         Writes the current CABAC objects of the given stripe to the FPGA registers
         """
@@ -186,12 +171,12 @@ class FPGA0(FPGA):
 
         regs_top = self.cabac_top[s].write_to_registers()
         regs_bottom = self.cabac_bottom[s].write_to_registers()
-        
-        for regnum in range(0,5):
+
+        for regnum in range(0, 5):
             self.write(0x500010 + regnum, regs_top[regnum])
             self.write(0x500020 + regnum, regs_bottom[regnum])
-        
-        self.write(0x500000, s) # starts the CABAC configuration
+
+        self.write(0x500000, s)  # starts the CABAC configuration
 
     # ----------------------------------------------------------
 
@@ -211,31 +196,27 @@ class FPGA0(FPGA):
         Gets the current value of the CABAC objects for the given parameter on the given stripe
         and checks that it is correct.
         """
-        prgm = ( self.cabac_top[s].get_cabac_fromstring(param) +
-                 self.cabac_bottom[s].get_cabac_fromstring(param) )
+        prgm = (self.cabac_top[s].get_cabac_fromstring(param) +
+                self.cabac_bottom[s].get_cabac_fromstring(param))
 
         for prgmval in prgm:
-            if (abs(prgmval - value)>0.2):
+            if abs(prgmval - value) > 0.2:
                 raise StandardError(
                     "CABAC readback different from setting for %s: %f != %f" %
-                    (param, prgmval, value) )
+                    (param, prgmval, value))
 
+    # ----------------------------------------------------------
 
-     # ----------------------------------------------------------
-
-    def reset_cabac(self, s=0): # stripe 's'
+    def reset_cabac(self, s=0):  # stripe 's'
         """
         Writes 0 to all the FPGA CABAC registers for stripe s
         """
         check_location(s)
 
-        for regnum in range(0,5):
+        for regnum in range(0, 5):
             self.write(0x500010 + regnum, 0)
             self.write(0x500020 + regnum, 0)
 
-        self.write(0x500000, s) # starts the CABAC configuration
+        self.write(0x500000, s)  # starts the CABAC configuration
 
-    # ASPIC stuff: not needed for REB1+ASPIC2. Take from wreb for REB2/WGREB+ASPIC3.
-
-
-
+        # ASPIC stuff: not needed for REB1+ASPIC2. Take from wreb for REB2/WGREB+ASPIC3.

@@ -11,20 +11,21 @@ import time
 
 # =======================================================================
 
-class REB(reb.REB):
+class REB1(reb.REB):
+
+    xmldir = "/home/lsst/py/camera/reb1/"
 
     # ===================================================================
 
-    def __init__(self, reb_id = 2,  ctrl_host = None, stripe_id = [0]):
+    def __init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0]):
         reb.REB.__init__(self, reb_id, ctrl_host, stripe_id)
-        self.fpga = fpga0.FPGA0(ctrl_host, reb_id)
+        self.fpga = fpga0.FPGA0(ctrl_host, reb_id)  # overwrites fpga from superclass
 
    # --------------------------------------------------------------------
 
     def REBpowerup(self):
         """
         Operations after powering the REB
-        :return:
         """
         #specific to REB1
         self.cabac_reset()
@@ -39,7 +40,6 @@ class REB(reb.REB):
         """
         Sequence to power up the CCD safely.
         """
-
         #starting drain voltages on CABAC
         drains = {"OD": 29, "GD": 24, "RD": 18}
         self.send_cabac_config(drains)
@@ -80,13 +80,12 @@ class REB(reb.REB):
         """
         Sequence to shut down the CCD safely
         """
-
         self.wait_end_sequencer()
         #Back-substrate first
         print("Back Substrate must be shut down before this.")
         time.sleep(3)
 
-        #current source
+        #current source to 0
         for stripe in self.stripes:
             self.fpga.set_current_source(0, stripe)
 
@@ -101,7 +100,7 @@ class REB(reb.REB):
 
         time.sleep(1)
 
-        #currents on OG to 0
+        #OG to 0
         self.send_cabac_config({"OG": 0})
 
         time.sleep(1)

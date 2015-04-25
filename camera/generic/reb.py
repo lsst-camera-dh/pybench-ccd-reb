@@ -68,6 +68,7 @@ def get_sequencer_hdu(seq):
 class REB(object):
     rawimgdir = "/data/raw/"
     fitstopdir = "/data/frames/"
+    xmldir = "/home/lsst/py/camera/xml/"
     full18bits = True  # TODO: check from version of the firmware
     # to be loaded from XML later
     imglines = 2020
@@ -145,7 +146,8 @@ class REB(object):
         if xmlfile:
             self.xmlfile = xmlfile
 
-        self.seq = rebxml.fromxmlfile(self.xmlfile)  # use self.seq.program to track addresses
+        self.seq = rebxml.fromxmlfile(os.path.join(self.xmldir, self.xmlfile))
+        # we will use self.seq.program to track addresses
         self.fpga.send_sequencer(self.seq)
         try:
             self.exptime = self.get_exposure_time()
@@ -162,10 +164,9 @@ class REB(object):
         if subname not in self.seq.program.subroutines:
             raise ValueError("No subroutine '%s' in the FPGA program." % subname)
 
-        first_instr = fpga.Instruction(
-            opcode="JSR",
-            address=self.seq.program.subroutines[subname],
-            repeat=repeat)
+        first_instr = fpga.Instruction(opcode="JSR",
+                                       address=self.seq.program.subroutines[subname],
+                                       repeat=repeat)
 
         # load it at the very beginning of the program (rel addr 0x0)
         self.fpga.send_program_instruction(0x0, first_instr)
@@ -188,8 +189,9 @@ class REB(object):
             exposureadd = self.seq.program.subroutines[self.exposuresub]
             instruction = self.seq.program.instructions[exposureadd]
         iterexp = instruction.repeat
+        self.exptime = float(iterexp) * self.exposure_unit  # in seconds
 
-        return float(iterexp) * self.exposure_unit  # in seconds
+        return self.exptime
 
     def set_exposure_time(self, exptime):
         """
@@ -204,6 +206,8 @@ class REB(object):
         newinstruction = self.seq.program.instructions[exposureadd]
         newinstruction.repeat = int(max(newiter, self.min_exposure))  # This does rewrite the seq.program too
         self.fpga.send_program_instruction(exposureadd, newinstruction)
+
+        # self.exptime = newiter * self.exposure_unit  # better re-read due to light/dark difference
 
     def set_dark_time(self, exptime):
         """
@@ -279,6 +283,10 @@ class REB(object):
     # --------------------------------------------------------------------
 
     def make_img_name(self):
+        """
+        Reconstitutes the path for the latest raw file created (does not necessarily exists).
+        :return: string
+        """
         return os.path.join(self.rawimgdir, '0x%016x.img' % self.fpga.get_time())
 
     # --------------------------------------------------------------------
@@ -286,6 +294,7 @@ class REB(object):
     def conv_to_fits(self, imgname, channels=None):
         """
         Creates the fits object from the acquired data.
+        If channels is not None but a list, saves the channels in the list (number 0 to 15).
         """
 
         # Reading raw file to array
@@ -324,10 +333,22 @@ class REB(object):
 
         return hdulist
 
-    def get_extension_header(self, CCDchan, fitshdu, borders=False):
+    def get_detsize(self, displayborders=False):
+        """
+        Builds detector size information for the FITS header.
+        If borders is True, includes all read pixels in DETSIZE.
+        :return: string
+        """
+        if displayborders:
+            detstring = '[1:%d,1:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines)
+        else:
+            detstring = '[1:4096,1:4004]'
+        return detstring
+
+    def get_extension_header(self, CCDchan, fitshdu, displayborders=False):
         """
         Builds FITS extension header with position information for each channel.
-        If borders is True, includes all read pixels in DATASEC display.
+        If displayborders is True, includes all read pixels in DATASEC display.
         :param CCDchan: int
         :param fitshdu: pyfits.HDUList
         :param borders: bool
@@ -336,19 +357,18 @@ class REB(object):
         extheader = fitshdu.header
         extheader["NAXIS1"] = self.imgcols
         extheader["NAXIS2"] = self.imglines
+        extheader['DETSIZE'] = self.get_detsize(displayborders)
 
-        if borders:
-            parstringlow = '1:2002'
-            parstringhigh = '4004:2003'
-            colwidth = 512
-            extheader['DETSIZE'] = '[1:4096,1:4004]'
-            extheader['DATASEC'] = '[11:522,1:2002]'
-        else:
+        if displayborders:
             parstringlow = '1:%d' % self.imglines
             parstringhigh = '%d:%d' % (2*self.imglines, self.imglines+1)
             colwidth = self.imgcols
-            extheader['DETSIZE'] = '[1:%d,1:%d]' % (self.imgcols*self.nchannels/2, 2*self.imglines)
             extheader['DATASEC'] = '[1:%d,1:%d]' % (self.imgcols, self.imglines)
+        else:
+            parstringlow = '1:2002'
+            parstringhigh = '4004:2003'
+            colwidth = 512
+            extheader['DATASEC'] = '[11:522,1:2002]'
 
         if CCDchan < 8:
             pdet = parstringlow
@@ -362,29 +382,13 @@ class REB(object):
         extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 
     def make_fits_name(self, imgstr):
+        """
+        Builds a complete FITS file path. imgstr should be the name of the file without the extension.
+        :param imgstr: string
+        :return: string
+        """
         fitsdir = os.path.join(self.fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
         if not os.path.isdir(fitsdir):
             os.mkdir(fitsdir)
         fitsname = os.path.join(fitsdir, imgstr + '.fits')
         return fitsname
-
-    # ===================================================================
-    #  Meta data / state of the instrument
-    # ===================================================================
-
-
-
-# needed elsewhere
-
-#def mock_acquire():
-    # stuff to put elsewhere for a full acquisition with header
-    #primeheader = {}
-    #primeheader["TESTTYPE"] = "Test" DARK:FLAT:OBS:PPUMP:QE:SFLAT
-    #DATE
-    #TEMP_SET	-95.00
-#CCDTEMP	-95.12
-#MONDIODE	143.12
-#MONOWL	550.00
-#FILTER	'550LP'
-#FILENAME	[Original name of the file]
-#exthdu = get_sequencer_hdu(self.reb.fpga)
