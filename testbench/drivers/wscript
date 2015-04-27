@@ -29,6 +29,7 @@ def build(bld):
                   'laser_thorlabs.py',
                   'lamp_oriel.py',
                   'ttl_ni.py',
+                  'monochromator_triax.py',
                   'xyz_pollux.py',
                   # 'keithley.py',
                   'keithley_ks.py',
