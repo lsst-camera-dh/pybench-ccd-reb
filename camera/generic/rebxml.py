@@ -9,8 +9,8 @@ from lxml import etree
 
 from fpga import *
 
-class XMLParser(object):
 
+class XMLParser(object):
     def __init__(self):
 
         self.channels_desc = {}
@@ -36,7 +36,7 @@ class XMLParser(object):
         return value
 
     def process_value(self, s):
-        if not(isinstance(s, str)):
+        if not (isinstance(s, str)):
             return s, None
 
         ss = s.strip()
@@ -59,7 +59,7 @@ class XMLParser(object):
             unit = 'us'
             lvaluenum = lvalue[:-2].strip()
         # elif lvalue[-1:] == 's':
-        #     unit = 's'
+        # unit = 's'
         #     lvaluenum = lvalue[:-1].strip()
         else:
             lvaluenum = lvalue
@@ -69,7 +69,6 @@ class XMLParser(object):
 
         return value, unit
 
-    
     def parse_parameters(self, parameters_node):
 
         params = parameters_node.xpath('parameter')
@@ -79,18 +78,17 @@ class XMLParser(object):
             fullname = param.xpath('fullname/text()')[0]
             name = param.get('id')
             value = param.xpath('value/text()')[0]
-            
-            param_dict = { 'value' : value }
-        
+
+            param_dict = {'value': value}
+
             if fullname != None:
                 param_dict['fullname'] = fullname
 
             self.parameters_desc[name] = dict(param_dict)
 
         self.parameters = \
-            dict([(k, self.parameters_desc[k]['value']) 
+            dict([(k, self.parameters_desc[k]['value'])
                   for k in self.parameters_desc.keys()])
-
 
     def parse_channels(self, channels_node):
 
@@ -102,19 +100,18 @@ class XMLParser(object):
             name = c.get('id')
             value = c.xpath('value/text()')[0]
 
-            c_dict = { 'channel' : int(value),
-                       'name': str(name) }
-        
+            c_dict = {'channel': int(value),
+                      'name': str(name)}
+
             if fullname != None:
                 c_dict['fullname'] = fullname[0]
 
             self.channels_desc[name] = dict(c_dict)
 
-        self.channels = bidi.BidiMap( [v['channel'] 
-                                       for v in self.channels_desc.values()],
-                                      [v['name']    
-                                       for v in self.channels_desc.values()] )
-    
+        self.channels = bidi.BidiMap([v['channel']
+                                      for v in self.channels_desc.values()],
+                                     [v['name']
+                                      for v in self.channels_desc.values()])
 
     def parse_functions(self, functions_node):
 
@@ -123,10 +120,10 @@ class XMLParser(object):
 
         idfunc = 0
         for func in funcs:
-            fullname =  func.xpath('fullname/text()')[0]
-            name =  func.get('id')
-        
-            func_dict = { }
+            fullname = func.xpath('fullname/text()')[0]
+            name = func.get('id')
+
+            func_dict = {}
 
             func_dict['idfunc'] = idfunc
             if fullname != None:
@@ -136,9 +133,9 @@ class XMLParser(object):
 
             print name, fullname
 
-            function = Function(name = name, 
-                                fullname = fullname, 
-                                channels = self.channels)
+            function = Function(name=name,
+                                fullname=fullname,
+                                channels=self.channels)
 
             # analyzing constants
 
@@ -151,7 +148,7 @@ class XMLParser(object):
                 value = int(const.xpath('text()')[0])
                 # print value
                 constants[channel] = value
-        
+
             # print constants
 
             # analyzing slices
@@ -181,9 +178,9 @@ class XMLParser(object):
                     duration /= 10.0  # TODO: improve this
 
                 if islice == 0:
-                    timelengths[islice] = int(duration)-1  # FPGA adds one to duration of first slice
-                elif islice == len(func.xpath('slicelist/timeslice'))-1:
-                    timelengths[islice] = int(duration)-2  # FPGA adds 2 to duration of last slice
+                    timelengths[islice] = int(duration) - 1  # FPGA adds one to duration of first slice
+                elif islice == len(func.xpath('slicelist/timeslice')) - 1:
+                    timelengths[islice] = int(duration) - 2  # FPGA adds 2 to duration of last slice
                 else:
                     timelengths[islice] = int(duration)
 
@@ -197,21 +194,21 @@ class XMLParser(object):
 
                     if constants.has_key(cname):
                         # that's a constant one
-                        output |= (constants[cname]<<crank)
+                        output |= (constants[cname] << crank)
                     elif channel_position.has_key(cname):
                         cpos = channel_position[cname]
                         cval = int(svalue[cpos])
-                        output |= (cval<<crank)
+                        output |= (cval << crank)
 
                 print bin(output)
 
                 outputs[islice] = output
-                    
+
                 islice += 1
-                
+
             function.timelengths = dict(timelengths)
             function.outputs = dict(outputs)
-        
+
             self.functions_desc[name]['function'] = function
             self.functions[name] = function
             idfunc += 1
@@ -223,7 +220,7 @@ class XMLParser(object):
         Return an instruction; update the dictionary of subroutines
         """
 
-        #print "        call"
+        # print "        call"
 
         repeat = 1
         repeats = call_node.xpath('repeat/text()')
@@ -240,10 +237,10 @@ class XMLParser(object):
 
             # is it a 'function' call?
             if self.functions_desc.has_key(called):
-                instr = Instruction(opcode = Instruction.OP_CallFunction,
-                                    function_id = self.functions_desc[called]['idfunc'],
-                                    infinite_loop = False,
-                                    repeat = repeat)
+                instr = Instruction(opcode=Instruction.OP_CallFunction,
+                                    function_id=self.functions_desc[called]['idfunc'],
+                                    infinite_loop=False,
+                                    repeat=repeat)
                 print instr
                 return instr
 
@@ -251,28 +248,28 @@ class XMLParser(object):
             # do we check that the subroutine exists? even if defined later?
             # elif subs.has_key(called):
             else:
-                instr = Instruction(opcode = Instruction.OP_JumpToSubroutine,
-                                    subroutine = called,
-                                    infinite_loop = False,
-                                    repeat = repeat)
+                instr = Instruction(opcode=Instruction.OP_JumpToSubroutine,
+                                    subroutine=called,
+                                    infinite_loop=False,
+                                    repeat=repeat)
                 print instr
                 return instr
 
-            # else:
-            #     # undefined call...
-            #     raise ValueError("Call to undefined object '%s'" % called)
+                # else:
+                #     # undefined call...
+                #     raise ValueError("Call to undefined object '%s'" % called)
 
-        else: # unnamed subroutine
+        else:  # unnamed subroutine
 
             subcalls = call_node.xpath("call")
 
             unnamed = Subroutine()
             unnamed.name = "unnamed%04d" % self.unnamed_subroutine_num
             self.unnamed_subroutine_num += 1
-            instr = Instruction(opcode = Instruction.OP_JumpToSubroutine,
-                                subroutine = unnamed.name,
-                                infinite_loop = False,
-                                repeat = repeat)
+            instr = Instruction(opcode=Instruction.OP_JumpToSubroutine,
+                                subroutine=unnamed.name,
+                                infinite_loop=False,
+                                repeat=repeat)
             print instr
 
             print "   unnamed subroutine", unnamed.name
@@ -283,7 +280,7 @@ class XMLParser(object):
 
             # Add the final RTS
             unnamed.instructions.append(
-                Instruction(opcode = Instruction.OP_ReturnFromSubroutine))
+                Instruction(opcode=Instruction.OP_ReturnFromSubroutine))
 
             self.subroutines[unnamed.name] = unnamed
             self.subroutines_names.append(unnamed.name)
@@ -292,11 +289,11 @@ class XMLParser(object):
 
     def parse_subroutine(self, sub_node):
         # print "subroutine"
-        subname =  sub_node.get('id')
-        fullname =  sub_node.xpath('fullname/text()')[0]
+        subname = sub_node.get('id')
+        fullname = sub_node.xpath('fullname/text()')[0]
         print "   name = ", subname
         # print "   fullname = ", fullname
-        
+
         sub = Subroutine()
         sub.name = subname
         sub.fullname = fullname
@@ -308,7 +305,7 @@ class XMLParser(object):
 
         # Add the file RTS opcode at the end
         sub.instructions.append(
-            Instruction(opcode = Instruction.OP_ReturnFromSubroutine))
+            Instruction(opcode=Instruction.OP_ReturnFromSubroutine))
 
         return sub
 
@@ -376,23 +373,22 @@ class XMLParser(object):
         # Produce a minimal main (a jump (JSR) and end-of-program (END))
         # It points to the first 'main'.
 
-        supermain = [ Instruction(opcode = Instruction.OP_JumpToSubroutine,
-                                  subroutine = self.mains_names[0]),
-                      Instruction(opcode = Instruction.OP_EndOfProgram) ]
+        supermain = [Instruction(opcode=Instruction.OP_JumpToSubroutine,
+                                 subroutine=self.mains_names[0]),
+                     Instruction(opcode=Instruction.OP_EndOfProgram)]
 
         # Create the unassembled program
 
         self.prg = Program_UnAssembled()
-        
-        self.prg.subroutines = allsubs # key = name, value = subroutine object
-        self.prg.subroutines_names = allsubsnames # to keep the order
-        self.prg.instructions = supermain # main program instruction list
 
-        return ( self.prg, 
-                 self.functions_desc, 
-                 self.parameters_desc, 
+        self.prg.subroutines = allsubs  # key = name, value = subroutine object
+        self.prg.subroutines_names = allsubsnames  # to keep the order
+        self.prg.instructions = supermain  # main program instruction list
+
+        return ( self.prg,
+                 self.functions_desc,
+                 self.parameters_desc,
                  self.channels_desc )
-
 
     def parse_file(self, xmlfile):
         tree = etree.parse(xmlfile)
@@ -405,7 +401,6 @@ class XMLParser(object):
         return True
 
 
-
 # @classmethod
 # def fromxmlfile(cls, xmlfile):
 def fromxmlfile(xmlfile):
@@ -414,34 +409,32 @@ def fromxmlfile(xmlfile):
     Raise an exception if the syntax is wrong.
     """
 
-
     channels = {}
     channels_desc = {}
     functions = {}
     functions_desc = {}
-    
+
     parser = XMLParser()
-    ( prg, 
-      functions_desc, 
-      parameters_desc, 
+    ( prg,
+      functions_desc,
+      parameters_desc,
       channels_desc ) = parser.parse_file(xmlfile)
-    
+
     program = prg.compile()
-    
-    channels = bidi.BidiMap( [v['channel'] 
-                              for v in channels_desc.values()],
-                             [v['name']    
-                              for v in channels_desc.values()] )
-    
-    for k,v in functions_desc.iteritems():
+
+    channels = bidi.BidiMap([v['channel']
+                             for v in channels_desc.values()],
+                            [v['name']
+                             for v in channels_desc.values()])
+
+    for k, v in functions_desc.iteritems():
         functions[v['idfunc']] = v['function']
-        
-        
-    seq = Sequencer(channels = channels, 
-                    channels_desc = channels_desc, 
-                    functions = functions, 
-                    functions_desc = functions_desc, 
-                    program = program)
+
+    seq = Sequencer(channels=channels,
+                    channels_desc=channels_desc,
+                    functions=functions,
+                    functions_desc=functions_desc,
+                    program=program)
 
     return seq
 
