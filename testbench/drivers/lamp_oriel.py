@@ -60,6 +60,7 @@ class Instrument(Driver):
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
 
+        self._model = 'Unknown'
 
     def open(self):
         """
@@ -79,9 +80,17 @@ class Instrument(Driver):
         if answer == "":
             return False
 
-        if 'Oriel' not in answer:
+        # QTH -> '69931'
+        # XeHg -> '69911'
+
+        if answer not in ['69931','69911']:
             return False
-            
+
+        if answer == '69931':
+            self._model = 'QTH 69931'
+        elif answer == '69911':
+            self._model = 'XeHg 69911'
+
         return True
 
 
@@ -101,7 +110,6 @@ class Instrument(Driver):
 
         Driver.register(self, bench)
         
-
 
     def close(self):
         """
@@ -170,6 +178,12 @@ class Instrument(Driver):
 
         return self.xmlrpc.power(query)
 
+    def on(self):
+        self.power(True)
+
+    def off(self):
+        self.power(False)
+
     def getAmps(self):
         return self.xmlrpc.getAmps()
 
@@ -205,26 +219,9 @@ class Instrument(Driver):
             }
 
         values = {
-            'MODEL'  : 'ThorLabs',
-            'DRIVER' : 'laserthorlabs / pyBench' 
+            'MODEL'  : 'ORIEL ' + self._model,
+            'DRIVER' : 'oriel / lamp_oriel' 
             }
-
-        for channel in self.allchannels:
-            # current 
-            key = 'CURR_CH%d' % channel
-            comment = '[mA] Current in laser diode %d in mA' % channel
-            value = self.getCurrent(channel)
-            keys.append(key)
-            values[key] = value
-            comments[key] = comment
-
-            # current 
-            key = 'POW_CH%d' % channel
-            comment = '[mW] Output Power for laser diode %d in mW' % channel
-            value = self.getPower(channel)
-            keys.append(key)
-            values[key] = value
-            comments[key] = comment
 
         return keys, values, comments
 
