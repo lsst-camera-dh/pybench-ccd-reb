@@ -27,6 +27,7 @@ def build(bld):
                   # 'power_backsubstrate.py',
                   'power_backsubstrate_ks.py',
                   'laser_thorlabs.py',
+                  'lamp_oriel.py',
                   'ttl_ni.py',
                   'xyz_pollux.py',
                   # 'keithley.py',
