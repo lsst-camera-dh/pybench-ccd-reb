@@ -107,7 +107,7 @@ class FPGA0(FPGA):
             else:
                 # fitsheader[key]= "{:d}".format(self.dacs[key])
                 fitsheader[key] = self.dacs[key]
-# TODO: put as MetaData
+
         return fitsheader
 
     # ----------------------------------------------------------
@@ -135,8 +135,33 @@ class FPGA0(FPGA):
 
         key = "I_OS"
 
-# TODO: put as MetaData
         return {key: self.dacs[key]}
+
+    # ----------------------------------------------------------
+
+    def get_dacs(self):
+        """
+        All DACs settings into MetaData format.
+        No readback available, using values stored in fpga object.
+        :return: MetaData
+        """
+        keys = ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH",
+                "HEAT1", "HEAT2", "I_OS"]
+        fitsheader = self.get_clock_voltages()
+
+        comments = {
+            'V_SL': 'Serial clocks low voltage',
+            'V_SH': 'Serial clocks high voltage',
+            'V_RGL': 'Reset Gate clock low voltage',
+            'V_RGH': 'Reset Gate clock high voltage',
+            'V_PL': 'Parallel clocks low voltage',
+            'V_PH': 'Parallel clocks high voltage',
+            'HEAT1': 'REB heater 1 setting',
+            'HEAT2': 'REB heater 2 setting',
+            'I_OS': 'Current sources setting'
+        }
+
+        return MetaData(keys, fitsheader, comments)
 
     # ----------------------------------------------------------
 
@@ -155,10 +180,12 @@ class FPGA0(FPGA):
         self.cabac_top[s].set_from_registers(top_config)
         self.cabac_bottom[s].set_from_registers(bottom_config)
 
-        config = self.cabac_top[s].get_header("%dT" % s)
-        config.update(self.cabac_bottom[s].get_header("%dB" % s))
+        keyst, configt, comt = self.cabac_top[s].get_header("%dT" % s)
+        keysb, configb, comb = self.cabac_bottom[s].get_header("%dB" % s)
 
-# TODO: put as MetaData
+        config = MetaData(keyst, configt, comt)
+        config.update_ordered(keysb, configb, comb)
+
         return config
 
     # ----------------------------------------------------------

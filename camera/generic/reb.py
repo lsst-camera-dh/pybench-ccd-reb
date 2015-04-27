@@ -28,18 +28,18 @@ def generate_tag(number):
 def get_sequencer_hdu(seq):
     """
     Builds table HDU for FITS file containing sequencer dump
-        :param seq: Sequencer
-        :return: pyfits.TableHDU
-        """
+    :param seq: Sequencer
+    :return: pyfits.TableHDU
+    """
     prog = seq.program
     progaddr = prog.instructions.keys()
     prognum = 256 + len(progaddr)
 
-    slicenum = N.ndarray(shape=(prognum,), dtype=N.dtype('a4'))
-    output = N.ndarray(shape=(prognum,), dtype=N.dtype('a32'))
-    duration = N.ndarray(shape=(prognum,), dtype=N.dtype('i8'))
+    slicenum = N.zeros(shape=(prognum,), dtype=N.dtype('a4'))
+    output = N.zeros(shape=(prognum,), dtype=N.dtype('a32'))
+    duration = N.zeros(shape=(prognum,), dtype=N.dtype('i8'))
 
-    for ifunc in seq.functions.iterkeys():
+    for ifunc in seq.functions:
         func = seq.get_function(ifunc)
         for islice in func.outputs.keys():
             i = ifunc * 16 + islice
@@ -48,7 +48,7 @@ def get_sequencer_hdu(seq):
             duration[i] = func.timelengths[islice]
 
     for i, addr in enumerate(sorted(progaddr)):
-        slicenum[i+256] = '30' + hex(addr)[2:]
+        slicenum[i+256] = '3' + '%03x' % addr
         output[i+256] = prog.instructions[addr].__repr__()[:20]
         duration[i+256] = prog.instructions[addr].repeat
 
@@ -61,6 +61,25 @@ def get_sequencer_hdu(seq):
     exthdu.header["EXTNAME"] = "SEQ_CFG"
 
     return exthdu
+
+
+def get_sequencer_string(seq):
+    """
+    Builds a string table representation of the sequencer content in seq.
+    :param seq: Sequencer
+    :return: N.array
+    """
+    reprarray = N.zeros(shape=(0,), dtype=N.dtype('a73'))
+    for ifunc in seq.functions:
+        reprfunc = seq.functions[ifunc].__repr__()
+        for l in reprfunc.splitlines():
+            reprarray = N.append(reprarray, l.expandtabs(8))
+    reprprog = seq.program.__repr__()
+    for l in reprprog.splitlines():
+        reprarray = N.append(reprarray, l)
+
+    return reprarray
+
 
 # =======================================================================
 
@@ -113,6 +132,7 @@ class REB(object):
         self.nchannels = 16*len(self.stripes)
 
    # --------------------------------------------------------------------
+
     def update_filetag(self, t):
         """
         Updates the filetag to the FPGA timer.
@@ -138,6 +158,7 @@ class REB(object):
         return tagstr
 
    # --------------------------------------------------------------------
+
     def load_sequencer(self, xmlfile=None):
         """
         Loads all sequencer content.
@@ -304,7 +325,8 @@ class REB(object):
         # for 18-bit data:
         # negative numbers are translated, sign is inverted on all data, also make all values positive
         # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
-        rawdata = N.choose(buff & 0x20000, (0x1ffff-buff, 0x5ffff-buff))
+        # this works by XORing the lowest 17 bits
+        rawdata = N.bitwise_xor(buff, 0x1FFFF)
         # reshape by channel
         length = self.imglines * self.imgcols
         rawdata = rawdata.reshape(length, self.nchannels)

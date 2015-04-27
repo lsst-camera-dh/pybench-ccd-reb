@@ -9,7 +9,9 @@ import py.camera.generic.reb as reb
 import fpga0
 import time
 
+
 # =======================================================================
+
 
 class REB1(reb.REB):
 
@@ -116,8 +118,12 @@ class REB1(reb.REB):
         """
         read CABAC configuration.
         """
-        for stripe in self.stripes:
-            self.fpga.get_cabac_config(stripe)
+        config = self.fpga.get_cabac_config(self.stripes[0])
+        if len(self.stripes) > 1:
+            for stripe in self.stripes[1:]:
+                config.update(self.fpga.get_cabac_config(stripe))
+
+        return config
 
     # --------------------------------------------------------------------
 

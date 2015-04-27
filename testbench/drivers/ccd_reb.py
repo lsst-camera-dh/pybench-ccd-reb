@@ -7,6 +7,7 @@ Testbench driver for REB (through direct calls to rriClient)
 """
 
 import py.camera.reb1.reb1 as reb1
+from py.camera.generic.reb import get_sequencer_string
 
 from driver import Driver
 
@@ -407,7 +408,7 @@ class Instrument(Driver):
             'INSTRUME': 'REB1',
             'CCD_CTRL': 'REB1',
             'CTRL_SYS': 'PYREB',
-            'CTRL_ID': 2,
+            'CTRL_ID': self.reb_id,
             'FIRMWARE': self.version,
             'CCD_MANU': 'E2V',
             'CCD_TYPE': 'E2V250',
@@ -434,13 +435,19 @@ class Instrument(Driver):
         # power supplies measured on board
         header = self.reb.get_input_voltages_currents()
         # cabacs
-        header.update_frommeta(self.get_cabac_config())
-        # clock rail voltages
-        header.update_frommeta(self.reb.fpga.get_clock_voltages())
-        # current sources
-        header.update_frommeta(self.reb.fpga.get_current_source())
+        header.update(self.get_cabac_config())
+        # clock rail voltages and current source
+        header.update(self.reb.fpga.get_dacs())
 
         return header.keys, header.values, header.comments
+
+    def get_meta_sequencer(self):
+        """
+        Returns a string table that can be put in a TableHDU (size 73).
+        Does not read back from the sequencer (need to update in the object when making changes).
+        :return: numpy.array
+        """
+        return get_sequencer_string(self.reb.seq)
 
 # TODO: add more meta to put in secondary headers
 

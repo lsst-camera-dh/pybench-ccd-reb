@@ -150,13 +150,13 @@ class Instruction(object):
         s = ""
         s += "%-4s" % self.name
 
-        if self.name == self.OP_names[1]:
+        if self.opcode == self.OP_CallFunction:
             s += "    %-11s" % ("func(%d)" % self.function_id)
             if self.infinite_loop:
                 s += "    " + "repeat(infinity)"
             else:
                 s += "    " + ("repeat(%d)" % self.repeat)
-        elif self.name == self.OP_names[2]:
+        elif self.opcode == self.OP_JumpToSubroutine:
             if self.address is not None:
                 s += "    %-11s" % ("0x%03x" % self.address)
             else:
@@ -672,13 +672,31 @@ class MetaData(object):
             else:
                 self.comments[k] = ''
 
-    def update_frommeta(self, addmeta):
+    def update(self, addmeta):
         """
         Updates from another meta object.
         :param addmeta: MetaData
         :return:
         """
         self.update_ordered(addmeta.keys, addmeta.values, addmeta.comments)
+
+    def order_keys(self, neworder):
+        """
+        Re-order the keys in the specified order. If some keys are
+        not in the parameter, they are appended at the end in the
+        same order as before.
+        :param neworder:
+        :return:
+        """
+        for k in neworder:
+            if k in self.keys:
+                self.keys.remove(k)
+            # if not already present, add it for later use
+            else:
+                self.values[k] = ''
+                self.comments[k] = ''
+        neworder.extend(self.keys)
+        self.keys = neworder
 
 
 ## ----------------------------------------------------------
