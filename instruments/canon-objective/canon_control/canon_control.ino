@@ -292,6 +292,12 @@ void loop() {
               {
                       buffer[index] = incomingByte;
                       
+                       Serial.print("Poll the lens : ");
+                       Serial.print("Command : 0A-");
+                       Serial.print(send(0x0A), HEX);
+                       Serial.print("  Answer : ");
+                       Serial.println(send(0x00), HEX);
+                      
                       //Before sending the command, power up of the motor.
                       digitalWrite(vpowPin, LOW);
                       delay(100);
