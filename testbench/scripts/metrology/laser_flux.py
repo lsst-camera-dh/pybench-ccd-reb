@@ -1,4 +1,4 @@
-
+import os, os.path
 import types
 import lsst.testbench
 import time
@@ -50,8 +50,18 @@ def laser_flux_ramp(self, channels = [1,2,3,4]):
     self.ttl.openShutter()
     time.sleep(2)
 
+    # Create the data file
     now = datetime.datetime.utcnow()
-    datafile = "DKD-PhD-Laser-fluxes-%s.data" % now.isoformat()
+    datadir = os.path.join(os.getenv("HOME"),
+                            "data", "metrology",
+                            now.date().isoformat())
+
+    if not(os.path.isdir(datadir)):
+        os.makedirs(datadir)
+
+    datafile = os.path.join(datadir,
+                            ("DKD-PhD-Laser-fluxes-%s.data"
+                             % now.isoformat()))
     f = open(datafile, "w")
 
     print >>f, "# fluxes on the LSST CCD testbench"

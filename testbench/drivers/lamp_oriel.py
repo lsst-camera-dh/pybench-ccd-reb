@@ -193,7 +193,7 @@ class Instrument(Driver):
 
         return False
 
-    def power(self, flag):
+    def power(self, flag, wait=False):
         """
         Turn on/off the lamp. 
         WARNING: wait 20 seconds to complete.
@@ -201,13 +201,18 @@ class Instrument(Driver):
         query = 0
         if flag: query = 1
 
-        return self.xmlrpc.power(query)
+        answer = self.xmlrpc.power(query)
+        if wait:
+            while self.isRamping():
+                time.sleep(0.5)
 
-    def on(self):
-        self.power(True)
+        return answer
 
-    def off(self):
-        self.power(False)
+    def on(self, wait=False):
+        return self.power(True, wait)
+
+    def off(self, wait=False):
+        return self.power(False, wait)
 
     def isOn(self):
         status = self.status()

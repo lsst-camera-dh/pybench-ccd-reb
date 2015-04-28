@@ -246,7 +246,7 @@ class Instrument(Driver):
         """
         answer = self.xmlrpc.selectQTH()
         if wait:
-            while not(self.getLamp() != 'QTH'):
+            while not(self.getLamp() == 'QTH'):
                 time.sleep(0.5)
 
         return answer
@@ -258,7 +258,7 @@ class Instrument(Driver):
         """
         answer = self.xmlrpc.selectXeHg()
         if wait:
-            while not(self.getLamp() != 'XeHg'):
+            while not(self.getLamp() == 'XeHg'):
                 time.sleep(0.5)
         return answer
         

@@ -152,7 +152,7 @@ class Instrument(Driver):
         """
         answer = self.xmlrpc.setWavelength(float(wavelength))
         if wait:
-            while not(B.triax.isReady()):
+            while not(self.isReady()):
                 time.sleep(0.5)
         return answer
 
@@ -174,7 +174,7 @@ class Instrument(Driver):
         # TODO : check allowed values
         answer = self.xmlrpc.setInSlit(int(width))
         if wait:
-            while not(B.triax.isReady()):
+            while not(self.isReady()):
                 time.sleep(0.5)
         return answer
 
@@ -191,7 +191,7 @@ class Instrument(Driver):
         # TODO : check allowed values
         answer = self.xmlrpc.setOutSlit(int(width))
         if wait:
-            while not(B.triax.isReady()):
+            while not(self.isReady()):
                 time.sleep(0.5)
         return answer
 
@@ -214,7 +214,7 @@ class Instrument(Driver):
 
         answer = self.xmlrpc.setGrating(int(grating))
         if wait:
-            while not(B.triax.isReady()):
+            while not(self.isReady()):
                 time.sleep(0.5)
         return answer
 
