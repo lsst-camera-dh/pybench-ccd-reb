@@ -249,7 +249,7 @@ class Instrument(Driver):
 
         values = {
             'MODEL'  : 'Triax',
-            'DRIVER' : 'triax / monochromator_triax' 
+            'DRIVER' : 'triax / monochromator_triax',
             'WVLGTH' : self.getWavelength(),
             'INSLIT' : self.getInSlit(),
             'OUTSLIT': self.getOutSlit(),

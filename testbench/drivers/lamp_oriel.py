@@ -256,7 +256,7 @@ class Instrument(Driver):
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
-            'DRIVER' : 'Instrument software driver' 
+            'DRIVER' : 'Instrument software driver', 
             'ON'     : '1 = power on, 0 = power off',
             'CONTROL': '1 = regulated flux, 0 otherwise',
             'CURRENT': '[A] lamp current',
@@ -267,7 +267,7 @@ class Instrument(Driver):
 
         values = {
             'MODEL'  : 'ORIEL ' + self._model,
-            'DRIVER' : 'oriel / lamp_oriel' 
+            'DRIVER' : 'oriel / lamp_oriel', 
             'ON'     : int(self.isOn()),
             'CONTROL': int(self.isFluxControlled()),
             'CURRENT': self.getAmps(),

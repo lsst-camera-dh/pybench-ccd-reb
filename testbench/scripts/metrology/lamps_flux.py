@@ -67,7 +67,7 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0, filters = [1,2,3]):
         os.makedirs(datadir)
 
     datafile = os.path.join(datadir,
-                            "DKD-PhD-QTH-triax-fluxes-%s.data" 
+                            ("DKD-PhD-QTH-triax-fluxes-%s.data"
                             % now.isoformat()))
     f = open(datafile, "w")
 

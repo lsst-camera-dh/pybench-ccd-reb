@@ -256,7 +256,7 @@ class Instrument(Driver):
         Move the flipping mirror to get the flux from the XeHg lamp.
         You may check the mirror state with the status() method.
         """
-        answer self.xmlrpc.selectXeHg()
+        answer = self.xmlrpc.selectXeHg()
         if wait:
             while not(self.getLamp() != 'XeHg'):
                 time.sleep(0.5)
