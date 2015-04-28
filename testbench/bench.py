@@ -14,6 +14,15 @@ import drivers
 # import drivers.xyz_pollux
 # import drivers.dummy_dummy
 
+print """
+LPNHE LSST CCD Testbench
+------------------------
+
+Now, create a Bench object with:
+
+B = lsst.testbench.Bench()
+
+"""
 
 class Bench(Borg):
     """
