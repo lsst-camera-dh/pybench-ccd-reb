@@ -12,6 +12,17 @@ B.register("ttl")
 B.register("DKD")
 B.register("PhD")
 
+print """
+metrology/laser_flux_ramp
+--------------------
+
+B.laser_flux_ramp(self, channels = [1,2,3,4])
+
+     Will do a flux ramp with each laser channels and measure 
+     the flux obtained in the integral sphere and at the CCD position 
+     with the calibrated DKD photodiode.
+"""
+
 def laser_flux_ramp(self, channels = [1,2,3,4]):
     ramps = { 
         #1: { 'Imin': 15.0, 'Imax': 35.20, 'Istep': 1. },

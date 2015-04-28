@@ -119,19 +119,27 @@ class Instrument(Driver):
 
     # ===================================================================
 
-    def openSafetyShutter(self):
+    def openSafetyShutter(self, wait=False):
         """
         Open the safety shutter.
         Return the shutter state (1: opened, 0: closed).
         """
-        return self.xmlrpc.openShutter()
+        answer = self.xmlrpc.openShutter()
+        if wait:
+            while not(self.SafetyShutterIsOpen()):
+                time.sleep(0.5)
+        return answer
 
-    def closeSafetyShutter(self):
+    def closeSafetyShutter(self, wait=False):
         """
         Close the safety shutter.
         Return the shutter state (1: opened, 0: closed).
         """
-        return self.xmlrpc.closeShutter()
+        answer = self.xmlrpc.closeShutter()
+        if wait:
+            while self.SafetyShutterIsOpen():
+                time.sleep(0.5)
+        return answer
 
     def SafetyShutterIsOpen(self):
         """
@@ -205,6 +213,7 @@ class Instrument(Driver):
         """
         Move the filter wheel to the specified position [1-6].
         You should check the wheel movement with the status() method.
+        Wait until target position is reached.
         """
 
         if position not in range(1,7):
@@ -218,23 +227,41 @@ class Instrument(Driver):
             self.moveFilterWheel()
             while self.filterWheelIsMoving():
                 time.sleep(1)
-            
 
     # ===================================================================
 
-    def selectQTH(self):
+    def getLamp(self):
+        """
+        Return the name of the select lamp.
+        """
+        status = self.status()
+        if len(status) < 4:
+            return None
+        return status[3]
+
+    def selectQTH(self, wait=False):
         """
         Move the flipping mirror to get the flux from the QTH lamp.
-        You should check the mirror state with the status() method.
+        You may check the mirror state with the status() method.
         """
-        return self.xmlrpc.selectQTH()
+        answer = self.xmlrpc.selectQTH()
+        if wait:
+            while not(self.getLamp() != 'QTH'):
+                time.sleep(0.5)
 
-    def selectXeHg(self):
+        return answer
+
+    def selectXeHg(self, wait=False):
         """
         Move the flipping mirror to get the flux from the XeHg lamp.
-        You should check the mirror state with the status() method.
+        You may check the mirror state with the status() method.
         """
-        return self.xmlrpc.selectXeHg()
+        answer self.xmlrpc.selectXeHg()
+        if wait:
+            while not(self.getLamp() != 'XeHg'):
+                time.sleep(0.5)
+        return answer
+        
 
     # ===================================================================
     #  Meta data / state of the instrument 

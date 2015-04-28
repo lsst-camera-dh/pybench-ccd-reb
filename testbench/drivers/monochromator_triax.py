@@ -3,39 +3,25 @@
 # Author: Laurent Le Guillou
 #
 """
-Testbench driver for the Thorlabs Laser (through Edo software and XML-RPC)
+Testbench driver for the Triax Monochromator (through Edo software and XML-RPC)
 """
 
-# XML-RPC interface:
+# XML-RPC interface: ('triax')
 #
-connect() returns always 0
-close() returns always 0
-checkConnection() returns a NULL string or the model name
-status() returns instrument status 
-getWavelength() returns wavelength (double)
-setWavelength(double) 
-moveRelative(int) 
-getInSlit() returns int
-setInSlit(int) 
-getOutSlit() returns int
-setOutSlit(int) 
-getGrating() returns current grating, int
-setGrating(int)
-help() this info !
-
-
 # connect() returns always 0
 # close() returns always 0
-# checkConnection() returns a NULL string or the model name
-# select(int index) enables channel if index>0, otherwise disables
-#                   where abs(index) = [1-4]
-# getCurrent(int index) returns a string with the target current
-#                       -1 if index out of range
-# setCurrent(int index,double value) returns 0 or -1 if index out of range
-# getPower(int index) returns actual output power
-#                             -1 if index out of range
-# enable() enables lasing, returns 0
-# disable() disables lasing, returns 0
+# checkConnection() returns a '1' if connected and a '0' otherwise
+# status() returns instrument status --> 1 = ready, 0 = not ready
+# getWavelength() returns wavelength (double)
+# setWavelength(double) 
+# moveRelative(int) 
+# getInSlit() returns int
+# setInSlit(int) 
+# getOutSlit() returns int
+# setOutSlit(int) 
+# getGrating() returns current grating, int
+# setGrating(int)
+# help() this info !
 
 
 from driver import Driver
@@ -72,8 +58,18 @@ class Instrument(Driver):
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
 
-        # Available channels
-        self.allchannels = [1,2,3,4]
+        # Available gratings
+        # TODO: add resolution, blaze angle, etc...
+        self.gratings_properties = { 0: {'name': 'G0',
+                                         'range': [200.0, 600.0]}, 
+                                     1: {'name': 'G1',
+                                         'range': [600.0, 1100.0]}, 
+                                     2: {'name': 'G2',
+                                         'range': [1100.0, 2600.0]}
+                                     }
+
+
+        self.gratings = self.gratings_properties.keys()
 
 
     def open(self):
@@ -91,18 +87,15 @@ class Instrument(Driver):
         answer = self.checkConnection()
         print answer
 
-        if answer == "":
+        if answer != '1':
             return False
 
-        if 'THORLABS' not in answer:
-            return False
-            
         return True
 
 
     def checkConnection(self):
         """
-        Returns a NULL string or the instrument model name
+        Returns '1' if connected.
         """
         return self.xmlrpc.checkConnection()
 
@@ -112,7 +105,7 @@ class Instrument(Driver):
         time.sleep(2)
         connected = self.is_connected()
         if not(connected):
-            raise IOError("Laser Thorlabs not connected.")
+            raise IOError("Monochromator Triax not connected.")
 
         Driver.register(self, bench)
         
@@ -130,93 +123,104 @@ class Instrument(Driver):
     #  Instrument specific methods
     # ===================================================================
 
-    def select(self, channel):
+    def status(self):
         """
-        Enable laser channel 'channel'. 'channel' should be in [1-4].
-        If channel is negative, Turn the channel off.
+        Return Monochromator status. 
+        0 = not ready (moving, etc), 1 = ready.
         """
+        return self.xmlrpc.status()
 
-        if abs(channel) not in self.allchannels:
-            logging.error("Invalid Laser Thorlabs channel id. Should be in %s"
-                          % str(self.allchannels))
-            raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in %s" % 
-                str(self.allchannels))
-
-        logging.info("selecting Laser channel %d" % channel)
-        return self.xmlrpc.select(channel)
-
-
-    def unselect(self, channel):
+    def isReady(self):
         """
-        Disable laser channel 'channel'. 'channel' should be in [1-4].
+        Tell if the Monochromator is ready.
         """
-        if channel not in self.allchannels:
-            raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in %s" %
-                str(self.allchannels))
+        return(self.status() == 1)
 
-        logging.info("disabling Laser channel %d" % channel)
-        return self.xmlrpc.select(-channel)
+    # ===================================================================
+    # Wavelength
 
-
-    def getCurrent(self, channel):
+    def getWavelength(self):
         """
-        Returns the current (in mA) set for channel 'channel'.  
-        Channel should be in [1-4].
+        Return the current wavelength.
         """
-        if channel not in self.allchannels:
-            raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in %s" %
-                str(self.allchannels))
-        
-        return float(self.xmlrpc.getCurrent(channel))
+        return self.xmlrpc.getWavelength()
 
-
-    def setCurrent(self, channel, current):
+    def setWavelength(self, wavelength, wait = False):
         """
-        Sets the current (in mA) for channel 'channel'.  
-        Channel should be in [1-4].
+        Set the wavelength to <wavelength>.
+        (takes time)
         """
-        if channel not in self.allchannels:
-            raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in %s" % 
-                str(self.allchannels))
-        
-        return self.xmlrpc.setCurrent(channel, float(current))
+        answer = self.xmlrpc.setWavelength(float(wavelength))
+        if wait:
+            while not(B.triax.isReady()):
+                time.sleep(0.5)
+        return answer
 
+    # def moveRelative(int) 
 
-    def getPower(self, channel):
+    # ===================================================================
+    # Slits
+
+    def getInSlit(self):
         """
-        Returns the actual output power (in mW) for channel 'channel'.  
-        Channel should be in [1-4].
+        Return the width of the entrance slit (unit ???).
         """
-        if channel not in self.allchannels:
-            raise ValueError(
-                "Invalid Laser Thorlabs channel id. Should be in %s" %
-                str(self.allchannels))
-        
-        return float(self.xmlrpc.getPower(channel))
+        return self.xmlrpc.getInSlit()
 
-
-    def enable(self):
+    def setInSlit(self, width, wait = False):
         """
-        Enable lasing.
+        Set the width of the entrance slit (unit ???).
         """
-        return self.xmlrpc.enable()
+        # TODO : check allowed values
+        answer = self.xmlrpc.setInSlit(int(width))
+        if wait:
+            while not(B.triax.isReady()):
+                time.sleep(0.5)
+        return answer
 
-
-    def disable(self):
+    def getOutSlit(self):
         """
-        Disable lasing.
+        Return the width of the exit slit (unit ???).
         """
-        return self.xmlrpc.disable()
+        return self.xmlrpc.getOutSlit()
 
+    def setOutSlit(self, width, wait):
+        """
+        Set the width of the exit slit (unit ???).
+        """
+        # TODO : check allowed values
+        answer = self.xmlrpc.setOutSlit(int(width))
+        if wait:
+            while not(B.triax.isReady()):
+                time.sleep(0.5)
+        return answer
+
+    # ===================================================================
+    # Gratings
+
+    def getGrating(self):
+        """
+        Return the current selected grating.
+        """
+        return self.xmlrpc.getGrating()
+
+    def setGrating(self, grating, wait=False):
+        """
+        Set the grating to <grating>.
+        """
+        if grating not in self.gratings:
+            raise ValueError("Invalid grating. Shoud be in %s" 
+                             % self.gratings )
+
+        answer = self.xmlrpc.setGrating(int(grating))
+        if wait:
+            while not(B.triax.isReady()):
+                time.sleep(0.5)
+        return answer
 
     # ===================================================================
     #  Meta data / state of the instrument 
     # ===================================================================
-
 
     def get_meta(self):
         """
@@ -227,35 +231,30 @@ class Instrument(Driver):
 
         # keys : specify the key order
         keys = ['MODEL',
-                'DRIVER']
+                'DRIVER',
+                'WVLGTH',
+                'INSLIT',
+                'OUTSLIT',
+                'GRATING']
 
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
-            'DRIVER' : 'Instrument software driver' 
+            'DRIVER' : 'Instrument software driver',
+            'WVLGTH' : '[nm] selected wavelength',
+            'INSLIT' : '[unit???] Width of the entrance slit',
+            'OUTSLIT': '[unit???] Width of the exit slit',
+            'GRATING': 'Selected grating'
             }
 
         values = {
-            'MODEL'  : 'ThorLabs',
-            'DRIVER' : 'laserthorlabs / pyBench' 
+            'MODEL'  : 'Triax',
+            'DRIVER' : 'triax / monochromator_triax' 
+            'WVLGTH' : self.getWavelength(),
+            'INSLIT' : self.getInSlit(),
+            'OUTSLIT': self.getOutSlit(),
+            'GRATING': self.getGrating()
             }
-
-        for channel in self.allchannels:
-            # current 
-            key = 'CURR_CH%d' % channel
-            comment = '[mA] Current in laser diode %d in mA' % channel
-            value = self.getCurrent(channel)
-            keys.append(key)
-            values[key] = value
-            comments[key] = comment
-
-            # current 
-            key = 'POW_CH%d' % channel
-            comment = '[mW] Output Power for laser diode %d in mW' % channel
-            value = self.getPower(channel)
-            keys.append(key)
-            values[key] = value
-            comments[key] = comment
 
         return keys, values, comments
 

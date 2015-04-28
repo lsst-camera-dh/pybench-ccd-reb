@@ -158,6 +158,19 @@ class Instrument(Driver):
         return self.xmlrpc.setPresetCurrent(float(power))
 
 
+    def isRamping(self):
+        """
+        Return True if the lamp is ramping up or down.
+        """
+        status = self.status()
+        if len(status) < 4:
+            return False
+
+        if status[2] == 1:
+            return True
+
+        return False
+
     def setFluxControl(self, flag):
         """
         Activate/deactivate the flux control (QTH only).
@@ -167,6 +180,18 @@ class Instrument(Driver):
 
         return self.xmlrpc.setFluxControl(query)
 
+    def isFluxControlled(self):
+        """
+        Return True if the flux is controlled, False otherwise.
+        """
+        status = self.status()
+        if len(status) < 4:
+            return False
+
+        if status[3] == 1:
+            return True
+
+        return False
 
     def power(self, flag):
         """
@@ -183,6 +208,16 @@ class Instrument(Driver):
 
     def off(self):
         self.power(False)
+
+    def isOn(self):
+        status = self.status()
+        if len(status) < 4:
+            return False
+
+        if status[1] == 1:
+            return True
+
+        return False
 
     def getAmps(self):
         return self.xmlrpc.getAmps()
@@ -210,17 +245,35 @@ class Instrument(Driver):
 
         # keys : specify the key order
         keys = ['MODEL',
-                'DRIVER']
+                'DRIVER',
+                'ON',
+                'CONTROL',
+                'CURRENT',
+                'VOLTAGE',
+                'POWER',
+                'TIME']
 
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
             'DRIVER' : 'Instrument software driver' 
+            'ON'     : '1 = power on, 0 = power off',
+            'CONTROL': '1 = regulated flux, 0 otherwise',
+            'CURRENT': '[A] lamp current',
+            'VOLTAGE': '[V] lamp voltage',
+            'POWER'  : '[W] lamp power',
+            'TIME'   : '[hours] ???'
             }
 
         values = {
             'MODEL'  : 'ORIEL ' + self._model,
             'DRIVER' : 'oriel / lamp_oriel' 
+            'ON'     : int(self.isOn()),
+            'CONTROL': int(self.isFluxControlled()),
+            'CURRENT': self.getAmps(),
+            'VOLTAGE': self.getVolts(),
+            'POWER'  : self.getWatts(),
+            'TIME'   : self.getHours()
             }
 
         return keys, values, comments
