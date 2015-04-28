@@ -43,7 +43,8 @@ from exceptions import Exception
 
 # ==================================================================
 
-DEFAULT_HOSTNAME = "lpnlsstbench"
+# DEFAULT_HOSTNAME = "lpnlsstbench"
+DEFAULT_HOSTNAME = "134.158.155.98"
 DEFAULT_PORT     = 8211
 DEFAULT_DEVICE   = "/dev/ttyS1"
 

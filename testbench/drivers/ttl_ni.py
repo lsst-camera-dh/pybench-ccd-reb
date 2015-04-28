@@ -16,6 +16,10 @@ which generates ttl signals (through Edo software and XML-RPC)
 #                         returns the state (1: opened, 0: closed)
 # closeShutter()    closes the security shutter
 #                         returns the state (1: opened, 0: closed)
+# openMellesShutter()     opens the Melles shutter
+#                         returns the state (1: opened, 0: closed)
+# closeMellesShutter()    closes the Melles shutter
+#                         returns the state (1: opened, 0: closed)
 # moveFilterWheel() moves the filter wheel
 #                         check movement with the status() method
 # homeFilterWheel() moves the filter wheel to the home position: filter 300nm
@@ -31,7 +35,6 @@ import time
 import xmlrpclib
 
 from driver import Driver
-
 
 # =======================================================================
 
@@ -93,7 +96,6 @@ class Instrument(Driver):
                 "TTL board not connected (or ttl software not running).")
 
         Driver.register(self, bench)
-        
 
 
     def close(self):
@@ -115,27 +117,60 @@ class Instrument(Driver):
         """
         return self.xmlrpc.status()
 
+    # ===================================================================
 
-    def openShutter(self):
+    def openSafetyShutter(self):
         """
         Open the safety shutter.
         Return the shutter state (1: opened, 0: closed).
         """
         return self.xmlrpc.openShutter()
 
-    def closeShutter(self):
+    def closeSafetyShutter(self):
         """
         Close the safety shutter.
         Return the shutter state (1: opened, 0: closed).
         """
         return self.xmlrpc.closeShutter()
 
-    def shutterIsOpen(self):
+    def SafetyShutterIsOpen(self):
         """
-        Return the shutter state (Open = True, Close = False)
+        Return the safety shutter state (Open = True, Close = False)
         """
         status = self.status()
         return bool(status[0])
+
+    # ===================================================================
+
+    def openMellesShutter(self):
+        """
+        Open the Melles shutter.
+        Return the shutter state (1: opened, 0: closed).
+        """
+        return self.xmlrpc.openMellesShutter()
+
+    def openShutter(self):
+        return self.openMellesShutter()
+
+    def closeMellesShutter(self):
+        """
+        Close the Melles shutter.
+        Return the shutter state (1: opened, 0: closed).
+        """
+        return self.xmlrpc.closeMellesShutter()
+
+    def closeShutter(self):
+        return self.closeMellesShutter()
+
+    def MellesShutterIsOpen(self):
+        """
+        Return the Melles shutter state (Open = True, Close = False)
+        """
+        status = self.status()
+        return bool(status[1])
+
+    def shutterIsOpen(self):
+        return self.MellesShutterIsOpen()
 
     # ===================================================================
 

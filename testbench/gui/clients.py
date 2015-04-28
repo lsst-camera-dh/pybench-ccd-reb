@@ -10,10 +10,10 @@ screens = {
                 'background': 'bg-ccd-grey.png' },
     'lights': { 'title': "Light Sources",
                 'desktop': 1,
-                'background': '/tmp/bg-light-sources.png' },
-    'cryo':   { 'title': "Cryogeny & Vacuum",
+                'background': 'bg-light-sources.png' },
+    'cryos':   { 'title': "Cryogeny & Vacuum",
                 'desktop': 2,
-                'background': '/tmp/bg-cryo-pumps.png' },
+                'background': 'bg-cryo-pumps.png' },
     'logs':   { 'title': "Logs",
                 'desktop': 3,
                 'background': 'bg-ccd-grey.png' },
@@ -51,7 +51,7 @@ clients = {
         'host': 'lpnlsstbench',
         'commandline': 'laserthorlabs',
         'screen': 'lights',
-        'position': {'x': 1950, 'y': 750, 'w': 420, 'h': 420} 
+        'position': {'x': 1950, 'y': 700, 'w': 520, 'h': 420} 
     },
     #-------------------------------------------------------------
     # TTL control (filter wheel, shutters, flipping mirror)

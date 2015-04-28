@@ -1,4 +1,6 @@
 #
+# LPNHE Testbench for the LSST CCD
+#
 # baseline configuration of instrument drivers: devices and XML-RPC ports
 # This file is used by all the Testbench scripts.
 #
@@ -36,11 +38,10 @@ config = {
     #
     'reb': {
         'host'        : 'lpnlsstacq',
-        # 'devices'     : ['/dev/laser'],
         'driver'      : 'ccd_reb',
-        'reb_id'      : 2
-        # 'port'        : 8082,
-        # 'commandline' : 'laserthorlabs'
+        'reb_id'      : 2,
+        'stripe'      : 0,
+        'xmlfile'     : 'sequencer-soi.xml'
         },
     #
     # ---------------------------------------------------------------------
@@ -72,8 +73,9 @@ config = {
     # Keithley 6487 current+voltage source
     # *Critical*
     # backsubstrate bias power supply
-    # option 1: keithley /dev/ttyUSB4 8088
-    # option 2: no-GUI ultra simple control with keithley-server
+    # option 1: keithley /dev/ttyS11 8088
+    # option 2: no-GUI ultra simple control with keithley-server :
+    # keithley-server --device=/dev/ttyS11 --hostname=134.158.155.98 --port=8301
     #
     # 'bss': {
     #     'host'        : 'lpnlsstbench',
@@ -89,7 +91,7 @@ config = {
         'devices'     : ['/dev/ttyS11'],
         'driver'      : 'power_backsubstrate_ks',
         'port'        : 8301,
-        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=lpnlsstbench --port=8301'
+        'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=134.158.155.98 --port=8301'
         },
     #
     # ---------------------------------------------------------------------
@@ -117,11 +119,11 @@ config = {
     #
     # ---------------------------------------------------------------------
     # QTH lamp
-    # oriel /dev/ttyUSB3 8089
+    # oriel /dev/ttyS2 8089
     #
     'QTH': {
         'host'        : 'lpnlsstbench',
-        'devices'     : ['/dev/ttyUSB3'],
+        'devices'     : ['/dev/ttyS2'],
         'driver'      : 'lamp_oriel',
         'port'        : 8089,
         'commandline' : 'oriel %device %port'
@@ -129,11 +131,11 @@ config = {
     #
     # ---------------------------------------------------------------------
     # XeHg lamp
-    # oriel /dev/ttyUSB2 8085
+    # oriel /dev/ttyS3 8085
     #
     'XeHg': {
         'host'        : 'lpnlsstbench',
-        'devices'     : ['/dev/ttyUSB2'],
+        'devices'     : ['/dev/ttyS3'],
         'driver'      : 'lamp_oriel',
         'port'        : 8085,
         'commandline' : 'oriel %device %port'
@@ -145,11 +147,11 @@ config = {
     #
     # ---------------------------------------------------------------------
     # Triax monochromator
-    # triax /dev/ttyUSB0 8086
+    # triax /dev/ttyS0 8086
     #
     'triax': {
         'host'        : 'lpnlsstbench',
-        'devices'     : ['/dev/ttyUSB0'],
+        'devices'     : ['/dev/ttyS0'],
         'driver'      : 'monochromator_triax',
         'port'        : 8086,
         'commandline' : 'triax %device %port'

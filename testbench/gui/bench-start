@@ -110,7 +110,9 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 for s_name, s_properties in screens.iteritems():
       desktop = s_properties['desktop']
       if s_properties.has_key('background'):
-            bgfile = os.path.join('data', s_properties['background']) # path
+            bgfile = os.path.join(scriptdir, 
+                                  "..", "share", "images", 
+                                  s_properties['background']) # path
             print "setting background of desktop %d with file %s" % (desktop, bgfile)
             wm.setbackground(desktop, bgfile)
 

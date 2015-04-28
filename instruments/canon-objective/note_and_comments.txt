@@ -1,8 +1,491 @@
 Remy Le Breton
-2015-04
 
 Some comments on the canon objective :
+
+2015-04-22
 
 - If we want to initiate properly the objective and make it move, be careful how we fix it on its "ring". There is a little angular space when it seems to be fixed so it can continue to move. To avoid this problem, you have to turn the objective the more anticlockwise you can.
 
 - If a manual command is launch before using one in focus move, the manual command does not work. Clue : vpowPin ?
+
+- 44 is the hexadecimal code for D, hence a problem with the command if it is note reinitialized each time.
+
+2015-04-23
+
+- Understood why a manual command work even if we do not put the vpowPin (power motor) to LOW : because in focus move, there is one digitalWrite(vpowPin, LOW); to power up the motor, but at the end to shut down the motor, it is also written digitalWrite(vpowPin, LOW); instead of digitalWrite(vpowPin, HIGH);.
+
+- To avoid the problem, need to power up and down the motor befor and after sending the command.
+
+- If the motor is always power up, possibility to obtain again the same position ater a shut down ? Because a priori it is no possible.
+
+2015-04-24
+
+- About mouvement : 4400 is to go toward the ring. From 00 to FF for the number of step. 44FF is to go the oposit way. From FF to 00 for the number of step. Need further investigation, for exemple 4401FF is the double of 4400FF ? Yes it seems to be the double. So 44FE00 should be the double in the oposit way ? Ok seems to be this way. Warning : if it is really the one's complement, FFFF should make a zero step ? Is there a shift ? Look at the focus_move() function.
+
+- Negative value correspond to a movement toward focus max (0x06)
+- Positive value correspond to a movement toward focus min (0x05)
+
+Number = binary = one's complement
+0 = 00000000 = 11111111 = FF = 0
+1 = 00000001 = 11111110 = FE = -1
+2 = 00000010 = 11111101 = FD = -2
+...
+
+True movement :
+1 = 0001
+-1 = FFFF
+
+The information is on two bytes ie : FF and FF 
+
+- When the objective is unpluged and then repluged, the position is set to 0.
+
+-Just by eye : we can't really make the difference between 1 step and 10 step. 44000A seems to be smaller than 440001. No, in fact it seems to be an hysteresis. When the objective go one way, and then the other way, if your first movement the other way is just one step, it seems bigger than ten because the "ring" have to move more. But then if you make another one step, it is smaller.
+
+- Hysteresis seems to be confirmed in the movement of the ring but not confirmed on the real movement of the objective.
+
+- Number of step on the whole range ? :
+   - Going down : 4x16x16 
+   - Going up : 4x16x16 
+
+- For the two ways : in fact it seems to be less (1024 is a max limit). Make more tests.
+
+- Down : 3x16x16 + 8x16 + 4x16
+- Up : 3x16x16 + 8x16 + 4x16
+
+- The movement seems to be reversible, ie there is the sme number of steps way down and way up (near 960)
+
+- Test with 900 : 
+- Down : 900 + 10 + 10 + (10 stop) seems to be 925 +- 5
+- Up : 920 +- 5
+
+- Test doing 920 up then down many times to see if there is always the same number of steps for a whole range. Ok, seems to always have a number of steps above 900 in each direction.
+
+2015-04-27 
+
+- Today's goal : understand how the objective give its position.
+
+- First test : go focus min and max and ask the position :
+  - Max : (FFFFFFFF,FFFFFFF7) (FFFFFFFF,FFFFFFEA) (FFFFFFFF,FFFFFFE7)
+    	  (FFFFFFFF,FFFFFFFD) (0,B) (0,1F) (0,2D) (0,31) (0,37) (0,3E)
+  - Min : (3,FFFFFFDD) (3,FFFFFFD4) (3,FFFFFFD5)
+    	  (3,FFFFFFE0) (3,FFFFFFFB) (4,2) (4,4) (4,A) (4,11) (4,18)
+
+- Unplug and replug :
+  - Asking position before any movement (theoreticaly at min) :
+    	   - (0,0)
+	   - if going at min (same position) change the value ? :
+	     	- (0,2E) then max at (FFFFFFFC,51)
+
+- Going at middle (approx 450 steps toward min), then unplug and replug :
+  - Position : (0,0) and wait 10 minutes (0,0)
+
+- Then Min and max :
+  - Max : (FFFFFFFD,FFFFFFE0) (FFFFFFFD,FFFFFFE8) (FFFFFFFD,FFFFFFF2)
+    	  (FFFFFFFD,FFFFFFF9)
+  - Min : (1,FFFFFFC2) (1,FFFFFFC5) (1,FFFFFFCC) (1,FFFFFFD5)
+
+- On the https://pickandplace.wordpress.com/2011/10/05/canon-ef-s-protocol-and-electronic-follow-focus/ :
+  - He seems to have the same problem : have to go on the whole range to count the number of steps and then keep the number in the firmware.
+  - It is a USM motor (Utra-sonic motor) : seems to work with piézo.
+
+- Added Poll the lens in the loop function, before the executeCommand.
+
+- Next test to do : go middle, unplug then replug : ask position (should be at 0) move one step or ten or more, then ask position again... should be 1, 10... ?
+
+- Sequence (beginning at (0,0)) :
+Commande and Answer :
+C00000 0 0 0
+440001 0 44 44
+C00000 0 0 9
+44FFFF 0 44 44
+C00000 FFFFFFFF FFFFFFFF
+44FFFF 0 44 44
+C00000 0 FFFFFFFF FFFFFFF9
+440001 0 44 44
+C00000 0 0 1
+
+- Sequence (beginning at (0,0)) :
+C00000 0 0 0
+440001 0 44 44
+C00000 0 0 9
+440001 0 44 44
+C00000 0 0 D
+
+- Sequence (beginning at (0,0)) :
+C00000 0 0 0
+440002 0 44 44
+C00000 0 0 9
+440002 0 44 44
+C00000 0 0 E
+
+- Sequence (beginning at (0,0)) :
+C00000 0 0 0
+440003 0 44 44
+C00000 0 0 9
+440003 0 44 44
+C00000 0 0 1F
+
+- Sequence (beginning at (0,0)) :
+C00000 0 0 0
+440004 0 44 44
+C00000 0 0 9
+440004 0 44 44
+C00000 0 0 10
+440004 0 44 44
+C00000 0 0 14
+440004 0 44 44
+C00000 0 0 1B
+440004 0 44 44
+C00000 0 0 1F
+440004 0 44 44
+C00000 0 0 27
+440004 0 44 44
+C00000 0 0 30
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 7
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : C
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 10
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 18
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 1B
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1  Answer : 4
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 23
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : A
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : F
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 14
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 1C
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 25
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 29
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : FF  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFF6
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : FF  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFF1
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : FF  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFEA
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : FF  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFE2
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : FF  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFD7
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : F6  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFF3 (12) (steps added to the last position)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : F6  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFE8 (11)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : F6  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFDD (11)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : F6  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF (13)
+Command : 0  Answer : FFFFFFD0
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : F6  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFC4 (12)
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : EC  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFE9 (22) steps with respect to FF
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : EC  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFD5 (20)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : EC  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFC0 (21)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : EC  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFA9 (23)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : EC  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFF94 (21)
+
+- Observation :
+  - I don't understand the behaviour under 10 step. The moving command seems to have a unprecision of +3 steps each times you mmove the focus. Above ten the relative error begins to be small. Under ten it is huge.
+  - A priori you can determine the direction of displacement of the last moving. If the response to C00000 is FFxx then the objective was going toward the max. If it is OOxx, it was going toward the min. Or it is just relative with respect to the initial 0 (See how precisely a USM motor work !)
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 21 (33) (steps from 00 ?)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 40 (31)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 5F (31)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 7F (32)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : FFFFFF9F (32)
+
+- Next test : doing positive and negative displacement alternatively.
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 22 (34) (absolute value of the added steps)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : E1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 0 (0)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 1F (31)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : E1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFFD (33)
+Command : C0  Answer : 0
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFFD (0)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 1D (31)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : E1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFFE (32)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 1F (32)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : E1  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFFF (32)
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 21 (33)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : C3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFE1 (63)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3C  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 20 (62)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : C3  Answer : 44
+
+- Sequence (beginning at (0,0)) :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 1E  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 20 (32)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : C3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFE2 (61)
+Command : 44  Answer : 0
+Command : 0  Answer : 44
+Command : 3C  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : 0
+Command : 0  Answer : 20 (61)
+Command : 44  Answer : 0
+Command : FF  Answer : 44
+Command : C3  Answer : 44
+Command : C0  Answer : 44
+Command : 0  Answer : FFFFFFFF
+Command : 0  Answer : FFFFFFE0 (63)
+
+- Next test : beginning at middle, unplug and replug and then test the behavior at the min and max focus (ie what become the position if i am at the max or min and I want to go further ?)
+
+- Next test : if we want to reinitialize the position (put the current at 0) can we just make init_Lens() ? With the actual init_lens(), the position is the same. Find a way to :
+       - power on a first time
+       - go at an extrema
+       - go to the middle
+       - reinitialize (put vddPin HIGH then LOW manually ?)
+       - We are at the middle at position 0 !
+
+- To do : test the behavior for small movements (under ten steps)
