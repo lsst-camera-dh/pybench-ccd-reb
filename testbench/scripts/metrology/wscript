@@ -21,7 +21,9 @@ def configure(conf):
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py', 'laser_flux.py'], 
+        source = ['__init__.py', 
+                  'laser_flux.py', 
+                  'lamp_flux.py'], 
         install_path = '${PYTHONDIR}/lsst/testbench/scripts/metrology')
 
     bld.recurse(submodules)
