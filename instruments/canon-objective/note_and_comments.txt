@@ -489,3 +489,96 @@ Command : 0  Answer : FFFFFFE0 (63)
        - We are at the middle at position 0 !
 
 - To do : test the behavior for small movements (under ten steps)
+
+- To do : do 100 steps and then 10x10 step back
+  - Command : C0  Answer : 0
+    Command : 0  Answer : 0
+    Command : 0  Answer : 0
+    Command : 44  Answer : 0
+    Command : 0  Answer : 44
+    Command : 64  Answer : 44
+    Command : C0  Answer : 44
+    Command : 0  Answer : 0
+    Command : 0  Answer : 66 (102)
+    Command : 44  Answer : 0
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : 44  Answer : 44
+    Command : FF  Answer : 44
+    Command : F6  Answer : 44
+    Command : C0  Answer : 44
+    Command : 0  Answer : FFFFFFFF
+    Command : 0  Answer : FFFFFFEA (124)
+
+- Next test : the last bit is shifted ? (not taken into account) : to do 1 steps needs to make 440003 ? I don't understand why there is a movement if I make 440001 ? Then, if it is not really taken into account, why the movement is higher by 2 and not less by two steps ?
+
+- Make a focus.txt and read doc on line how they mke their auto-focus (variance, first term of fourier transform...)
+
+2015-04-28
+
+- To take picture : dmk /dev/video1
+
+- Test at extrema : begin at middle, then go max and try to go max again :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : FFFFFF9A
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : 72
+
+- Same as before more times :
+Command : C0  Answer : 0
+Command : 0  Answer : 0
+Command : 0  Answer : 0
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : FFFFFFDE
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : FFFFFFB4
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : FFFFFF84
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : 55
+Command : 6  Answer : 0
+Command : C0  Answer : 6
+Command : 0  Answer : FFFFFFFD
+Command : 0  Answer : 25
+Command : 6  Answer : 0
+
+- Test to take some images :

@@ -1,0 +1,19 @@
+Remy Le Breton :
+Information about auto-focus (canon and other)
+
+- http://www.the-digital-picture.com/Photography-Tips/canon-eos-dslr-autofocus-explained.aspx
+(The article is more about the sensor : line, cros, vertical and horizontal sensors... they once mention "phase detection and contrast detection")
+
+- When it was argentic, how does the autofocus work without fluxes analysis ?
+
+- http://cpn.canon-europe.com/content/education/infobank/autofocus/autofocus.do
+(semi reflective miror, then lens which separates the light in two images : if there is a deviationbetween the two, then need to focus.
+
+- http://www.cambridgeincolour.com/tutorials/camera-autofocus.htm
+
+- https://photographylife.com/how-phase-detection-autofocus-works
+(Nice one)
+
+- Phase detection focus : analysis of an image, split in two : study of the difference of focus of ray ligth at the edge of the lens (work on cotrast). Phase detection focus is faster than contrast focus because at the first analysis, it knows how to move to achieve the perfect focus, and so requier less data image to analyse.
+
+- http://en.wikipedia.org/wiki/Autofocus#Contrast_detection
