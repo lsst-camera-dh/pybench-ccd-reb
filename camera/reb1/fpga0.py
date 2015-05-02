@@ -22,7 +22,7 @@ class FPGA0(FPGA):
     # --------------------------------------------------------------------
 
     def __init__(self, ctrl_host=None, reb_id=2):
-        FPGA.__init__(ctrl_host, reb_id)
+        FPGA.__init__(self, ctrl_host, reb_id)
         # declare two CABACs for each stripe even if they will not be used
         # (at least we will want to initialize to 0 if they exist)
         self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]

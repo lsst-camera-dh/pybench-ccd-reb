@@ -13,7 +13,7 @@ import time
 import os
 import string
 import numpy as N
-import pyfits
+import astropy.io.fits as pyfits
 import fpga
 import rebxml
 
@@ -105,7 +105,8 @@ class REB(object):
         self.nchannels = 0
         self.set_stripes(stripe_id)  # stripe in use
         self.imgtag = 0
-        self.recover_filetag()  # in case we are recovering from software reboot and not hardware reboot
+        self.recover_filetag()  # in case we are recovering from software reboot
+        self.update_filetag(self.imgtag)
         self.xmlfile = "sequencer-soi.xml"
         # initialize parameters for frames
         self.seq = None  # will be filled when loading the sequencer
@@ -123,7 +124,7 @@ class REB(object):
                 bitval += 1 << s
         self.fpga.write(0x400007, bitval)
 
-        if self.stripes:
+        if not self.stripes:
             print("Warning: no stripe selected.")
         if self.full18bits and len(self.stripes) > 2:
             print("Warning: attempting to read 18-bit data for 3 stripes, full image will not fit")
@@ -135,8 +136,9 @@ class REB(object):
 
     def update_filetag(self, t):
         """
-        Updates the filetag to the FPGA timer.
-        :param t: int new numerical tag
+        Updates the filetag from the given value and writes it to the
+        FPGA timer.
+        :param t: int
         :return:
         """
         hextag = generate_tag(t)

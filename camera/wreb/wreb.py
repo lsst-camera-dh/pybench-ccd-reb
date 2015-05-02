@@ -10,7 +10,7 @@ import py.camera.generic.reb as reb
 import time
 import os
 import fpga
-import pyfits
+import astropy.io.fits as pyfits
 
 
 class WREB(reb.REB):
