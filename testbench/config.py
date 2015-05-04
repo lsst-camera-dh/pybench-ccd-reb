@@ -48,13 +48,12 @@ config = {
     # REB (version 2)
     # 
     #
-    'reb2': {
+    'wreb': {
         'host'        : 'lpnlsstacq',
-        # 'devices'     : ['/dev/laser'],
-        'driver'      : 'ccd_reb2',
-        'reb_id'      : 2
-        # 'port'        : 8082,
-        # 'commandline' : 'laserthorlabs'
+        'driver'      : 'ccd_reb',
+        'reb_id'      : 0xFF,
+        'stripe'      : 0,
+        'xmlfile'     : 'sequencer-wreb.xml'
         },
     # ---------------------------------------------------------------------
     # C-REB (???)

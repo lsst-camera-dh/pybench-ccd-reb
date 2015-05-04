@@ -5,37 +5,56 @@
 # Testing a Python class to replace CCD bench scripts
 
 import os
-import types
 import time
-import datetime
-#import subprocess
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 
-import lsst.testbench
+#import py.testbench.drivers.ccd_reb as reb
+import py.testbench as testbench
 
-B = lsst.testbench.Bench() # singleton
+B = testbench.Bench()  # singleton
 
-# B.register('reb')  # connect to the REB 
-# B.register('bss')  # connect (remotely) to the BackSubstrate Power
+B.register('reb')  # connect to the REB
+B.register('bss')  # connect (remotely) to the BackSubstrate Power
 
-def load_sequencer(self):
-    self.seq = reb.fromxmlfile(self.xmlfile)
-    self.primeheader["CTRLCFG"] = self.xmlfile
 
-    pass
+def load_sequencer(self, filename=None):
+    self.reb.load_sequencer(filename)
 
-# B.load_sequencer = types.MethodType(load_sequencer, B)
-Bench.load_sequencer = load_sequencer
+testbench.Bench.load_sequencer = load_sequencer
+
+
+def REBpowerup(self):
+    print("Powering up the REB1")
+    self.reb.REBpowerup()
+
+testbench.Bench.REBpowerup = REBpowerup
+
 
 def CCDpowerup(self):
-    print "Power up the CCD"
-    pass
+    print "Powering up the CCD"
+    self.reb.CCDpowerup()
+    time.sleep(1)
+    # starts Keithley backsubstrate voltage
+    self.bss.config(voltage=-60)
+    self.bss.enable()
+    # TODO: wait until complete, checks
+    time.sleep(5)
+    print("Start-up sequence complete")
 
-# B.CCDpowerup = types.MethodType(CCDpowerup, B)
-Bench.CCDpowerup = CCDpowerup
+testbench.Bench.CCDpowerup = CCDpowerup
 
-# stand_alone = True
+
+def CCDshutdown(self):
+    print("Shutting down the CCD")
+    self.reb.wait_end_sequencer()
+    # Back-substrate first
+    self.bss.disable()
+    # TODO: wait until done
+    time.sleep(10)
+    self.reb.CCDshutdown()
+
+testbench.Bench.CCDshutdown = CCDshutdown
 
 # def wait_for_action(action):
 #     """
@@ -49,70 +68,6 @@ Bench.CCDpowerup = CCDpowerup
 #         s = s.lower()
 
 
-# def generate_frametag():
-#     now = datetime.datetime.utcnow()
-#     tagstr = time.strftime('%Y%m%d0%h%M%s', today) # + '%05d' % number
-#     tag = int(tagstr,16)
-#     return tag
-
-
-# def log(name, logger, cmd, value = None):
-#     """
-
-#     :param name:
-#     :param logger:
-#     :param cmd:
-#     :param value:
-#     """
-#     if logger:
-#         if value:
-#             logger.log("%s : %s = %s" % (name, str(cmd), str(value)) )
-#         else:
-#             logger.log("%s : %s" % (name, str(cmd)) )
-
-
-# def dict_to_fitshdu(dictheader, fitshdu):
-#     fitsheader = fitshdu.header
-#     for keyword in dictheader:
-#         fitsheader[keyword] = dictheader[keyword]
-
-
-# def get_sequencer_hdu(fpga):
-#     """
-#     Builds table HDU for FITS file containing sequencer dump
-#         :param fpga: FPGA
-#         :return: pyfits.TableHDU
-#         """
-#     prog = fpga.dump_program()
-#     progaddr = prog.instructions.keys()
-#     prognum = 256 + len(progaddr)
-
-#     slicenum = np.ndarray(shape=(prognum,), dtype=np.dtype('a4'))
-#     output = np.ndarray(shape=(prognum,), dtype=np.dtype('a32'))
-#     duration = np.ndarray(shape=(prognum,), dtype=np.dtype('i8'))
-
-#     for ifunc in range(16):
-#         seq = fpga.dump_function(ifunc)
-#         for islice in range(16):
-#             i = ifunc * 16 + islice
-#             slicenum[i] = hex(i)[2:]
-#             output[i] = bin(seq.outputs[islice])[2:]
-#             duration[i] = seq.timelengths[islice]
-
-#     for i, addr in enumerate(sorted(progaddr)):
-#         slicenum[i+256] = '30' + hex(addr)[2:]
-#         output[i+256] = prog.instructions[addr].__repr__()[:20]
-#         duration[i+256] = prog.instructions[addr].repeat
-
-#     slicecol = pyfits.Column(name="Address", format='A4', array=slicenum)
-#     outputcol = pyfits.Column(name="Output", format='A32', array=output)
-#     durationcol = pyfits.Column(name="Time", format='I8', array=duration)
-
-#     exthdu = pyfits.new_table([slicecol, outputcol, durationcol], tbtype='TableHDU')
-#     # add name to extension here
-#     exthdu.header["EXTNAME"] = "SEQ_CFG"
-
-#     return exthdu
 
 
 # class Bench(object):
@@ -153,127 +108,11 @@ Bench.CCDpowerup = CCDpowerup
 #     def 
 
 
-#     def REBpowerup(self):
-#         """
-#         Operations after powering the REB (through CCS)
-#         :return:
-#         """
-#         try:
-#             self.reb.read(0, 5)
-#         except:
-#             wait_for_action("Could not establish communication with DREB, try rebooting RCE.")
-#             self.reb.read(0, 5)
-
-#         self.reb.set_strip(self.strip_id)
-#         self.reb.cabac_reset()
-#         self.reb.send_sequencer(self.seq)
-#         hextag = generate_tag(self.imgtag)
-#         self.reb.set_time(hextag)  # using time registers to store image tag (do not run clock in this case)
-#         #self.CCDshutdown()
-
-#         print("REB ready to connect to CCD")
-#         #subprocess.Popen("imageClient %d" % self.reb_id, shell=True)  # hijacks the ipython shell
-#         print("Remember to launch imageClient in %s" % self.rawimgdir)
-
-#     def CCDpowerup(self):
-#         """
-#         Sequence to power up the CCD safely.
-#         """
-
-#         #sets the default sequencer clock states to 0
-#         self.reb.send_function(0, reb.Function( name="default state",
-#                                                 timelengths={0: 2, 1: 0},
-#                                                 outputs={0: 0, 1: 0} ))
-
-#         #starting drain voltages on CABAC
-#         drains = {"OD": 29, "GD": 24, "RD": 18}
-#         self.reb.send_cabac_config(drains)
-
-#         time.sleep(1)
-
-#         #starting OG voltage on CABAC
-#         og = {"OG": 3.5}
-#         self.reb.send_cabac_config(og)
-
-#         time.sleep(1)
-
-#         #sets clock rails
-#         dacs = {"V_SL": 0, "V_SH": 8.03, "V_RGL": 0, "V_RGH": 8.03, "V_PL": 0, "V_PH": 9.13}
-#         self.reb.set_dacs(dacs)
-
-#         time.sleep(1)
-
-#         #sets clock currents on CABAC
-#         iclock = {"IC": 255}
-#         self.reb.send_cabac_config(iclock)
-
-#         time.sleep(1)
-
-#         #puts current on CS gate
-#         dacOS = {"I_OS": 0xfff}
-#         self.reb.set_dacs(dacOS)
-
-#         #rewrite default state of sequencer (to avoid reloading functions)
-#         self.reb.send_function(0, reb.Function( name="default state",
-#                                             timelengths={0: 2, 1: 0},
-#                                             outputs={0: 0x6bc, 1: 0} ))
-
-#         time.sleep(1)
-
-#         #starts Keithley backsubstrate voltage
-#         self.bss.config(voltage=-40)
-#         self.bss.enable()
-
-#         print("Start-up sequence complete")
-
-#     def CCDshutdown(self):
-#         """
-#         Sequence to shut down the CCD safely
-#         """
-
-#         self.wait_end_sequencer()
-#         #Back-substrate first
-#         self.bss.disable()
-
-#         #current source
-#         self.reb.set_dacs({"I_OS": 0})
-
-#         time.sleep(1)
-
-#         #clock states to 0 
-#         self.reb.send_function(0, reb.Function( name="default state",
-#                                                 timelengths={0: 2, 1: 0},
-#                                                 outputs={0: 0, 1: 0} ))
-#         #currents on CABAC clocks to 0
-#         self.reb.send_cabac_config({"IC": 0})
-#         #clock rails to 0
-#         self.reb.set_dacs({"V_SL": 0, "V_SH": 0, "V_RGL": 0, "V_RGH": 0, "V_PL": 0, "V_PH": 0})
-
-#         time.sleep(1)
-
-#         #currents on OG to 0
-#         self.reb.send_cabac_config({"OG": 0})
-
-#         time.sleep(1)
-
-#         #drains to 0
-#         self.reb.send_cabac_config({"OD": 0, "GD": 0, "RD": 0})
-
-#         print("CCD shutdown complete")
 
 #     def bench_shutdown(self):
 #         pass
 #         #self.lamp.ttl.closeShutter()
 
-#     def update_tag(self, num = 1):
-#         """
-#         Updates the clock tag to current date and given sequence number
-#         :param num: int
-#         :return:
-#         """
-#         self.imgtag = num
-#         hextag = generate_tag(self.imgtag)
-#         self.reb.set_time(hextag)
 
 #     def get_headers(self):
 #         """
@@ -299,56 +138,7 @@ Bench.CCDpowerup = CCDpowerup
 #         self.monochromator.testheader["MONOWL"] = wavelength
 #         self.primeheader["CCDTEMP"] = self.temp.getTemp()
 
-#     def get_extension_header(self, REBchannel, fitshdu, borders = False):
-#         """
-#         Builds FITS extension header with position information for each channel
-#         :param REBchannel: int
-#         :return:
-#         """
-#         extheader = fitshdu.header
-#         extheader["NAXIS1"] = self.imgcols
-#         extheader["NAXIS2"] = self.imglines
 
-#         if borders == False:
-#             parstringlow = '1:2002'
-#             parstringhigh = '4004:2003'
-#             colwidth = 512
-#             extheader['DETSIZE'] = '[1:4096,1:4004]'
-#             extheader['DATASEC'] = '[11:522,1:2002]'
-#         else :
-#             parstringlow = '1:%d' % self.imglines
-#             parstringhigh = '%d:%d' % (2*self.imglines, self.imglines+1)
-#             colwidth = self.imgcols
-#             extheader['DETSIZE'] = self.primeheader["DETSIZE"]
-#             extheader['DATASEC'] = '[1:%d,1:%d]' % (self.imgcols, self.imglines)
-
-#         if REBchannel<self.nchannels/2:
-#             pdet = parstringlow
-#             si = colwidth*(REBchannel+1)
-#             sf = colwidth*REBchannel+1
-#         else :
-#             pdet = parstringhigh
-#             # previous geometry
-#             #si = colwidth*(self.nchannels-1-REBchannel)+1
-#             #sf = colwidth*(self.nchannels-REBchannel)
-#             si = colwidth*(REBchannel-self.nchannels/2)+1
-#             sf = colwidth*(REBchannel-self.nchannels/2+1)
-
-#         extheader['DETSEC'] = '[%d:%d,%s]' % (si,sf,pdet)
-
-#     def waiting_sequence(self, name="Wait"):
-#         """
-#         Lets CCD wait until keyboard interrupt is sent by clearing periodically
-
-#         """
-#         self.wait_end_sequencer()
-#         keepwaiting = True
-#         while keepwaiting:
-#             try:
-#                 self.reb.run_subroutine(name)
-#                 time.sleep(60)
-#             except KeyboardInterrupt:
-#                 keepwaiting = False
 
 #     def get_exposure_time(self, darktime=False):
 #         """
@@ -441,19 +231,7 @@ Bench.CCDpowerup = CCDpowerup
 #             # setting up tag for next image
 #             self.update_tag(self.imgtag + 1)
 
-#     def wait_end_sequencer(self):
-#         """
-#         Waits until the sequencer is not running anymore.
-#         """
-#         while self.reb.get_state() & 4:  # sequencer status bit in the register
-#             time.sleep(1)
 
-#     def make_fits_name(self, imgstr):
-#         fitsdir = os.path.join(self.fitstopdir,time.strftime('%Y%m%d',time.gmtime()))
-#         if not os.path.isdir(fitsdir):
-#             os.mkdir(fitsdir)
-#         fitsname = os.path.join(fitsdir, imgstr +'.fits')
-#         return fitsname
 
 #     def save_to_fits(self, imgname, fitsname = ""):
 #         """
