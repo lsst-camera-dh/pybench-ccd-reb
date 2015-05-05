@@ -152,7 +152,7 @@ class XYZ(object):
 
         if self.homed and not(force):
             # put the 3 motors half-range ?
-            self.park()
+            if park: self.park()
             return
 
         # To avoid breaking the objective, we first go backward
@@ -171,7 +171,7 @@ class XYZ(object):
         self.z_axis.home()
 
         # then park it
-        self.park()
+        if park: self.park()
 
         self.homed = True
 
@@ -279,8 +279,8 @@ class XYZ(object):
     def check_target(self, x, y, z):
         """
         Check the target position.
-        Permitted volume for the "orange cryostat"
-        -- LLG & RLB - 20141017
+        Permitted volume for the 2 "grey cryostat"
+        -- LLG, RLB, SK - 20150504
         """
 
         if (x < 0.0) or (x > 101.7):
@@ -293,15 +293,27 @@ class XYZ(object):
             raise ValueError("XYZ coordinate z out of allowed range.")
 
         # Extra restriction to avoid crashing against the wall ;-)
+        # ----------------------------------------------------------------
+        # Grey cryostats, new settings
 
-        xcenter = 33.42
-        ycenter = 44.52
-        radius = 24.0
+        xcenter = 41.60
+        ycenter = 38.42
+        radius = 22.5
+        zwall = 72.0
 
-        if z > 81.8:
-            dist = ((x-xcenter)**2 + (y-ycenter)**2)**.5
+        if z > zwall:
+            dist = ( (x-xcenter)**2 + (y-ycenter)**2 )**.5
             if dist > radius:
-                raise ValueError("XYZ target not allowed: will hit the window mount!!!")
+                raise ValueError(
+                    "XYZ target not allowed: will hit the window mount!!!")
+
+        #----------------------------------------------------------------
+        # # Former: orange cryostat
+        # xcenter = 33.42
+        # ycenter = 44.52
+        # radius = 24.0
+        # zwall = 81.8
+        #----------------------------------------------------------------
 
         return True
 
