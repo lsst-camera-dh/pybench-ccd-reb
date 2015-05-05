@@ -23,8 +23,7 @@ def build(ctx):
                   'reb.py',
                   'fpga.py',
                   'rebxml.py',
-                  'bidi.py
-                  ],
+                  'bidi.py'],
         install_path = '${PYTHONDIR}/lsst/camera/generic')
 
     # ctx.recurse(submodules)

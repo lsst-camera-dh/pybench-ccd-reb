@@ -119,7 +119,7 @@ class Instrument(Driver):
     # ===================================================================
 
 
-    def home(self):
+    def home(self, park = True):
         """
         Home the three motors, move up and down each of the 3 motors,
         to test the mechanical motor stops and reset the motor zeros.  
@@ -127,11 +127,11 @@ class Instrument(Driver):
         Should be called once at the begining of a run to detect
         the physical limits.
         
-        WARNING: blocking call. Takes about 20s.
+        WARNING: blocking call. Takes about 3 min.
         
         see: XYZ.home()
         """
-        result = self.xmlrpc.home()
+        result = self.xmlrpc.home(park)
         return result
 
 

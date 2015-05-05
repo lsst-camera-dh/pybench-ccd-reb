@@ -147,18 +147,18 @@ class XYZremote(object):
 
     # ----------------------- XYZ homing procedure -----------------
 
-    def home(self):
+    def home(self, park=True):
         """
         Home the three motors, move up and down each of the 3 motors,
         to test the mechanical motor stops and reset the motor zeros.  
         Should be called once at the begining of a run.
         
-        WARNING: blocking call. Takes about 20s.
+        WARNING: blocking call. Takes about 3 min.
         
         see: XYZ.home()
         """
         logging.info("XYZ.home() called.")
-        self.XYZ.home()
+        self.XYZ.home(park = park)
         logging.info("XYZ.home() done.")
         return True
 
