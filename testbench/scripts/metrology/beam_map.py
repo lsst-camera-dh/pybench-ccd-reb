@@ -43,7 +43,7 @@ B.laser_beam_map(self,
                  ymin = 0.0, ymax = 100.0, dy = 5.0, 
                  z = 0.0,
                  current_range = 2e-3,
-                 n = 20,
+                 n = 10,
                  meta = [])
 
      Will do a dark map, then a map for each laser channel.
@@ -57,7 +57,7 @@ def beam_map(self,
              ymin = 0.0, ymax = 100.0, dy = 5.0, 
              z = 0.0,
              current_range = 2e-3,
-             n = 20,
+             n = 10,
              meta = []):
 
     self.log("Homing the XYZ mount (takes up to 3 minutes. Be patient).")
@@ -89,7 +89,7 @@ def beam_map(self,
 
     print >>output, "# Keithley range = ", current_range
     print >>output, "# "
-    print >>output, "# fluxes on the LSST CCD testbench"
+    print >>output, "# Integrating sphere flux on the LSST CCD testbench"
     print >>output, "# time\t x\t y\t z\t \t PhD flux\t on/off"
 
     self.log("Taking dark...")
