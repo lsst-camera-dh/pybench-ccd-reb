@@ -6,7 +6,7 @@ import beamMaps as BM
 if len(sys.argv)>1:
     dataDir = sys.argv[1]
 else:
-    dataDir = "/home/lsst/data/metrology/2015-05-05"
+    dataDir = "/home-local/karkar/dataLSST/metrology/testdata"
 
 allfiles=[]
 maxdepth = 0
@@ -21,7 +21,7 @@ if len(allfiles) == 0:
     print "Error no  .data files were found here :" , dataDir
 
 print "will plot maps from files :", allfiles
-allmethods = [BM.beamMap2d,BM.beamMapScatter2d, BM.beamMapScatter3d, BM.beamMapSurface3d]
+allmethods = [BM.beamMapScatter2dFixedScale, BM.beamMapScatter2d,BM.beamMap2d, BM.beamMapScatter3d, BM.beamMapSurface3d]
 print "using methods :", [method.__name__  for method in allmethods]
 
 for filename in allfiles:
@@ -37,11 +37,29 @@ for filename in allfiles:
     Y = c[1]
     Z = c[2]
     flagShutter = c[3]
+    X = X[flagShutter==1]
+    Y = Y[flagShutter==1]
+    light = Z[flagShutter==1]
+    dark = Z[flagShutter==0]
+    # avLight = light.mean()
+    avDark = dark.mean()
+    signalMap = light - np.array([avDark]*light.shape[0])
+    meanMap = np.array([signalMap.mean()]*signalMap.shape[0])
+    percent = (signalMap - meanMap )*100/meanMap
     if flagShutter.shape[0] < 6:
         print "not enough valid points in this map, skipping"
 	continue
     title = header
+    label = 'signal above the average in percent'
+    plotDir = dataDir+"/plots/"
+    if not os.path.isdir(plotDir):
+                os.makedirs(plotDir)
+    print 'Data directory is :     %s' % dataDir
+    print 'Plot directory is :     %s' % plotDir
     for plotMethod in allmethods:
         print "now using method: ", plotMethod.__name__
-        plotname = filename[:-5]+"_"+plotMethod.__name__+".png"
-        plotMethod(X[flagShutter==1],Y[flagShutter==1],Z[flagShutter==1], plotname, title)
+        plotname = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+".png"
+        if plotMethod == BM.beamMapScatter2dFixedScale:
+            plotMethod(X,Y,percent, plotname, title, label, -2, 2)
+        else:
+            plotMethod(X,Y,percent, plotname, title, label)
