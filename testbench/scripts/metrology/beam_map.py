@@ -23,9 +23,9 @@ print """
 metrology/beam_map
 --------------------
 
-B.beam_map(self, xmin = 0.0, xmax = 100.0, dx = 5.0,
-                 ymin = 0.0, ymax = 100.0, dy = 5.0, 
-                 z = 0.0, current_range = 2e-8, n=20, meta = [])
+B.beam_map(xmin = 0.0, xmax = 100.0, dx = 5.0,
+           ymin = 0.0, ymax = 100.0, dy = 5.0, 
+           z = 0.0, current_range = 2e-8, n=20, meta = [])
 
      Will do a map of the incident beam using the PhD photodiode
      (and the connected Keithley). The photodiode should be fixed
@@ -33,8 +33,7 @@ B.beam_map(self, xmin = 0.0, xmax = 100.0, dx = 5.0,
 
 --------------------
 
-B.laser_beam_map(self, 
-                 channels = [1,2,3,4],
+B.laser_beam_map(channels = [1,2,3,4],
                  currents = { 1: 32.0,
                               2: 45.0,
                               3: 55.0,
@@ -48,6 +47,20 @@ B.laser_beam_map(self,
 
      Will do a dark map, then a map for each laser channel.
 
+--------------------
+
+B.lamp_beam_map(lamp = "QTH",
+                wavelength = 500.0,
+                grating = 0,
+                filt = 1,
+                xmin = 0.0, xmax = 100.0, dx = 5.0,
+                ymin = 0.0, ymax = 100.0, dy = 5.0, 
+                z = 0.0,
+                current_range = 2e-10,
+                n = 1,
+                meta = [])          
+
+     Will do a dark map, then a map for each laser channel.
 
 """
 
@@ -214,5 +227,88 @@ def laser_beam_map(self,
         time.sleep(2)
 
 lsst.testbench.Bench.laser_beam_map = laser_beam_map
+
+# -----------------------------------------------------------------
+
+def lamp_beam_map(self, 
+                  lamp = "QTH",
+                  wavelength = 500.0,
+                  grating = 0,
+                  filt = 1,
+                  xmin = 0.0, xmax = 100.0, dx = 5.0,
+                  ymin = 0.0, ymax = 100.0, dy = 5.0, 
+                  z = 0.0,
+                  current_range = 2e-10,
+                  n = 1,
+                  meta = []):          
+
+
+    # First register the lamp if not yet done
+
+    self.register(lamp)
+
+    mylamp = self.registry[lamp]['instance']
+
+    # Check if the lamp is on and the flux regulated
+
+    if not(mylamp.isOn()):
+        self.log("Error: you should turn the lamp %s on first." % lamp)
+        return
+
+    if not(mylamp.isFluxControlled()):
+        self.log("Error: you should turn the lamp flux control on first.")
+        return
+
+    # Now set up the monochromator
+
+    self.register('triax')
+
+    # In case it is still open, close the safety shutter
+    self.ttl.closeSafetyShutter(wait=True)
+
+    # set the filter
+    self.ttl.moveFilter(filt)
+
+    # Set up the Triax monochromator
+    self.log("Waiting for the monochromator to be ready...")
+    self.triax.setInSlit(1400,  wait=True)
+    self.triax.setOutSlit(1400, wait=True)
+
+    # Select the grating and the wavelength
+    self.triax.setGrating(grating, wait=True)
+    self.triax.setWavelength(wavelength, wait=True)
+    self.log("The monochromator is ready.")
+
+    # Dark map (safety shutter)
+    self.log("First taking a dark map (lamp off)")
+
+    self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
+                  ymin = ymin, ymax = ymax, dy = dy,	 
+                  z = z,
+                  current_range = current_range,
+                  n = n,
+                  meta = ["Dark map (everything off)"])
+
+    # Open the safety shutter
+    self.ttl.openSafetyShutter(wait=True)
+
+    self.log("Then taking a real map (lamp on)")
+
+    self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
+                  ymin = ymin, ymax = ymax, dy = dy,	 
+                  z = z,
+                  current_range = current_range,
+                  n = n,
+                  meta = ["Lamp = %s" % lamp,
+                          "Lamp current = %f A" % mylamp.getAmps(),
+                          "Lamp power = %f W" % mylamp.getWatts(),
+                          "Filter = %d" % filt,
+                          "Grating = %d" % self.triax.getGrating(),
+                          "Wavelength = %f" % self.triax.getWavelength()] )
+
+    # In case it is still open, close the safety shutter
+    self.ttl.closeSafetyShutter(wait=True)
+
+lsst.testbench.Bench.lamp_beam_map = lamp_beam_map
 
 # -----------------------------------------------------------------
