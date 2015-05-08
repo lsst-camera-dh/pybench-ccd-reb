@@ -267,7 +267,7 @@ class Instrument(Driver):
             'CURRENT': '[A] lamp current',
             'VOLTAGE': '[V] lamp voltage',
             'POWER'  : '[W] lamp power',
-            'TIME'   : '[hours] ???'
+            'TIME'   : '[hours] lamp life duration'
             }
 
         values = {
