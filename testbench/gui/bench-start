@@ -105,7 +105,7 @@ subsystems = args[:]
 n_screens = len(screens)
 wm.setndesktop(n_screens)
 
-script_dir = os.path.dirname(os.path.realpath(__file__))
+scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 for s_name, s_properties in screens.iteritems():
       desktop = s_properties['desktop']

@@ -89,13 +89,14 @@ clients = {
     'lakeshore-0': { 
         'host': 'lpnlsstbench',
         'commandline': 'lakeshore',
-        'screen': 'cryo',
+        'screen': 'cryos',
         'position': {'x': 96, 'y': 175, 'w': 400.0, 'h': 450} 
     },
     #
     # gnuplot graph!'position': {'x': 96, 'y': 700, 'w': 640.0, 'h': 470} 
     # ...
 
+    'pump-0': ['agilent-pump-0', 'pfeiffer-0', 'cryo-0-pressure-graph'],
     # agilent pump      1066, 800, 400, 570
     # pfeiffer          1490, 800, 400, 570
     # pressure gnuplot  1250, 175, 640, 470
@@ -111,15 +112,17 @@ clients = {
     'lakeshore-1': { 
         'host': 'lpnlsstbench',
         'commandline': 'lakeshore',
-        'screen': 'cryo',
+        'screen': 'cryos',
         'position': {'x': 2016, 'y': 175, 'w': 400.0, 'h': 450} 
     }
-    #
+    #,
     # gnuplot graph!
 
+    'pump-1': ['agilent-pump-1', 'pfeiffer-1', 'cryo-1-pressure-graph']
 
     # agilent pump      2986, 800, 400, 570
     # pfeiffer          3410, 800, 400, 570
     # pressure gnuplot  3170, 175, 640, 470
+    #-------------------------------------------------------------
 
 }

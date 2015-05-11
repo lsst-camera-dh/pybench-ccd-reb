@@ -25,7 +25,7 @@ metrology/beam_map
 
 B.beam_map(xmin = 0.0, xmax = 100.0, dx = 5.0,
            ymin = 0.0, ymax = 100.0, dy = 5.0, 
-           z = 0.0, current_range = 2e-8, n=20, meta = [])
+           z = 50.0, current_range = 2e-8, n=20, meta = [])
 
      Will do a map of the incident beam using the PhD photodiode
      (and the connected Keithley). The photodiode should be fixed
@@ -40,12 +40,13 @@ B.laser_beam_map(channels = [1,2,3,4],
                               4: [45.0]},
                  xmin = 0.0, xmax = 100.0, dx = 5.0,
                  ymin = 0.0, ymax = 100.0, dy = 5.0, 
-                 z = 0.0,
+                 z = 50.0,
                  current_range = 2e-3,
                  n = 10,
+                 dark = True,
                  meta = [])
 
-     Will do a dark map, then a map for each laser channel.
+     Will do a dark map (if dark), then a map for each laser channel.
 
 --------------------
 
@@ -55,9 +56,10 @@ B.lamp_beam_map(lamp = "QTH",
                 filt = 1,
                 xmin = 0.0, xmax = 100.0, dx = 5.0,
                 ymin = 0.0, ymax = 100.0, dy = 5.0, 
-                z = 0.0,
+                z = 50.0,
                 current_range = 2e-10,
-                n = 1,
+                n = 10,
+                dark = True,
                 meta = [])          
 
      Will do a dark map, then a map for each laser channel.
@@ -68,7 +70,7 @@ B.lamp_beam_map(lamp = "QTH",
 def beam_map(self, 
              xmin = 0.0, xmax = 100.0, dx = 5.0,
              ymin = 0.0, ymax = 100.0, dy = 5.0, 
-             z = 0.0,
+             z = 50.0,
              current_range = 2e-3,
              n = 10,
              meta = []):
@@ -178,9 +180,10 @@ def laser_beam_map(self,
                        4: [50.0]},
                    xmin = 0.0, xmax = 100.0, dx = 5.0,
                    ymin = 0.0, ymax = 100.0, dy = 5.0, 
-                   z = 0.0,
+                   z = 50.0,
                    current_range = 2e-3,
-                   n = 20,
+                   n = 10,
+                   dark = True,
                    meta = []):          
 
     # First register the laser if not yet done
@@ -195,14 +198,18 @@ def laser_beam_map(self,
 
     # Dark map
 
-    self.log("First taking a dark map (laser off)")
+    if dark:
 
-    self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
-                  ymin = ymin, ymax = ymax, dy = dy,	 
-                  z = z,
-                  current_range = current_range,
-                  n = n,
-                  meta = ["Dark map (everything off)"] + self.get_meta_text())
+        self.log("First taking a dark map (laser off)")
+
+        self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
+                      ymin = ymin, ymax = ymax, dy = dy,	 
+                      z = z,
+                      current_range = current_range,
+                      n = n,
+                      meta = ["Dark map (everything off)"] + self.get_meta_text())
+
+    # Now the maps with light
 
     for ch in channels:
         for current in currents[ch]:
@@ -239,9 +246,10 @@ def lamp_beam_map(self,
                   filt = 1,
                   xmin = 0.0, xmax = 100.0, dx = 5.0,
                   ymin = 0.0, ymax = 100.0, dy = 5.0, 
-                  z = 0.0,
+                  z = 50.0,
                   current_range = 2e-10,
-                  n = 1,
+                  n = 10,
+                  dark = True,
                   meta = []):          
 
 
@@ -281,17 +289,19 @@ def lamp_beam_map(self,
     self.triax.setWavelength(wavelength, wait=True)
     self.log("The monochromator is ready.")
 
-    # Dark map (safety shutter)
-    self.log("First taking a dark map (lamp off)")
+    if dark:
+        # Dark map (safety shutter)
+        self.log("First taking a dark map (lamp off)")
+        
+        self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
+                      ymin = ymin, ymax = ymax, dy = dy,	 
+                      z = z,
+                      current_range = current_range,
+                      n = n,
+                      meta = ["Dark map (everything off)"] +
+                      self.get_meta_text() )
 
-    self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
-                  ymin = ymin, ymax = ymax, dy = dy,	 
-                  z = z,
-                  current_range = current_range,
-                  n = n,
-                  meta = ["Dark map (everything off)"] +
-                  self.get_meta_text() )
-
+    # now maps with light
     # Open the safety shutter
     self.ttl.openSafetyShutter(wait=True)
 
