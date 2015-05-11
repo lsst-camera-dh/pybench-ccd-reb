@@ -34,10 +34,10 @@ B.beam_map(xmin = 0.0, xmax = 100.0, dx = 5.0,
 --------------------
 
 B.laser_beam_map(channels = [1,2,3,4],
-                 currents = { 1: 32.0,
-                              2: 45.0,
-                              3: 55.0,
-                              4: 45.0},
+                 currents = { 1: [32.0],
+                              2: [45.0],
+                              3: [55.0],
+                              4: [45.0]},
                  xmin = 0.0, xmax = 100.0, dx = 5.0,
                  ymin = 0.0, ymax = 100.0, dy = 5.0, 
                  z = 0.0,
@@ -166,16 +166,16 @@ def laser_beam_map(self,
                    channels = [1,2,3,4],
                    currents = { 
                        #1: 30.0,
-                       1: 35.0,
+                       1: [35.0],
                        #2: 42.0,
-                       2: 45.0,
+                       2: [45.0],
                        #2: 59.0
                        #2: 60.0,
                        #3: 25.0,
                        #3: 39.0,
-                       3: 66.0,
+                       3: [66.0],
                        #4: 30.0,
-                       4: 50.0},
+                       4: [50.0]},
                    xmin = 0.0, xmax = 100.0, dx = 5.0,
                    ymin = 0.0, ymax = 100.0, dy = 5.0, 
                    z = 0.0,
@@ -202,29 +202,31 @@ def laser_beam_map(self,
                   z = z,
                   current_range = current_range,
                   n = n,
-                  meta = ["Dark map (everything off)"])
+                  meta = ["Dark map (everything off)"] + self.get_meta_text())
 
     for ch in channels:
-        self.log("Enable laser channel %d" % ch)
-        self.laser.select(ch)
-        self.laser.enable()
-        time.sleep(2)
-        #
-        self.log("Setting up the current for channel %d" % ch)
-        self.laser.setCurrent(ch, currents[ch])
+        for current in currents[ch]:
+            self.log("Enable laser channel %d" % ch)
+            self.laser.select(ch)
+            self.laser.enable()
+            time.sleep(2)
+            #
+            self.log("Setting up the current for channel %d" % ch)
+            self.laser.setCurrent(ch, current)
         
-        self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
-                      ymin = ymin, ymax = ymax, dy = dy,	 
-                      z = z,
-                      current_range = current_range,
-                      n = n,
-                      meta = ["Laser channel = %d" % ch,
-                              "Laser current = %f" % currents[ch]])
+            self.beam_map(xmin = xmin, xmax = xmax, dx = dx,
+                          ymin = ymin, ymax = ymax, dy = dy,	 
+                          z = z,
+                          current_range = current_range,
+                          n = n,
+                          meta = ["Laser channel = %d" % ch,
+                                  "Laser current = %f" % current ] +
+                                  self.get_meta_text() )
 
-        self.log("Disable Laser channel %d" % ch)
-        self.laser.unselect(ch)
-        self.laser.disable()
-        time.sleep(2)
+            self.log("Disable Laser channel %d" % ch)
+            self.laser.unselect(ch)
+            self.laser.disable()
+            time.sleep(2)
 
 lsst.testbench.Bench.laser_beam_map = laser_beam_map
 
@@ -287,7 +289,8 @@ def lamp_beam_map(self,
                   z = z,
                   current_range = current_range,
                   n = n,
-                  meta = ["Dark map (everything off)"])
+                  meta = ["Dark map (everything off)"] +
+                  self.get_meta_text() )
 
     # Open the safety shutter
     self.ttl.openSafetyShutter(wait=True)
@@ -304,7 +307,8 @@ def lamp_beam_map(self,
                           "Lamp power = %f W" % mylamp.getWatts(),
                           "Filter = %d" % filt,
                           "Grating = %d" % self.triax.getGrating(),
-                          "Wavelength = %f" % self.triax.getWavelength()] )
+                          "Wavelength = %f" % self.triax.getWavelength() ] +
+                  self.get_meta_text() )
 
     # In case it is still open, close the safety shutter
     self.ttl.closeSafetyShutter(wait=True)

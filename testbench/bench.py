@@ -192,6 +192,32 @@ class Bench(Borg):
             
         return meta
 
+    def get_meta_text(self, prefix = ''):
+        """
+        Returns meta data describing the current state of all the
+        registered instruments as a text header.
+        Useful for data text files.
+        """
+        result = []
+
+        metas = self.get_meta()
+
+        for identifier, meta in metas.iteritems():
+            # print identifier, meta
+            result.append(prefix + "[" + meta['extname'] + "]")
+            keys = meta['keys']
+            # print identifier, keys
+            values = meta['values']
+            # print identifier, values
+            comments = meta['comments']
+            # print identifier, comments
+            for key in keys:
+                result.append(prefix + 
+                              "%-8s= %-20s # %s" % 
+                              (key, str(values[key]), comments[key]))
+
+        return result
+
     # ===================================================================
 
 
