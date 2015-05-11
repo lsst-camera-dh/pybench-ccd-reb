@@ -582,3 +582,19 @@ Command : 0  Answer : 25
 Command : 6  Answer : 0
 
 - Test to take some images :
+
+2015-05-11
+
+- For the autofocus : try points on the whole range, then try to find a variation for the variance. Then go to th max, and do the same with a smaller step.
+
+- Take some photo with the python implementation
+
+- Can we have the photos in fits ?
+
+- scp -r directory/ rlebret@lpnp204:/data/bench/test_pattern/
+
+- New objective : works ok !
+
+- Need to do some new test about the range.
+
+- For the autofocus : it seems to be a delay when in a loop i launch a command and then take a picture.
