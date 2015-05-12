@@ -12,8 +12,6 @@ def MakeRawMap(filename):
     Z = c[2]
     flagShutter = c[3]
     cutLight = flagShutter==1
-    # npoints = flagShutter[cutLight].shape[0]
-
     X = X[cutLight]
     Y = Y[cutLight]
     light = Z[cutLight]
@@ -21,10 +19,6 @@ def MakeRawMap(filename):
 
     uniqueX, indicesX = np.unique(X, return_index=True)
     uniqueY, indicesY = np.unique(Y, return_index=True)
-    # print uniqueX, "\n",indicesX
-    # print uniqueY,"\n", indicesY
-    # uniqueX = [0.]
-    # uniqueY = [0.]
     nmappoints = (uniqueX.shape[0])*(uniqueY.shape[0])
     reducedX = np.zeros(nmappoints)
     reducedY = np.zeros(nmappoints)
@@ -33,21 +27,12 @@ def MakeRawMap(filename):
     for x in uniqueX:
         for y in uniqueY:
             allpointsXY = light[(X==x)&(Y==y)]
-            # print "for (",x, y,") , Nmeasures = ", allpointsXY.shape[0]
-            # print allpointsXY
             avMapPoint = allpointsXY.mean()
-            # print "average for this point", avMapPoint
             reducedX[i] = x
             reducedY[i] = y
             reducedmMap[i] = avMapPoint
             i = i+1
-
-    # avDark = dark.mean()
-    # signalMap = reducedmMap - np.array([avDark]*reducedmMap.shape[0])
-    # meanMap = np.array([signalMap.mean()]*signalMap.shape[0])
-    # percent = (signalMap - meanMap )*100/meanMap
     label = 'PhD current'
-
     return reducedX,reducedY,reducedmMap,dark, label
 
 def MakeRawImageMap(filename):
@@ -58,7 +43,6 @@ def MakeRawImageMap(filename):
     Z = c[2]
     flagShutter = c[3]
     cutLight = flagShutter==1
-    # npoints = flagShutter[cutLight].shape[0]
 
     X = X[cutLight]
     Y = Y[cutLight]
@@ -67,13 +51,7 @@ def MakeRawImageMap(filename):
 
     uniqueX, indicesX = np.unique(X, return_index=True)
     uniqueY, indicesY = np.unique(Y, return_index=True)
-    # print uniqueX, "\n",indicesX
-    # print uniqueY,"\n", indicesY
-    # uniqueX = [0.]
-    # uniqueY = [0.]
     nmappoints = (uniqueX.shape[0])*(uniqueY.shape[0])
-    # reducedX = np.zeros(nmappoints)
-    # reducedY = np.zeros(nmappoints)
     allpointsXY = {}
     reducedMap= {}
     i = 0
@@ -82,8 +60,13 @@ def MakeRawImageMap(filename):
             allpointsXY[(x,y)]= light[(X==x)&(Y==y)]
             reducedMap[(x,y)] = allpointsXY[(x,y)].mean()
     map = np.array([np.array([reducedMap[(x,y)] for x in uniqueX]) for y in uniqueY])
-    # return uniqueX,uniqueY,allpointsXY, reducedMap
-    return uniqueX,uniqueY,map
+    return uniqueX,uniqueY,map,dark
+
+def PlotCCDLimit(mycolor='black'):
+    plt.plot((17, 57), (7, 7), linewidth = 3, color = mycolor)
+    plt.plot((17, 57), (47, 47), linewidth = 3, color = mycolor)
+    plt.plot((17, 17), (7, 47), linewidth = 3, color = mycolor)
+    plt.plot((57, 57), (7, 47), linewidth = 3, color = mycolor)
 
 
 def beamMap2d(X,Y,Z,plotname,mytitle,label):
@@ -98,9 +81,11 @@ def beamMap2d(X,Y,Z,plotname,mytitle,label):
     ax.set_ylabel("Y")
     bar =fig.colorbar(im)
     bar.set_label(label)
+    PlotCCDLimit('black')
     #plt.show()
     fig.suptitle(mytitle)
     fig.savefig(plotname)
+    plt.close(fig)
 
 def beamMap2dFixedScale(X,Y,Z,plotname,mytitle,label, mymin, mymax):
     xi = np.linspace(min(X), max(X))
@@ -114,10 +99,11 @@ def beamMap2dFixedScale(X,Y,Z,plotname,mytitle,label, mymin, mymax):
     ax.set_ylabel("Y")
     bar =fig.colorbar(im)
     bar.set_label(label)
+    PlotCCDLimit('black')
     #plt.show()
     fig.suptitle(mytitle)
     fig.savefig(plotname)
-
+    plt.close(fig)
 
 def beamMapScatter2d(X,Y,Z,plotname,mytitle, label):
     fig = plt.figure()
@@ -127,10 +113,11 @@ def beamMapScatter2d(X,Y,Z,plotname,mytitle, label):
     ax.set_ylabel("Y")
     bar = fig.colorbar(im)
     bar.set_label(label)
+    PlotCCDLimit('black')
     # plt.show()
     fig.suptitle(mytitle)
     fig.savefig(plotname)
-
+    plt.close(fig)
 def beamMapScatter2dFixedScale(X,Y,Z,plotname,mytitle,label, mymin, mymax):
     fig = plt.figure()
     ax = plt.subplot(111)
@@ -138,12 +125,12 @@ def beamMapScatter2dFixedScale(X,Y,Z,plotname,mytitle,label, mymin, mymax):
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     bar = fig.colorbar(im)
-    # bar.set_clim(min, max)
     bar.set_label(label)
+    PlotCCDLimit('black')
     # plt.show()
     fig.suptitle(mytitle)
     fig.savefig(plotname)
-
+    plt.close(fig)
 def beamMapScatter3d(X,Y,Z,plotname,mytitle, label):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
@@ -153,10 +140,11 @@ def beamMapScatter3d(X,Y,Z,plotname,mytitle, label):
     ax.set_zlabel(label)
     bar = fig.colorbar(im)
     bar.set_label(label)
+    PlotCCDLimit('black')
     # plt.show()
     fig.suptitle(mytitle)
     fig.savefig(plotname)
-
+    plt.close(fig)
 def beamMapSurface3d(X,Y,Z,plotname,mytitle, label):
     xi = np.linspace(min(X), max(X))
     yi = np.linspace(min(Y), max(Y))
@@ -168,8 +156,9 @@ def beamMapSurface3d(X,Y,Z,plotname,mytitle, label):
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel(label)
+    PlotCCDLimit('black')
     fig.colorbar(surf, shrink=0.5, aspect=5)
     # plt.show()
     fig.suptitle(mytitle)
     fig.savefig(plotname)
-
+    plt.close(fig)
