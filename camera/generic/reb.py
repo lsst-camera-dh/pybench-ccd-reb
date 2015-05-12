@@ -87,7 +87,7 @@ def get_sequencer_string(seq):
 class REB(object):
     rawimgdir = "/data/raw/"
     fitstopdir = "/data/frames/"
-    xmldir = "/home/lsst/py/camera/xml/"
+    xmldir = "/home/lsst/lsst/py/camera/xml/"
     full18bits = True  # TODO: check from version of the firmware
     # to be loaded from XML later
     imglines = 2020
