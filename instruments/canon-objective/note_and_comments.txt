@@ -598,3 +598,18 @@ Command : 6  Answer : 0
 - Need to do some new test about the range.
 
 - For the autofocus : it seems to be a delay when in a loop i launch a command and then take a picture.
+
+2015-05-11
+
+- Go to an extremum, then reinitialize the position, go to the other extremum, and ask the position : should give the number of step : I don't understand the result ? When an extremum is touched, the counter seems to continue to move.
+
+- From max to min : 0000 to 03E2 = 994 steps ?
+- From min to max : 0000 to FC1F = 992 steps ?
+
+- Beware of the axis : when you go to min, the number of steps is positive, when you go to max the number of steps is negative, as for the position.
+
+- If I move "by hand" : 
+  From max to min : 900 + 10 + 10 + 10 + 10 then can't go further => Something like 940
+  From min to max : 900 + 10 + 10 + 10 + 10 then can't go further => Something like 940
+
+- Update auto-focus : asking position complete.
