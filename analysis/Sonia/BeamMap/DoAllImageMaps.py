@@ -38,7 +38,7 @@ for filename in allfiles:
     title = source
     print source
 
-    uniqueX,uniqueY, map = BM.MakeRawImageMap(filename)
+    uniqueX,uniqueY, map,dark = BM.MakeRawImageMap(filename)
     label = "PhD current"
     nmappoints = map.shape[0]*map.shape[1]
     if nmappoints < 6:
@@ -57,6 +57,7 @@ for filename in allfiles:
     print 'Data directory is :     %s' % dataDir
     print 'Plot directory is :     %s' % plotDir
 
+#   first plot the raw image
     plotname = plotDir+filename[:-5].replace(dataDir, "")+"_Image_"+source+".png"
     fig = plt.figure()
     ax=plt.subplot(111)
@@ -65,6 +66,47 @@ for filename in allfiles:
     ax.set_ylabel("Y")
     bar =fig.colorbar(im)
     bar.set_label(label)
+    BM.PlotCCDLimit('black')
     #plt.show()
     fig.suptitle(title)
     fig.savefig(plotname)
+    plt.close(fig)
+
+#   second plot is relative to the average value of the map and in percent
+    avDark = dark.mean()
+    signalMap = map - np.array([avDark]*map.shape[0])
+    meanMap = np.array([signalMap.mean()]*signalMap.shape[0])
+    percent = (signalMap - meanMap )*100/meanMap
+    label = 'signal above the average in percent'
+
+    plotname2 = plotDir+filename[:-5].replace(dataDir, "")+"_ImagePercent_"+source+".png"
+    fig = plt.figure()
+    ax=plt.subplot(111)
+    im =plt.imshow(percent, interpolation ='None', origin = 'lower', extent=[min(uniqueX),max(uniqueX),min(uniqueY),max(uniqueY)])
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    bar =fig.colorbar(im)
+    bar.set_label(label)
+    BM.PlotCCDLimit('black')
+    #plt.show()
+    fig.suptitle(title)
+    fig.savefig(plotname2)
+    plt.close(fig)
+
+
+    # third plot the same but with fixed percent scale
+    mymin = -1.
+    mymax = 1.
+    plotname3 = plotDir+filename[:-5].replace(dataDir, "")+"_ImagePercentFixedScale_"+source+".png"
+    fig = plt.figure()
+    ax=plt.subplot(111)
+    im =plt.imshow(percent, interpolation ='None', origin = 'lower', extent=[min(uniqueX),max(uniqueX),min(uniqueY),max(uniqueY)], vmin=mymin, vmax=mymax)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    bar =fig.colorbar(im)
+    bar.set_label(label)
+    BM.PlotCCDLimit('black')
+    #plt.show()
+    fig.suptitle(title)
+    fig.savefig(plotname3)
+    plt.close(fig)
