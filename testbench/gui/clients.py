@@ -114,7 +114,7 @@ clients = {
         'commandline': 'lakeshore',
         'screen': 'cryos',
         'position': {'x': 2016, 'y': 175, 'w': 400.0, 'h': 450} 
-    }
+    },
     #,
     # gnuplot graph!
 
