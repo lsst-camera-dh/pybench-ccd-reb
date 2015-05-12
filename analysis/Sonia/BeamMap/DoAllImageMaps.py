@@ -2,6 +2,7 @@ __author__ = 'karkar'
 import os, sys
 import numpy as np
 import beamMaps as BM
+import matplotlib.pyplot as plt
 
 if len(sys.argv)>1:
     dataDir = sys.argv[1]
@@ -37,28 +38,33 @@ for filename in allfiles:
     title = source
     print source
 
-    reducedX,reducedY,reducedmMap,dark, label = BM.MakeRawMap(filename)
-
-    nmappoints = (reducedX.shape[0])*(reducedY.shape[0])
+    uniqueX,uniqueY, map = BM.MakeRawImageMap(filename)
+    label = "PhD current"
+    nmappoints = map.shape[0]*map.shape[1]
     if nmappoints < 6:
         print "only ", nmappoints, "points in this map, skipping"
         continue
 
-    avDark = dark.mean()
-    signalMap = reducedmMap - np.array([avDark]*reducedmMap.shape[0])
-    meanMap = np.array([signalMap.mean()]*signalMap.shape[0])
-    percent = (signalMap - meanMap )*100/meanMap
-    label = 'signal above the average in percent'
+    # avDark = dark.mean()
+    # signalMap = reducedmMap - np.array([avDark]*reducedmMap.shape[0])
+    # meanMap = np.array([signalMap.mean()]*signalMap.shape[0])
+    # percent = (signalMap - meanMap )*100/meanMap
+    # label = 'signal above the average in percent'
 
     plotDir = dataDir+"/plots/"
     if not os.path.isdir(plotDir):
         os.makedirs(plotDir)
     print 'Data directory is :     %s' % dataDir
     print 'Plot directory is :     %s' % plotDir
-    for plotMethod in allmethods:
-        print "now using method: ", plotMethod.__name__
-        plotname = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"_"+source+".png"
-        if plotMethod == BM.beamMapScatter2dFixedScale or plotMethod == BM.beamMap2dFixedScale:
-            plotMethod(reducedX,reducedY,percent, plotname, title, label, -2, 2)
-        else:
-            plotMethod(reducedX,reducedY,percent, plotname, title, label)
+
+    plotname = plotDir+filename[:-5].replace(dataDir, "")+"_Image_"+source+".png"
+    fig = plt.figure()
+    ax=plt.subplot(111)
+    im =plt.imshow(map, interpolation ='None', origin = 'lower', extent=[min(uniqueX),max(uniqueX),min(uniqueY),max(uniqueY)])
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    bar =fig.colorbar(im)
+    bar.set_label(label)
+    #plt.show()
+    fig.suptitle(title)
+    fig.savefig(plotname)
