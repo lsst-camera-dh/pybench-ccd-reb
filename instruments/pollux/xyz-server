@@ -186,9 +186,9 @@ class XYZremote(object):
         By default, check is and *MUST* be left to True.
         """
 
-        logging.info("XYZ.move() called.")
+        logging.info("XYZ.move(%s) called." % str(moves))
         self.XYZ.move(wait=wait,check=check, **moves)
-        logging.info("XYZ.move() done.")
+        logging.info("XYZ.move(%s) done." % str(moves))
         return True
 
     # ----------------------- XYZ movements ------------------------
@@ -339,7 +339,9 @@ def main(options, args):
 
 if __name__ == '__main__':
     now = datetime.datetime.now()
-    logname = "xyz-server-%s.log" % now.isoformat().split('T')[0]
+    logdir = os.path.join(os.getenv("HOME"), "logs")
+    logname = os.path.join(logdir,
+                           "xyz-server-%s.log" % now.date().isoformat())
 
     import optparse
     parser = optparse.OptionParser(usage="""
