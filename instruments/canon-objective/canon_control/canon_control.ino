@@ -204,9 +204,10 @@ void executeCommand(char buffer[], int & index)
                  //Serial.print("   ");
                  //Serial.println(d,HEX);
                  
-                 Serial.print("Command : ");
+                 //Serial.print("Command : ");
                  Serial.print(a, HEX);
-                 Serial.print("  Answer : ");
+                 Serial.print(" ");
+                 //Serial.print("  Answer : ");
                  Serial.println(send(a), HEX);
                  delay(1000);
                  if(secure == 150)
@@ -216,7 +217,7 @@ void executeCommand(char buffer[], int & index)
                  k = k + 2;
                  secure = secure + 1;
            }
-       Serial.println("Command executed, reinitializing buffer...");
+       //Serial.println("Command executed, reinitializing buffer...");
        eraseBuffer(buffer,index);
 }
 
@@ -292,11 +293,11 @@ void loop() {
               {
                       buffer[index] = incomingByte;
                       
-                       Serial.print("Poll the lens : ");
-                       Serial.print("Command : 0A-");
-                       Serial.print(send(0x0A), HEX);
-                       Serial.print("  Answer : ");
-                       Serial.println(send(0x00), HEX);
+                       //Serial.print("Poll the lens : ");
+                       //Serial.print("Command : 0A-");
+                       send(0x0A);
+                       //Serial.print("  Answer : ");
+                       send(0x00);
                       
                       //Before sending the command, power up of the motor.
                       digitalWrite(vpowPin, LOW);
@@ -323,9 +324,9 @@ void loop() {
                    {
                                       buffer[index]= incomingByte;
                                       index = index + 1;
-                                      Serial.print(buffer);
-                                      Serial.print("  ");
-                                      Serial.println(index);
+                                      //Serial.print(buffer);
+                                      //Serial.print("  ");
+                                      //Serial.println(index);
                                       //Serial.println(index%2);
                                       break;
                     }
