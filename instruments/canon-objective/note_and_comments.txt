@@ -613,3 +613,22 @@ Command : 6  Answer : 0
   From min to max : 900 + 10 + 10 + 10 + 10 then can't go further => Something like 940
 
 - Update auto-focus : asking position complete.
+
+- Do a double table for images and position [[image1,pos1],[image2,pos2]] ! No, better to make different lists
+
+2015-05-12
+
+- Functions to save images and init the focalization (take picture over the whole range by a define number of step).
+
+- Warning : check the returned position values (if there is no problem ? 0 missing, if it is of for hexadecimal character).
+
+- First series without test target : without the objective, juste camera and LED
+- Second series without test target : pose of 33.3 ms instead of 66.6 ms
+- Third series without test target : LED objective and camera at 33.3 ms
+- The next series are done near the objectif (smaller light cone)
+- The last is done for with a ligth cone that presumably cover the whole CCD. (100ms) (interfringes 30 pix, very bad contrast)
+
+- When the light one is the smaller, the contrast is better, and the interfringes is about 10 pix = this can be for precise study, because it is not on the whole CCD
+
+- To do : in the blackbox and with the test target further
+
