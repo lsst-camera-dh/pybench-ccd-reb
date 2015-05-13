@@ -22,9 +22,6 @@ if len(allfiles) == 0:
     print "Error no  .data files were found here :" , dataDir
 
 print "will plot maps from files :", allfiles
-allmethods = [ BM.beamMap2dFixedScale,BM.beamMap2d, BM.beamMapSurface3d]
-# , BM.beamMapScatter2d, BM.beamMapScatter3d, BM.beamMapScatter2dFixedScale,
-print "using methods :", [method.__name__  for method in allmethods]
 
 for filename in allfiles:
     print 'now using file', filename
@@ -38,7 +35,8 @@ for filename in allfiles:
     title = source
     print source
 
-    uniqueX,uniqueY, map,dark = BM.MakeRawImageMap(filename)
+    mapX,mapY, map,dark = BM.MakeRawImageMap(filename)
+    # print mapX.shape, mapY.shape, map.shape
     label = "PhD current"
     nmappoints = map.shape[0]*map.shape[1]
     if nmappoints < 6:
@@ -61,7 +59,7 @@ for filename in allfiles:
     plotname = plotDir+filename[:-5].replace(dataDir, "")+"_Image_"+source+".png"
     fig = plt.figure()
     ax=plt.subplot(111)
-    im =plt.imshow(map, interpolation ='None', origin = 'lower', extent=[min(uniqueX),max(uniqueX),min(uniqueY),max(uniqueY)])
+    im =plt.imshow(map, interpolation ='None', origin = 'upper', extent=[np.min(mapX),np.max(mapX),np.max(mapY),np.min(mapY)])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     bar =fig.colorbar(im)
@@ -74,15 +72,16 @@ for filename in allfiles:
 
 #   second plot is relative to the average value of the map and in percent
     avDark = dark.mean()
-    signalMap = map - np.array([avDark]*map.shape[0])
-    meanMap = np.array([signalMap.mean()]*signalMap.shape[0])
+    signalMap = map - np.ones(map.shape)*avDark
+    mymean = signalMap.mean()
+    meanMap = mymean*np.ones(signalMap.shape)
     percent = (signalMap - meanMap )*100/meanMap
-    label = 'signal above the average in percent'
+    label = 'signal above the average in %'
 
     plotname2 = plotDir+filename[:-5].replace(dataDir, "")+"_ImagePercent_"+source+".png"
     fig = plt.figure()
     ax=plt.subplot(111)
-    im =plt.imshow(percent, interpolation ='None', origin = 'lower', extent=[min(uniqueX),max(uniqueX),min(uniqueY),max(uniqueY)])
+    im =plt.imshow(percent, interpolation ='None', origin = 'upper', extent=[np.min(mapX),np.max(mapX),np.max(mapY),np.min(mapY)])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     bar =fig.colorbar(im)
@@ -97,16 +96,50 @@ for filename in allfiles:
     # third plot the same but with fixed percent scale
     mymin = -1.
     mymax = 1.
-    plotname3 = plotDir+filename[:-5].replace(dataDir, "")+"_ImagePercentFixedScale_"+source+".png"
+    plotname3 = plotDir+filename[:-5].replace(dataDir, "")+"_ImagePercentFixedScale_"+source+".pdf"
     fig = plt.figure()
     ax=plt.subplot(111)
-    im =plt.imshow(percent, interpolation ='None', origin = 'lower', extent=[min(uniqueX),max(uniqueX),min(uniqueY),max(uniqueY)], vmin=mymin, vmax=mymax)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    im =plt.imshow(percent, interpolation ='None', origin = 'upper',extent=[np.min(mapX),np.max(mapX),np.max(mapY),np.min(mapY)] , vmin=mymin, vmax=mymax)
+    ax.set_xlabel("X in mm")
+    ax.set_ylabel("Y in mm")
     bar =fig.colorbar(im)
     bar.set_label(label)
     BM.PlotCCDLimit('black')
-    #plt.show()
     fig.suptitle(title)
+    plt.show()
     fig.savefig(plotname3)
     plt.close(fig)
+
+
+
+
+    # # forth plot the same but zoomed
+    # mymin = -1.
+    # mymax = 1.
+    # realxmin = 15
+    # realxmax = 60
+    # realymin = 5
+    # realymax = 50
+    # print map.shape[0], np.max(mapX) - np.min(mapX)
+    # print (np.max(mapX) - np.min(mapX))/map.shape[0]
+    # xmin = int(realxmin*map.shape[0]/(np.max(mapX) - np.min(mapX)))
+    # xmax = int(realxmax*map.shape[0]/(np.max(mapX) - np.min(mapX)))
+    # ymin = int(realymin*map.shape[1]/(np.max(mapY) - np.min(mapY)))
+    # ymax = int(realymax*map.shape[1]/(np.max(mapY) - np.min(mapY)))
+    # print xmin, xmax, ymin, ymax
+    # plotname4 = plotDir+filename[:-5].replace(dataDir, "")+"_ImagePercentFixedScaleZoom_"+source+".png"
+    # fig = plt.figure()
+    # ax=plt.subplot(111)
+    # im =plt.imshow(BM.crop(percent, xmin, xmax, ymin, ymax), interpolation ='None', origin = 'upper',aspect = None, extent=[realxmin, realxmax, realymax, realymin] , vmin=mymin, vmax=mymax)
+    # ax.set_xlabel("X")
+    # ax.set_ylabel("Y")
+    # bar =fig.colorbar(im)
+    # bar.set_label(label)
+    # BM.PlotCCDLimit('black')
+    # #plt.show()
+    # # plt.xlim(xmin, xmax)
+    # # plt.ylim(ymax, ymin)
+    # fig.suptitle(title)
+    # fig.savefig(plotname4)
+    # plt.close(fig)
+
