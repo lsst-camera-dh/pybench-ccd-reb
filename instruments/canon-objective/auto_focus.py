@@ -42,13 +42,13 @@ origin = "middle" #to define and change if it is change. It is a variable to kno
 
 print "default exposure is : " + str(default_exposure) + " " + "ms"
 
-def ask_origin():
-    print "Origin is at the : " + origin
-
 def launch_command(arduino, code):
     arduino.write(code)
     time.sleep(len(code))
-    return arduino.readlines()
+    line = arduino.readlines()
+    for i in range(len(line)):
+        line[i] = line[i].replace("\r\n","")
+    return line
 
 def compute_variance(image):
     variance = np.var(image)
@@ -77,8 +77,9 @@ def take_and_show(camera):
     time.sleep(0.5)
     name = camera.save()
     time.sleep(0.5)
+    viewer = ds9.ds9()
     to_show = im.open(name)
-    to_show.show()
+    viewer.set_np2arr(np.array(to_show))
 
 def take_and_load(camera):
     camera.photo()
@@ -95,6 +96,16 @@ def take():
     time.sleep(0.5)
     print "Photo taken at : " + name
 
+def extract_position(lines):
+    line = lines[(lines.index([i for i in lines if 'C0' in i][0]) + 1):]
+    for i in range(len(line)):
+        pos = line[i].find(" ")
+        line[i] = line[i][pos+1:]
+        line[i] = line[i][-2:]
+    
+    position = line[0] + line[1]
+
+    return position
 #------------------------------------------------------
 #Command list
 
@@ -115,7 +126,6 @@ init_name = camera.save()
 time.sleep(0.5)
 
 init_focus = im.open(init_name)
-init_focus = init_focus.getdata()
 init_focus = np.array(init_focus)
 init_var = compute_variance(init_focus)
 
@@ -127,8 +137,7 @@ for i in images:
     new_position = launch_command(arduino, move)
 
     pic = im.open(i) #pic.show() pic.size()
-    d = pic.getdata()
-    data = np.array(d)
+    data = np.array(pic)
     img_var = compute_variance(data)
 
 #images = gl.glob("/home/rlebret/Documents/Data/Fringes/Test2_20150428/*.tif")
@@ -163,3 +172,12 @@ for i in images:
 #img = cam.capture(exposure = expo)
 #img = np.array(img)
 #img_var = compute_variance(img)
+
+#import ds9
+#import numpy as np
+#import Image
+#img = Image.open("/home/rlebret/Documents/Data/Fringes/20150511/20150511_172257.tif", "r")
+#data = np.array(img)
+#data
+#viewer = ds9.ds9()
+#viewer.set_np2arr(data)
