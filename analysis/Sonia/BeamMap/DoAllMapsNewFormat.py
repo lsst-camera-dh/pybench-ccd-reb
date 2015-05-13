@@ -62,37 +62,42 @@ for filename in allfiles:
     # min max for colorscale
     mymin = -1
     mymax = 1
-    for plotMethod in allmethods:
-        print "now using method: ", plotMethod.__name__
-        plotname = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"_"+source+".png"
-        if plotMethod == BM.beamMapScatter2dFixedScale or plotMethod == BM.beamMap2dFixedScale:
-            plotMethod(reducedX,reducedY,percent, plotname, title, label,mymin, mymax)
-        else:
-            plotMethod(reducedX,reducedY,percent, plotname, title, label)
-
-    # min max for colorscale
-    mymin = -1.
-    mymax = 1.
     # min max for zoom
     xmin = 15
     xmax = 60
     ymin = 5
     ymax = 50
-    reducedX2,reducedY2,reducedmMap2,dark2, label2= BM.MakeRawMap(filename,xmin, xmax, ymin, ymax )
-    nmappoints2 = (reducedX2.shape[0])*(reducedY2.shape[0])
-    if nmappoints2 < 6:
-        print "only ", nmappoints, "points in this map, skipping"
-        continue
-    avDark2 = dark2.mean()
-    signalMap2 = reducedmMap2 - np.array([avDark2]*reducedmMap2.shape[0])
-    meanMap2 = np.array([signalMap2.mean()]*signalMap2.shape[0])
-    percent2 = (signalMap2 - meanMap2 )*100/meanMap2
-    label2 = 'signal above the average in percent'
-
     for plotMethod in allmethods:
         print "now using method: ", plotMethod.__name__
-        plotname2 = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"Zoom_"+source+".png"
+        plotname = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"_"+source+".png"
         if plotMethod == BM.beamMapScatter2dFixedScale or plotMethod == BM.beamMap2dFixedScale:
-            plotMethod(reducedX2,reducedY2,percent2, plotname2, title, label2,mymin, mymax)
+            plotMethod(reducedX, reducedY, percent, plotname, title, label, mymin, mymax, xmin, xmax, ymin, ymax)
         else:
-            plotMethod(reducedX2,reducedY2,percent2, plotname2, title, label2)
+            plotMethod(reducedX, reducedY, percent, plotname, title, label,xmin, xmax, ymin, ymax)
+
+    # min max for colorscale
+    # mymin = -1.
+    # mymax = 1.
+    # # min max for zoom
+    # xmin = 15
+    # xmax = 60
+    # ymin = 5
+    # ymax = 50
+    # reducedX2,reducedY2,reducedmMap2,dark2, label2= BM.MakeRawMap(filename,xmin, xmax, ymin, ymax )
+    # nmappoints2 = (reducedX2.shape[0])*(reducedY2.shape[0])
+    # if nmappoints2 < 6:
+    #     print "only ", nmappoints, "points in this map, skipping"
+    #     continue
+    # avDark2 = dark2.mean()
+    # signalMap2 = reducedmMap2 - np.array([avDark2]*reducedmMap2.shape[0])
+    # meanMap2 = np.array([signalMap2.mean()]*signalMap2.shape[0])
+    # percent2 = (signalMap2 - meanMap2 )*100/meanMap2
+    # label2 = 'signal above the average in percent'
+    #
+    # for plotMethod in allmethods:
+    #     print "now using method: ", plotMethod.__name__
+    #     plotname2 = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"Zoom_"+source+".png"
+    #     if plotMethod == BM.beamMapScatter2dFixedScale or plotMethod == BM.beamMap2dFixedScale:
+    #         plotMethod(reducedX2,reducedY2,percent2, plotname2, title, label2,mymin, mymax)
+    #     else:
+    #         plotMethod(reducedX2,reducedY2,percent2, plotname2, title, label2)

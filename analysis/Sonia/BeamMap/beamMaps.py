@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def MakeRawMap(filename,xmin=-1, xmax=-1, ymin=-1, ymax=-1):
@@ -100,42 +100,85 @@ def PlotCCDLimit(mycolor='black'):
     plt.plot((17, 17), (7, 47), linewidth = 3, color = mycolor)
     plt.plot((57, 57), (7, 47), linewidth = 3, color = mycolor)
 
-def beamMap2d(X,Y,Z,plotname,mytitle,label):
+def beamMap2d(X,Y,Z,plotname,mytitle,label,xmin, xmax, ymin, ymax ):
     xi = np.linspace(min(X), max(X), num=np.unique(X).shape[0])
     yi = np.linspace(min(Y), max(Y), num=np.unique(Y).shape[0])
     Z = griddata(X,Y,Z, xi, yi)
     X, Y = np.meshgrid(xi, yi)
-    fig = plt.figure()
-    ax=plt.subplot(111)
-    im =ax.pcolor(X,Y,Z)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    bar =fig.colorbar(im)
+    fig = plt.figure(num=None, figsize=(16.5,8))
+    ax1=plt.subplot(121)
+    im =ax1.pcolor(X,Y,Z)
+    plt.gca().invert_yaxis()
+    plt.xlim(X.min(),X.max())
+    plt.ylim(Y.max(),Y.min())
+    ax1.set_xlabel("X in mm")
+    ax1.set_ylabel("Y in mm")
+    ax1.set_aspect('equal')
+    bar =fig.colorbar(im, ax=ax1)
     bar.set_label(label)
+    bar.ax.set_visible(False)
     PlotCCDLimit('black')
+
+    ax2 = plt.subplot(122)
+    im2 = ax2.pcolor(X,Y,Z)
+    plt.gca().invert_yaxis()
+    plt.xlim(xmin,xmax)
+    plt.ylim(ymax,ymin)
+    ax2.set_xlabel("X in mm")
+    ax2.set_ylabel("Y in mm")
+    ax2.set_aspect('equal')
+    PlotCCDLimit('black')
+    divider = make_axes_locatable(ax2)
+    cax = divider.append_axes("right", size="5%", pad=0.5)
+    bar2= plt.colorbar(im2, cax=cax)
+    bar2.set_label(label)
     #plt.show()
     fig.suptitle(mytitle)
+    fig.subplots_adjust(left=0.0, bottom=None, right=0.95, top=None,
+                      wspace=0.1, hspace=None)
     fig.savefig(plotname)
     plt.close(fig)
 
 
-def beamMap2dFixedScale(X,Y,Z,plotname,mytitle,label, mymin, mymax, ):
+def beamMap2dFixedScale(X,Y,Z,plotname,mytitle,label, mymin, mymax,xmin, xmax, ymin, ymax ):
     xi = np.linspace(min(X), max(X), num=np.unique(X).shape[0])
     yi = np.linspace(min(Y), max(Y), num=np.unique(Y).shape[0])
     Z = griddata(X,Y,Z, xi, yi)
     X, Y = np.meshgrid(xi, yi)
-    fig = plt.figure()
-    ax=plt.subplot(111)
-    im =ax.pcolor(X,Y,Z, vmin=mymin, vmax=mymax)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    bar =fig.colorbar(im)
+    fig = plt.figure(num=None, figsize=(16.5,8))
+    ax1=plt.subplot(121)
+    im =ax1.pcolor(X,Y,Z, vmin=mymin, vmax=mymax)
+    plt.gca().invert_yaxis()
+    plt.xlim(X.min(),X.max())
+    plt.ylim(Y.max(),Y.min())
+    ax1.set_xlabel("X in mm")
+    ax1.set_ylabel("Y in mm")
+    ax1.set_aspect('equal')
+    bar =fig.colorbar(im, ax=ax1)
     bar.set_label(label)
+    bar.ax.set_visible(False)
     PlotCCDLimit('black')
+
+    ax2 = plt.subplot(122)
+    im2 = ax2.pcolor(X,Y,Z, vmin=mymin, vmax=mymax)
+    plt.gca().invert_yaxis()
+    plt.xlim(xmin,xmax)
+    plt.ylim(ymax,ymin)
+    ax2.set_xlabel("X in mm")
+    ax2.set_ylabel("Y in mm")
+    ax2.set_aspect('equal')
+    PlotCCDLimit('black')
+    divider = make_axes_locatable(ax2)
+    cax = divider.append_axes("right", size="5%", pad=0.5)
+    bar2= plt.colorbar(im2, cax=cax)
+    bar2.set_label(label)
     #plt.show()
     fig.suptitle(mytitle)
+    fig.subplots_adjust(left=0.0, bottom=None, right=0.95, top=None,
+                      wspace=0.1, hspace=None)
     fig.savefig(plotname)
     plt.close(fig)
+
 
 
 
