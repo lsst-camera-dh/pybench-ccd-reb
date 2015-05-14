@@ -18,7 +18,10 @@ print """
 metrology/lamps_flux
 --------------------
 
-B.qth_flux(wlrange = [300.0, 1200.0], dwl = 5.0, filters = [1,2,3])
+B.qth_flux(wlrange = [300.0, 1200.0], dwl = 5.0, 
+           gratings=[0,1,2],
+           filters = [1,2,3],
+           n = 10)
 
      Will do a wavelength scanning and measure the flux obtained
      in the integral sphere and at the CCD position with the 
@@ -26,8 +29,10 @@ B.qth_flux(wlrange = [300.0, 1200.0], dwl = 5.0, filters = [1,2,3])
 
 """
 
-
-def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0, filters = [1,2,3]):
+def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0, 
+             gratings=[0,1,2],
+             filters = [1,2,3],
+             n = 10):
     """
     Will do a wavelength scanning and measure the flux obtained
     in the integral sphere and at the CCD position with the 
@@ -81,6 +86,9 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0, filters = [1,2,3]):
                             % now.isoformat()))
     f = open(datafile, "w")
 
+    for line in self.get_meta_text():
+        print >>f, "#", line
+    
     print >>f, "# fluxes on the LSST CCD testbench"
     print >>f, "# QTH lamp through monochromator"
     print >>f, "# Entrance slit = ", self.triax.getInSlit()
@@ -96,30 +104,31 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0, filters = [1,2,3]):
         self.ttl.openSafetyShutter(wait=True)
         self.log("Changing to filter %d done." % filt)
 
-        self.ttl.openShutter()
+        for grating in gratings:
+            self.log("Changing to grating %d ..." % grating)
+            self.triax.setGrating(grating, wait=True)
+            self.log("Changing to grating %d done." % grating)
 
-        for wl in np.arange(wlrange[0], wlrange[1] + dwl, dwl):
-            print "set wavelength to ", wl, "nm"
-            self.triax.setWavelength(wl, wait=True)
+            self.ttl.openShutter()
 
-            ### NAZE !!!
-            grating = self.triax.getGrating()
+            for wl in np.arange(wlrange[0], wlrange[1] + dwl, dwl):
+                print "set wavelength to ", wl, "nm"
+                self.triax.setWavelength(wl, wait=True)
 
-            # for i in xrange(20):
-            for i in xrange(1):
-                now = time.time()
-                lampcurrent = self.QTH.getAmps()
-                lamppower = self.QTH.getWatts()
-                eff_wl = self.triax.getWavelength()
-                dkdflux = self.DKD.read_measurement()
-                phdflux = self.PhD.read_measurement()
+                for i in xrange(n):
+                    now = time.time()
+                    lampcurrent = self.QTH.getAmps()
+                    lamppower = self.QTH.getWatts()
+                    eff_wl = self.triax.getWavelength()
+                    dkdflux = self.DKD.read_measurement()
+                    phdflux = self.PhD.read_measurement()
 
-                print >>f, now, filt, grating, eff_wl, \
-                    lampcurrent, lamppower, dkdflux, phdflux
-                print now, filt, grating, eff_wl, \
-                    lampcurrent, lamppower, dkdflux, phdflux
+                    print >>f, now, filt, grating, eff_wl, \
+                        lampcurrent, lamppower, dkdflux, phdflux
+                    print now, filt, grating, eff_wl, \
+                        lampcurrent, lamppower, dkdflux, phdflux
 
-        self.ttl.closeShutter()
+            self.ttl.closeShutter()
 
     f.close()
 
