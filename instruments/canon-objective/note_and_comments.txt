@@ -598,3 +598,37 @@ Command : 6  Answer : 0
 - Need to do some new test about the range.
 
 - For the autofocus : it seems to be a delay when in a loop i launch a command and then take a picture.
+
+2015-05-11
+
+- Go to an extremum, then reinitialize the position, go to the other extremum, and ask the position : should give the number of step : I don't understand the result ? When an extremum is touched, the counter seems to continue to move.
+
+- From max to min : 0000 to 03E2 = 994 steps ?
+- From min to max : 0000 to FC1F = 992 steps ?
+
+- Beware of the axis : when you go to min, the number of steps is positive, when you go to max the number of steps is negative, as for the position.
+
+- If I move "by hand" : 
+  From max to min : 900 + 10 + 10 + 10 + 10 then can't go further => Something like 940
+  From min to max : 900 + 10 + 10 + 10 + 10 then can't go further => Something like 940
+
+- Update auto-focus : asking position complete.
+
+- Do a double table for images and position [[image1,pos1],[image2,pos2]] ! No, better to make different lists
+
+2015-05-12
+
+- Functions to save images and init the focalization (take picture over the whole range by a define number of step).
+
+- Warning : check the returned position values (if there is no problem ? 0 missing, if it is of for hexadecimal character).
+
+- First series without test target : without the objective, juste camera and LED
+- Second series without test target : pose of 33.3 ms instead of 66.6 ms
+- Third series without test target : LED objective and camera at 33.3 ms
+- The next series are done near the objectif (smaller light cone)
+- The last is done for with a ligth cone that presumably cover the whole CCD. (100ms) (interfringes 30 pix, very bad contrast)
+
+- When the light one is the smaller, the contrast is better, and the interfringes is about 10 pix = this can be for precise study, because it is not on the whole CCD
+
+- To do : in the blackbox and with the test target further
+
