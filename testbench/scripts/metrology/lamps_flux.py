@@ -61,7 +61,7 @@ def qth_flux(self,
         self.log("Error: you should turn the lamp on first.")
         return
 
-    if self.QTH.isFluxControlled():
+    if not(self.QTH.isFluxControlled()):
         self.log("Error: you should turn the lamp flux control on first.")
         return
 
