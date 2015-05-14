@@ -58,7 +58,7 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0,
 
     # Setup of the 2 Keithleys
     self.log("Setting up the 2 Keithleys...")
-    self.DKD.setup_current_measurements(2e-10)
+    self.DKD.setup_current_measurements(2e-9)
     self.PhD.setup_current_measurements(2e-8)
     self.log("Setting up the 2 Keithleys done.")
 
@@ -95,6 +95,25 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0,
     print >>f, "# Exit slit = ", self.triax.getOutSlit()
     print >>f, "# time\t filter\t grating\t wavelength\t lamp current\t lamp power\t DKD flux\t Sphere flux"
 
+    # First take dark current
+
+    self.log("Taking dark current measurements")
+    self.ttl.closeSafetyShutter(wait=True)
+    self.ttl.closeShutter(wait=True)
+
+    for i in xrange(n):
+        now = time.time()
+        lampcurrent = self.QTH.getAmps()
+        lamppower = self.QTH.getWatts()
+        eff_wl = self.triax.getWavelength()
+        dkdflux = self.DKD.read_measurement()
+        phdflux = self.PhD.read_measurement()
+
+        print >>f, now, -1, -1, eff_wl, \
+            lampcurrent, lamppower, dkdflux, phdflux, 0
+        print now, -1, -1, eff_wl, \
+            lampcurrent, lamppower, dkdflux, phdflux, 0
+
     # for ch in self.laser.allchannels:
     for filt in filters:
         self.log("Changing to filter %d ..." % filt)
@@ -107,6 +126,7 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0,
         for grating in gratings:
             self.log("Changing to grating %d ..." % grating)
             self.triax.setGrating(grating, wait=True)
+            time.sleep(2)
             self.log("Changing to grating %d done." % grating)
 
             self.ttl.openShutter()
@@ -114,6 +134,8 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0,
             for wl in np.arange(wlrange[0], wlrange[1] + dwl, dwl):
                 print "set wavelength to ", wl, "nm"
                 self.triax.setWavelength(wl, wait=True)
+                time.sleep(2)
+                eff_wl = self.triax.getWavelength()
 
                 for i in xrange(n):
                     now = time.time()
@@ -124,13 +146,30 @@ def qth_flux(self, wlrange = [300.0, 1200.0], dwl = 5.0,
                     phdflux = self.PhD.read_measurement()
 
                     print >>f, now, filt, grating, eff_wl, \
-                        lampcurrent, lamppower, dkdflux, phdflux
+                        lampcurrent, lamppower, dkdflux, phdflux, 1
                     print now, filt, grating, eff_wl, \
-                        lampcurrent, lamppower, dkdflux, phdflux
+                        lampcurrent, lamppower, dkdflux, phdflux, 1
 
             self.ttl.closeShutter()
 
     f.close()
+
+    self.log("Taking dark current measurements")
+    self.ttl.closeSafetyShutter(wait=True)
+    self.ttl.closeShutter(wait=True)
+
+    for i in xrange(n):
+        now = time.time()
+        lampcurrent = self.QTH.getAmps()
+        lamppower = self.QTH.getWatts()
+        eff_wl = self.triax.getWavelength()
+        dkdflux = self.DKD.read_measurement()
+        phdflux = self.PhD.read_measurement()
+
+        print >>f, now, filt, grating, eff_wl, \
+            lampcurrent, lamppower, dkdflux, phdflux, 0
+        print now, filt, grating, eff_wl, \
+            lampcurrent, lamppower, dkdflux, phdflux, 0
 
     # In case...
     self.ttl.closeSafetyShutter()
