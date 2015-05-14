@@ -150,25 +150,37 @@ class Instrument(Driver):
 
     # ===================================================================
 
-    def openMellesShutter(self):
+    def openMellesShutter(self, wait=False):
         """
         Open the Melles shutter.
         Return the shutter state (1: opened, 0: closed).
         """
-        return self.xmlrpc.openMellesShutter()
+        answer = self.xmlrpc.openMellesShutter()
 
-    def openShutter(self):
-        return self.openMellesShutter()
+        if wait:
+            while not(self.MellesShutterIsOpen()):
+                time.sleep(0.5)
 
-    def closeMellesShutter(self):
+        return answer
+
+    def openShutter(self, wait=False):
+        return self.openMellesShutter(wait = wait)
+
+    def closeMellesShutter(self, wait = False):
         """
         Close the Melles shutter.
         Return the shutter state (1: opened, 0: closed).
         """
-        return self.xmlrpc.closeMellesShutter()
+        answer = self.xmlrpc.closeMellesShutter()
 
-    def closeShutter(self):
-        return self.closeMellesShutter()
+        if wait:
+            while self.MellesShutterIsOpen():
+                time.sleep(0.5)
+
+        return answer 
+
+    def closeShutter(self, wait=False):
+        return self.closeMellesShutter(wait = wait)
 
     def MellesShutterIsOpen(self):
         """

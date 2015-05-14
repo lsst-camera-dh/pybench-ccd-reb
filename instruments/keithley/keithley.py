@@ -47,7 +47,8 @@ class Multimeter(object):
         self.rtscts = 0
         self.xonxoff = 0
         # self.timeout = 0.5 # Non-blocking & non waiting mode
-        self.timeout = 1.0 # Non-blocking & non waiting mode
+        # self.timeout = 1.0 # Non-blocking & non waiting mode
+        self.timeout = 0.7 # Non-blocking & non waiting mode
         self.repr_mode = 0
         self.parity = serial.PARITY_NONE
         self.bytesize = serial.EIGHTBITS
