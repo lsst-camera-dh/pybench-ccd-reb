@@ -15,7 +15,7 @@ for (dirpath, dirnames, filenames) in os.walk(dataDir):
     if depth == maxdepth:
         dirnames[:] = [] # Don't recurse any deeper
     for thisfile in filenames:
-        if (thisfile[-5:] == '.data'):
+        if (thisfile[-5:] == '.data') and ("beam-map" in thisfile):
             allfiles.append(os.path.join(dirpath,thisfile))
 if len(allfiles) == 0:
     print "Error no  .data files were found here :" , dataDir
@@ -69,7 +69,7 @@ for filename in allfiles:
     ymax = 50
     for plotMethod in allmethods:
         print "now using method: ", plotMethod.__name__
-        plotname = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"_"+source+".png"
+        plotname = plotDir+filename[:-5].replace(dataDir, "")+"_"+plotMethod.__name__+"_"+source+".pdf"
         if plotMethod == BM.beamMapScatter2dFixedScale or plotMethod == BM.beamMap2dFixedScale:
             plotMethod(reducedX, reducedY, percent, plotname, title, label, mymin, mymax, xmin, xmax, ymin, ymax)
         else:
