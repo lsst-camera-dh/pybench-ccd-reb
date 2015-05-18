@@ -36,7 +36,9 @@ B.qth_flux_all(wlrange = [300.0, 1200.0], dwl = 5.0,
 
 
 B.qth_stability(wl = 500.0, grating = 0, filt = 1, 
-                current_range = 2e-10, repeat = 10000)
+                DKD_range = 2e-10, 
+                PhD_range = 2e-7, 
+                repeat = 10000)
 
      Repeat the same measurement to estimate the stability 
      of the QTH.
@@ -296,7 +298,7 @@ def qth_stability(self,
 
 
     ndark = 20
-    freq = 100
+    freq = 200
     shutter_open = 1
 
     eff_wl = self.triax.getWavelength()
@@ -307,12 +309,12 @@ def qth_stability(self,
             shutter_open = 0
             self.ttl.closeSafetyShutter(wait=True)
             self.ttl.closeShutter(wait=True)
-            time.sleep(2)
+            time.sleep(5)
         elif (i % freq) == ndark:
             shutter_open = 1
             self.ttl.openSafetyShutter(wait=True)
             self.ttl.openShutter(wait=True)
-            time.sleep(2)
+            time.sleep(5)
 
         now = time.time()
         lampcurrent = self.QTH.getAmps()
