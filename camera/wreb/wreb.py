@@ -270,9 +270,7 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
         exthdu = reb.get_sequencer_hdu(R.seq)
         hdulist.append(exthdu)
 
-
         hdulist.writeto(fitsname, clobber=True)
-
 
         print("Wrote FITS file "+fitsname)
     else:

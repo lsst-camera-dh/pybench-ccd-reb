@@ -3,6 +3,8 @@
 # LSST
 #
 # Testing a Python class to replace CCD bench scripts
+# Here we should put the basic functions that use several instruments
+# of the bench.
 
 import os
 import time
@@ -41,6 +43,7 @@ def CCDpowerup(self):
     # TODO: wait until complete, checks
     time.sleep(5)
     print("Start-up sequence complete")
+    self.reb.waiting_sequence()
 
 testbench.Bench.CCDpowerup = CCDpowerup
 
@@ -55,6 +58,62 @@ def CCDshutdown(self):
     self.reb.CCDshutdown()
 
 testbench.Bench.CCDshutdown = CCDshutdown
+
+
+def save_to_fits(self, channels=None, imgname=None, fitsname=''):
+    """
+    Saves the given raw image to FITS file with all auxiliary headers.
+    Note: does not include incrementing on FPGA image tag. Should be done
+    afterwards if successful and if we want to keep the raw data.
+    """
+    if imgname:
+        rawfile = imgname
+    else:
+        rawfile = self.reb.make_img_name()
+
+    if not os.path.isfile(rawfile):
+        print("Did not find the expected raw file: %s " % rawfile)
+
+    if not fitsname:
+        fitsname = self.reb.make_fits_name(rawfile)
+
+    hdulist = self.reb.conv_to_fits(rawfile, channels)
+    primaryhdu = hdulist[0]
+
+    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'FITS file name')
+    primaryhdu.header["DATE"] = (time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), 'FITS file creation date')
+    primaryhdu.header["TESTTYPE"] = ('TEST', 'TEST:DARK:FLAT:OBS:PPUMP:QE:SFLAT')
+
+    # get the rest from the instrument meta
+    keys, values, comments = self.reb.get_meta()
+    for key in keys:
+        primaryhdu.header[key] = (values[key], comments[key])
+
+    # CCD operating conditions
+    exthdu = pyfits.ImageHDU(name="CCD_COND")
+    keys, values, comments = self.reb.get_meta_operating()
+    for key in keys:
+        exthdu.header[key] = (values[key], comments[key])
+    hdulist.append(exthdu)
+
+    # Sequencer content
+    seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
+                                                         array=self.reb.get_meta_sequencer(),
+                                                         ascii=True)])
+    hdulist.append(seqhdu)
+
+    hdulist.writeto(fitsname, clobber=True)
+    print("Wrote FITS file "+fitsname)
+
+
+    # more stuff to put here
+
+    #TEMP_SET	-95.00
+    #CCDTEMP	-95.12
+    #MONDIODE	143.12
+    #MONOWL	550.00
+    #FILTER	'550LP'
+
 
 # def wait_for_action(action):
 #     """
@@ -311,7 +370,7 @@ testbench.Bench.CCDshutdown = CCDshutdown
 #     wait_for_action("REB can be connected to CCD now.")
 #     b.CCDpowerup()
 #     # Puts CCD in waiting state by clearing periodically, while waiting for a new command.
-#     b.waiting_sequence()
+#
 #     return b
 
 
