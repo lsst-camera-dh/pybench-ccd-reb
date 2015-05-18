@@ -34,7 +34,16 @@ B.qth_flux_all(wlrange = [300.0, 1200.0], dwl = 5.0,
      Will do a wavelength scanning for all combinations 
      of filter and gratings.
 
+
+B.qth_stability(wl = 500.0, grating = 0, filt = 1, 
+                current_range = 2e-10, repeat = 10000)
+
+     Repeat the same measurement to estimate the stability 
+     of the QTH.
+
 """
+
+# ==============================================================================
 
 def qth_flux(self, 
              wlrange = [300.0, 1200.0], dwl = 5.0, 
@@ -76,9 +85,9 @@ def qth_flux(self,
 
 
     # Set up the Triax monochromator
+    self.log("Waiting for the monochromator to be ready...")
     self.triax.setInSlit(1400,  wait=True)
     self.triax.setOutSlit(1400, wait=True)
-    self.log("Waiting for the monochromator to be ready...")
     self.log("Waiting for the monochromator to be ready done.")
 
     # Create the data file
@@ -99,7 +108,7 @@ def qth_flux(self,
     print >>f, "# QTH lamp through monochromator"
     print >>f, "# Entrance slit = ", self.triax.getInSlit()
     print >>f, "# Exit slit = ", self.triax.getOutSlit()
-    print >>f, "# time\t filter\t grating\t wavelength\t lamp current\t lamp power\t DKD flux\t Sphere flux"
+    print >>f, "# time\t filter\t grating\t wavelength\t lamp current\t lamp power\t DKD flux\t Sphere flux\t On/Off"
 
     self.log("Changing to filter %d ..." % filt)
     # Important: first close the safety shutter (as the wheel may go to unprotected positions)
@@ -186,6 +195,7 @@ def qth_flux(self,
 lsst.testbench.Bench.qth_flux = qth_flux
 
 
+# ==============================================================================
 
 def qth_flux_all(self,
                  wlrange = [300.0, 1200.0], dwl = 5.0, 
@@ -207,4 +217,120 @@ def qth_flux_all(self,
 # Attach this method to the Bench class / instance
 lsst.testbench.Bench.qth_flux_all = qth_flux_all
 
+# ==============================================================================
 
+def qth_stability(self,
+                  wl = 500.0, grating = 0, filt = 1, 
+                  DKD_range = 2e-10, 
+                  PhD_range = 2e-7, 
+                  repeat = 10000):
+    """
+    Repeat the same measurement to estimate the stability 
+    of the QTH.
+    """
+
+    # Check if the lamp is already on
+    # and the flux control also
+    if not(self.QTH.isOn()):
+        self.log("Error: you should turn the lamp on first.")
+        return
+
+    if not(self.QTH.isFluxControlled()):
+        self.log("Error: you should turn the lamp flux control on first.")
+        return
+
+    # setup of the 2 Keithleys
+
+    self.DKD.setup_current_measurements(DKD_range)
+    self.PhD.setup_current_measurements(PhD_range)
+
+    # In case it is still open, close the safety shutter
+    # self.ttl.closeSafetyShutter(wait=True)
+
+    self.log("Changing to filter %d ..." % filt)
+    # Important: first close the safety shutter (as the wheel may go to unprotected positions)
+    self.ttl.closeSafetyShutter(wait=True)
+    self.ttl.moveFilter(filt)
+    self.log("Changing to filter %d done." % filt)
+
+    # Set up the Triax monochromator
+    self.log("Waiting for the monochromator to be ready...")
+    self.triax.setInSlit(1400,  wait=True)
+    self.triax.setOutSlit(1400, wait=True)
+    self.log("Changing to grating %d ..." % grating)
+    self.triax.setGrating(grating, wait=True)
+    time.sleep(2)
+    self.log("Changing to grating %d done." % grating)
+    self.triax.setWavelength(wl, wait=True)
+    self.log("Waiting for the monochromator to be ready done.")
+
+    # Create the data file
+    now = datetime.datetime.utcnow()
+    datadir = os.path.join(os.getenv("HOME"),
+                            "data", "metrology",
+                            now.date().isoformat())
+
+    if not(os.path.isdir(datadir)):
+        os.makedirs(datadir)
+
+    datafile = os.path.join(datadir,
+                            ("DKD-PhD-QTH-triax-flux-stability-%s.data"
+                            % now.isoformat()))
+    f = open(datafile, "w")
+
+    print >>f, "# flux on the LSST CCD testbench"
+    print >>f, "# QTH lamp through monochromator"
+    print >>f, "# Stability check"
+    print >>f, "# Entrance slit = ", self.triax.getInSlit()
+    print >>f, "# Exit slit = ", self.triax.getOutSlit()
+    print >>f, "# time\t filter\t grating\t wavelength\t lamp current\t lamp power\t DKD flux\t Sphere flux\t On/Off"
+
+    # Now write meta info in the data file
+    for line in self.get_meta_text():
+        print >>f, "#", line
+
+
+    # Taking data
+    # dark current regularly measured by closing the Melles shutter
+    # and the safety shutter
+
+
+    ndark = 20
+    freq = 100
+    shutter_open = 1
+
+    eff_wl = self.triax.getWavelength()
+
+    for i in xrange(repeat + ndark):
+        # interleaving dark measurements
+        if (i % freq) == 0:
+            shutter_open = 0
+            self.ttl.closeSafetyShutter(wait=True)
+            self.ttl.closeShutter(wait=True)
+            time.sleep(2)
+        elif (i % freq) == ndark:
+            shutter_open = 1
+            self.ttl.openSafetyShutter(wait=True)
+            self.ttl.openShutter(wait=True)
+            time.sleep(2)
+
+        now = time.time()
+        lampcurrent = self.QTH.getAmps()
+        lamppower = self.QTH.getWatts()
+        dkdflux = self.DKD.read_measurement()
+        phdflux = self.PhD.read_measurement()
+
+        print >>f, now, filt, grating, eff_wl, \
+            lampcurrent, lamppower, dkdflux, phdflux, shutter_open
+        print now, filt, grating, eff_wl, \
+            lampcurrent, lamppower, dkdflux, phdflux, shutter_open
+
+    f.close()
+
+    self.ttl.closeShutter()
+    self.ttl.closeSafetyShutter()
+    time.sleep(2)
+
+lsst.testbench.Bench.qth_stability = qth_stability
+
+# ==============================================================================
