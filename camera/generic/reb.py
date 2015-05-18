@@ -407,12 +407,17 @@ class REB(object):
 
     def make_fits_name(self, imgstr):
         """
-        Builds a complete FITS file path. imgstr should be the name of the file without the extension.
+        Builds a complete FITS file path.
+        Takes the root name of imgstr as FITS name.
         :param imgstr: string
         :return: string
         """
         fitsdir = os.path.join(self.fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
         if not os.path.isdir(fitsdir):
             os.mkdir(fitsdir)
-        fitsname = os.path.join(fitsdir, imgstr + '.fits')
+
+        rootname = os.path.splitext(os.path.basename(imgstr))[0]
+
+        fitsname = os.path.join(fitsdir, rootname + '.fits')
+
         return fitsname
