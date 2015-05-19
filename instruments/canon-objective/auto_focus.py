@@ -18,10 +18,13 @@ dmk_ready = input("Launch dmk /dev/video1 (no need to connect), press 1 when don
 camera = xmlrpclib.ServerProxy("http://localhost:8100/")
 camera.connect()
 
-default_exposure = 33.3 #ms
+default_exposure = 100.0 #33.3 #ms
 camera.setExposure(default_exposure)
 
 print "default exposure is : " + str(default_exposure) + " " + "ms"
+
+def setExpoTime(camera, t):
+    camera.setExposure(t)
 
 def launch_command(arduino, code):
     arduino.write(code)
@@ -74,6 +77,16 @@ def take_and_load(camera):
     tmp = im.open(name)
     return np.array(tmp)
 
+def take_same_many(camera, N):
+    images = []
+    for i in range(N):
+        camera.photo()
+        time.sleep(0.5)
+        name = camera.save()
+        time.sleep(0.5)
+        images.append(np.array(im.open(name)))
+    return images
+
 def take(camera):
     camera.photo()
     time.sleep(0.5)
@@ -97,7 +110,7 @@ def init_auto_focus(arduino,camera):
     test_pos = []
     max_pos = []
     theo_mov = []
-    step = 100
+    step = 200
     position = step
 
     print "Initialization of auto-focus"
@@ -142,6 +155,9 @@ for i in arduino.readlines():
     print i
 
 images, images_pos, theo_mov, max_pos, variances = init_auto_focus(arduino, camera)
+
+plt.plot(range(len(variances)),variances)
+plt.show()
 
 #max_index = variances.index(np.max(variances))
 
