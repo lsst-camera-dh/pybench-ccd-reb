@@ -39,6 +39,7 @@ def powerup_CCD(self):
     time.sleep(1)
     # starts Keithley backsubstrate voltage
     self.bss.setup(voltage=-60)
+    self.bss.setup_current_measure(2e-5)
     self.bss.enable(delay=10.0)
     # TODO: wait until complete
     print("Start-up sequence complete")
@@ -52,7 +53,7 @@ def shutdown_CCD(self):
     self.reb.wait_end_sequencer()
     # Back-substrate first
     self.bss.disable()
-    # includes waiting until done: tbc
+    # extra wait time for safety
     time.sleep(10)
     self.reb.CCDshutdown()
 
@@ -116,7 +117,7 @@ def save_to_fits(self, channels=None, imgname=None, fitsname=''):
     seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
                                                          array=self.reb.get_meta_sequencer(),
                                                          ascii=True)])
-    seqhdu['NAME'] = 'SEQUENCER'
+    seqhdu.header['EXTNAME'] = 'SEQUENCER'
 
     hdulist.append(exthdu)
     hdulist.append(seqhdu)

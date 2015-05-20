@@ -37,7 +37,7 @@ config = {
     # 
     #
     'reb': {
-        'host'        : 'lpnlsstacq',
+       # 'host'        : 'lpnlsstacq',
         'driver'      : 'ccd_reb',
         'reb_id'      : 2,
         'stripe'      : 0,
@@ -49,7 +49,7 @@ config = {
     # 
     #
     'wreb': {
-        'host'        : 'lpnlsstacq',
+      #  'host'        : 'lpnlsstacq',
         'driver'      : 'ccd_reb',
         'reb_id'      : 0xFF,
         'stripe'      : 0,

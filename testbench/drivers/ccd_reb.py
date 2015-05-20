@@ -85,7 +85,7 @@ class Instrument(Driver):
         except IOError:
             answer = None
 
-        return answer
+        return answer[0x2]
 
     def register(self, bench):
         self.open()

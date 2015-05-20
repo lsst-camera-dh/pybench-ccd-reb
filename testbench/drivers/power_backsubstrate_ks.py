@@ -365,7 +365,31 @@ class Instrument(Driver):
         while self.voltageStatus():
             time.sleep(1)
 
+    # ===================================================================
+    #  Current measurement
+    # ===================================================================
 
+    def setup_current_measure(self, currentrange=2e-5):
+        """
+        Setups the current measurement and does the zero correct.
+        """
+        #self.send("*RST")
+        self.send("SYST:ZCH ON")
+        self.send("RANG %f" % currentrange)
+        self.send("INIT")
+        time.sleep(2.0)
+        self.send("SYST:ZCOR:ACQ")
+        self.send("SYST:ZCOR ON")
+        self.send("SYST:ZCH OFF")
+        
+    def read_current_measure(self):
+        """
+        Reads a single current measurement.
+        """
+        measure = self.send('READ?')
+        current = measure.split(',')[0].replace('A', '')
+        return float(current)
+        
     # ===================================================================
     #  Meta data / state of the instrument 
     # ===================================================================
@@ -384,7 +408,8 @@ class Instrument(Driver):
                 'VOLTRANG',
                 'VOLTILIM',
                 'VOLTAGE',
-                'VOLTSRC']
+                'VOLTSRC',
+                'CURRENT']
 
         # comments : meaning of the keys
         comments = {
@@ -393,7 +418,8 @@ class Instrument(Driver):
             'VOLTRANG' : '[V] Voltage range in Volts',
             'VOLTILIM' : '[V] Volt. Source current limit',
             'VOLTAGE'  : '[V] Voltage setting',
-            'VOLTSRC'  : '[V] Voltage source on/off'
+            'VOLTSRC'  : '[V] Voltage source on/off',
+            'CURRENT'  : '[A] Current in voltage source'
             }
 
         values = {
@@ -402,7 +428,8 @@ class Instrument(Driver):
             'VOLTRANG' : self.getVoltageRange(),
             'VOLTILIM' : self.getCurrentLimit(),
             'VOLTAGE'  : self.getVoltage(),
-            'VOLTSRC'  : self.voltageStatus() 
+            'VOLTSRC'  : self.voltageStatus(),
+            'CURRENT'  : self.read_current_measure() 
             }
 
         return keys, values, comments
