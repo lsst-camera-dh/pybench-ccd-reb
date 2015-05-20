@@ -8,7 +8,6 @@
 
 import os
 import time
-import numpy as np
 import astropy.io.fits as pyfits
 
 #import py.testbench.drivers.ccd_reb as reb

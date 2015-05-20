@@ -15,7 +15,7 @@ import time
 
 class REB1(reb.REB):
 
-    xmldir = "/home/lsst/py/camera/reb1/"
+    xmldir = "/home/lsst/lsst/py/camera/reb1/"
 
     # ===================================================================
 
