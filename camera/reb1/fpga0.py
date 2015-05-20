@@ -161,7 +161,7 @@ class FPGA0(FPGA):
             'I_OS': 'Current sources setting'
         }
 
-        return MetaData(keys, fitsheader, comments)
+        return MetaData(keys, fitsheader, comments, 'REB DACS')
 
     # ----------------------------------------------------------
 
@@ -183,7 +183,7 @@ class FPGA0(FPGA):
         keyst, configt, comt = self.cabac_top[s].get_header("%dT" % s)
         keysb, configb, comb = self.cabac_bottom[s].get_header("%dB" % s)
 
-        config = MetaData(keyst, configt, comt)
+        config = MetaData(keyst, configt, comt, 'CABACS')
         config.update_ordered(keysb, configb, comb)
 
         return config

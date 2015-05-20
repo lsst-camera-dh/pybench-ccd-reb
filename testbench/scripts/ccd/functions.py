@@ -37,10 +37,9 @@ def powerup_CCD(self):
     self.reb.CCDpowerup()
     time.sleep(1)
     # starts Keithley backsubstrate voltage
-    self.bss.config(voltage=-60)
-    self.bss.enable()
-    # TODO: wait until complete, checks
-    time.sleep(5)
+    self.bss.setup(voltage=-60)
+    self.bss.enable(delay=10.0)
+    # TODO: wait until complete
     print("Start-up sequence complete")
     self.reb.waiting_sequence()
 
@@ -52,7 +51,7 @@ def shutdown_CCD(self):
     self.reb.wait_end_sequencer()
     # Back-substrate first
     self.bss.disable()
-    # TODO: wait until done
+    # includes waiting until done: tbc
     time.sleep(10)
     self.reb.CCDshutdown()
 

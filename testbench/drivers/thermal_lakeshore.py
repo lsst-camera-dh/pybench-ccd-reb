@@ -189,4 +189,6 @@ class Instrument(Driver):
 
         return keys, values, comments
 
+# TODO: add programmed temperature as 'TEMP_SET'
+
     # ===================================================================

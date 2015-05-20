@@ -621,9 +621,9 @@ class MetaData(object):
 
     def __repr__(self):
         s = 'MetaData object %s:\n' % self.name
-        s += 'keys\t:\tvalues    \tcomments\n'
+        s += 'keys    =               values # comments\n'
         for key in self.keys:
-            s += '%s\t:\t%s\t%s' % (key, self.values[key].__repr__(), self.comments[key])
+            s += '%-8s= %-20s # %s\n' % (key, str(self.values[key]), self.comments[key])
         return s
 
     def update_single_data(self, key, value, comment=""):
