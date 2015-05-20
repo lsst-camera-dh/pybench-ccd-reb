@@ -343,6 +343,15 @@ if __name__ == '__main__':
     logname = os.path.join(logdir,
                            "xyz-server-%s.log" % now.date().isoformat())
 
+    # recreate the symlink xyz-server.log 
+    logsymlink = os.path.join(logdir, "xyz-server.log")
+    if os.path.islink(logsymlink):
+        try:
+            os.unlink(logsymlink)
+            os.symlink(logname, logsymlink)
+        except OSError:
+            pass
+
     import optparse
     parser = optparse.OptionParser(usage="""
 %prog [-l log-file] [-d] 
