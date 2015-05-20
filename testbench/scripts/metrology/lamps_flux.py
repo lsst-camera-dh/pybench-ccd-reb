@@ -264,6 +264,7 @@ def qth_stability(self,
     time.sleep(2)
     self.log("Changing to grating %d done." % grating)
     self.triax.setWavelength(wl, wait=True)
+    time.sleep(2)
     self.log("Waiting for the monochromator to be ready done.")
 
     # Create the data file
