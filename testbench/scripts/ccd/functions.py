@@ -12,7 +12,8 @@ import numpy as np
 import astropy.io.fits as pyfits
 
 #import py.testbench.drivers.ccd_reb as reb
-import py.testbench.bench as bench
+#import py.testbench.bench as bench
+import lsst.testbench.bench as bench
 
 B = bench.Bench()  # singleton
 
