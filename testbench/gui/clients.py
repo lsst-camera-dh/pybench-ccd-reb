@@ -44,6 +44,26 @@ clients = {
     'lamps': ['QTH', 'XeHg', 'ttl'],
 
     #-------------------------------------------------------------
+    # Lamp Oriel QTH
+    # 
+    #
+    'QTH': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'oriel /dev/ttyS2 8089',
+        'screen': 'lights',
+        'position': {'x': 2200, 'y': 700, 'w': 400, 'h': 300} 
+    },
+    #-------------------------------------------------------------
+    # Lamp Oriel XeHg
+    # 
+    #
+    'XeHg': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'oriel /dev/ttyS3 8085',
+        'screen': 'lights',
+        'position': {'x': 3160, 'y': 700, 'w': 400, 'h': 300} 
+    },
+    #-------------------------------------------------------------
     # Thorlabs Laser (4 channels)
     # 
     #
@@ -51,7 +71,7 @@ clients = {
         'host': 'lpnlsstbench',
         'commandline': 'laserthorlabs',
         'screen': 'lights',
-        'position': {'x': 1950, 'y': 700, 'w': 520, 'h': 420} 
+        'position': {'x': 1480, 'y': 700, 'w': 400, 'h': 420} 
     },
     #-------------------------------------------------------------
     # TTL control (filter wheel, shutters, flipping mirror)
@@ -61,7 +81,18 @@ clients = {
         'host': 'lpnlsstbench',
         'commandline': 'ttl',
         'screen': 'lights',
-        'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
+        'position': {'x': 1950, 'y': 30, 'w': 490, 'h': 300} 
+    },
+
+    #-------------------------------------------------------------
+    # Monochromator Triax 180
+    # 
+    #
+    'triax': { 
+        'host': 'lpnlsstbench',
+        'commandline': 'triax',
+        'screen': 'lights',
+        'position': {'x': 3070, 'y': 30, 'w': 490, 'h': 300} 
     },
 
     #-------------------------------------------------------------
@@ -70,13 +101,13 @@ clients = {
     'xyz': ['xyz-server', 'xyz-log-console'],
     'xyz-server': { 
         'host': 'lpnlsstbench',
-        'commandline': 'xyz-server -....'
+        'commandline': 'xyz-server -d'
     },
     'xyz-log-console': { 
         'host': 'lpnlsstbench',
         'commandline': 'gnome-terminal -x tail -f $HOME/logs/xyz-server.log',
         'screen': 'lights',
-        'position': {'x': 1400, 'y': 30, 'w': 490.0, 'h': 300} 
+        'position': {'x': 1400, 'y': 30, 'w': 490, 'h': 300} 
     },
     #-------------------------------------------------------------
     # Cryo & Pumps Cryostat chamber #0 (blue)

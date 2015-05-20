@@ -6,7 +6,7 @@
 
 __author__ = 'juramy'
 
-import py.camera.generic.reb as reb
+import lsst.camera.generic.reb as reb
 import time
 import os
 import fpga

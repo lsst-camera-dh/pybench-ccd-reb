@@ -22,7 +22,7 @@ B.laser_flux_ramp(channels = [1,2,3,4])
      the flux obtained in the integral sphere and at the CCD position 
      with the calibrated DKD photodiode.
 
-B.laser_stability(channel = 2, current = 45.0, repeat=1e5)
+B.laser_stability(channel = 2, current = 45.0, repeat=10000)
 
      Repeat forever the same measurement to estimate the
      stability of the laser source.
@@ -117,7 +117,7 @@ lsst.testbench.Bench.laser_flux_ramp = laser_flux_ramp
 
 #------------------------------------------------------------------------
 
-def laser_stability(self, channel = 2, current = 45.0, repeat = 1e4):
+def laser_stability(self, channel = 2, current = 45.0, repeat = 10000):
 
     # setup of the 2 Keithleys
 
@@ -161,7 +161,7 @@ def laser_stability(self, channel = 2, current = 45.0, repeat = 1e4):
 
     self.log("Dark current measurement")
     self.laser.disable()
-    self.closeShutter()
+    self.ttl.closeShutter()
 
     for i in xrange(10):
         now = time.time()
@@ -194,7 +194,7 @@ def laser_stability(self, channel = 2, current = 45.0, repeat = 1e4):
 
     self.log("Dark current measurement")
     self.laser.disable()
-    self.closeShutter()
+    self.ttl.closeShutter()
 
     for i in xrange(10):
         now = time.time()

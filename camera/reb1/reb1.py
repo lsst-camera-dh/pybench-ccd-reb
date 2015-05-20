@@ -5,7 +5,8 @@
 """
 Testbench driver for REB (through direct calls to rriClient)
 """
-import py.camera.generic.reb as reb
+# import py.camera.generic.reb as reb
+import lsst.camera.generic.reb as reb
 import fpga0
 import time
 
