@@ -173,7 +173,7 @@ class Instrument(Driver):
             'MODEL'  : 'Instrument model',
             'DRIVER' : 'Instrument software driver', 
             'TEMPA'  : '[Celsius] temperature A',
-            'TEMPA'  : '[Celsius] temperature B',
+            'TEMPB'  : '[Celsius] temperature B',
             'POWER'  : '[W] heating power'
             }
 

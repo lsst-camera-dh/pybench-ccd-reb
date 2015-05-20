@@ -18,12 +18,13 @@ import fpga
 import rebxml
 
 
-def generate_tag(number):
-    today = time.gmtime()
-    tagstr = time.strftime('%Y%m%d', today)+'%05d' % number
-    tag = int(tagstr, 16)
-    return tag
+def generate_tagstr():
+    tagstr = time.strftime('%Y%m%d%H%M%S', time.gmtime())
+    return tagstr
 
+def generate_hextag(tagstr):
+    hextag = int(tagstr, 16)
+    return hextag
 
 def get_sequencer_hdu(seq):
     """
@@ -73,7 +74,8 @@ def get_sequencer_string(seq):
     for ifunc in seq.functions:
         reprfunc = seq.functions[ifunc].__repr__()
         for l in reprfunc.splitlines():
-            reprarray = N.append(reprarray, l.expandtabs(8))
+            if l:
+                reprarray = N.append(reprarray, l.expandtabs(8))
     reprprog = seq.program.__repr__()
     for l in reprprog.splitlines():
         reprarray = N.append(reprarray, l)
@@ -104,9 +106,9 @@ class REB(object):
         self.stripes = []
         self.nchannels = 0
         self.set_stripes(stripe_id)  # stripe in use
-        self.imgtag = 0
-        self.recover_filetag()  # in case we are recovering from software reboot
-        self.update_filetag(self.imgtag)
+        #self.imgtag = 0  # this is now a string, filled in update_filetag
+        #self.recover_filetag()  # in case we are recovering from software reboot
+        self.update_filetag()
         self.xmlfile = "sequencer-soi.xml"
         # initialize parameters for frames
         self.seq = None  # will be filled when loading the sequencer
@@ -134,30 +136,31 @@ class REB(object):
 
    # --------------------------------------------------------------------
 
-    def update_filetag(self, t):
+    def update_filetag(self):
         """
-        Updates the filetag from the given value and writes it to the
+        Updates the filetag from the current time and writes it to the
         FPGA timer.
         :param t: int
         :return:
         """
-        hextag = generate_tag(t)
+        t = generate_tagstr()
+        hextag = generate_hextag(t)
         self.imgtag = t
         self.fpga.set_time(hextag)
 
-    def recover_filetag(self):
-        """
-        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
-        Returns the tag.
-        :return: string
-        """
-        t = self.fpga.get_time()
-        tagstr = '0x%016x' % t
-        todaystr = time.strftime('%Y%m%d', time.gmtime())
-        if string.find(tagstr, todaystr) > -1:
-            self.imgtag = int(tagstr[-5:], base=10)
-
-        return tagstr
+    # def recover_filetag(self):
+    #     """
+    #     Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
+    #     Returns the tag.
+    #     :return: string
+    #     """
+    #     t = self.fpga.get_time()
+    #     tagstr = '0x%016x' % t
+    #     todaystr = time.strftime('%Y%m%d', time.gmtime())
+    #     if string.find(tagstr, todaystr) > -1:
+    #         self.imgtag = int(tagstr[-5:], base=10)
+    #
+    #     return tagstr
 
    # --------------------------------------------------------------------
 
@@ -283,6 +286,7 @@ class REB(object):
         Executes the currently loaded sequence.
         """
         self.wait_end_sequencer()
+        self.update_filetag()
         self.tstamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
         self.fpga.start()
         print("Starting %s sequence with %f exposure time." % (self.seqname, self.exptime))
