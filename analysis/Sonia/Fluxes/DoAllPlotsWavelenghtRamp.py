@@ -5,6 +5,8 @@ import glob
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import datetime
+import matplotlib.dates as dates
 # import FluxesPlots
 
 def doPlot( plot, prefix, thetitle):
@@ -17,9 +19,23 @@ def doPlot( plot, prefix, thetitle):
     Y = plot[2]
     cut = plot[3]
     cutcondition = cut
-    plt.plot(X[cutcondition], Y[cutcondition], marker = "*", markeredgecolor= 'None', linewidth = 0)
+
+    if "VS time" in mytitle:
+        dts = map(datetime.datetime.fromtimestamp, X[cutcondition])
+        fds = dates.date2num(dts)  # converted
+        # matplotlib date format object
+#         hfmt = dates.DateFormatter('%m/%d %H:%M:%S')
+        hfmt = dates.DateFormatter('%H:%M:%S')
+#         ax1.xaxis.set_major_locator(dates.MinuteLocator())
+        plt.plot(fds, Y[cutcondition], marker = "*", markeredgecolor= 'None', linewidth = 0)
+        plt.gca().xaxis.set_major_formatter(hfmt)
+        plt.xticks(rotation='vertical')
+        plt.subplots_adjust(bottom=.2)
+    else:
+        plt.plot(X[cutcondition], Y[cutcondition], marker = "*", markeredgecolor= 'None', linewidth = 0)
     plt.grid(True)
     plt.title(mytitle)
+    # plt.show()
     plt.savefig(imagename)
     plt.close()
 
@@ -46,7 +62,7 @@ else:
 #
 # print "will plot from files :", allfiles
 
-allfiles= glob.glob(dataDir+"/"+"DKD-PhD-QTH-triax-fluxes*.data")
+allfiles= glob.glob(dataDir+"/"+"DKD-PhD-QTH-triax-flux*.data")
 if len(allfiles) == 0 :
     print "no data file found in ", dataDir
     exit()
@@ -81,21 +97,25 @@ for filename in allfiles:
     cutdark = flagShutter == 0
     darkDKD  = DKDflux[cutdark]
     darkPhD = PhDFlux[cutdark]
-    DKDflux = DKDflux - darkDKD.mean()
-    PhDFlux = PhDFlux - darkPhD.mean()
+    DKDfluxDS = DKDflux - darkDKD.mean()
+    PhDFluxDS = PhDFlux - darkPhD.mean()
 
     darkDKDpercent = (darkDKD - darkDKD.mean())*100/ darkDKD.mean()
     darkPhDpercent = (darkPhD - darkPhD.mean())*100/ darkPhD.mean()
 
     allPlots = [
-                # ('PhDFlux above dark VS time', time, PhDFlux, cutlight),
-                # ('DKDflux above dark VS time', time, DKDflux, cutlight),
-                ('PhDFlux above dark VS wavelength', wavelength, PhDFlux, cutlight),
-                # ('DKDflux above dark  VS wavelength', wavelength, DKDflux, cutlight),
-                # ('DKDflux above dark VS PhDFlux', PhDFlux, DKDflux, cutlight),
-                # ('DKDflux Over PhDFlux VS time', time, DKDflux/PhDFlux, cutlight),
-                # ('darkDKDPercent VS time', time[cutdark], darkDKDpercent, np.ones(darkDKDpercent.shape, dtype=bool) ),
-                # ('darkPhDPercent VS time', time[cutdark], darkPhDpercent, np.ones(darkPhDpercent.shape, dtype=bool) ),
+                ('PhDFlux above dark VS time', time, PhDFluxDS, cutlight),
+                ('DKDflux above dark VS time', time, DKDfluxDS, cutlight),
+                # ('PhDFlux VS time', time, PhDFlux, cutlight),
+                # ('DKDflux VS time', time, DKDflux, cutlight),
+                # ('PhDFlux above dark VS wavelength', wavelength, PhDFluxDS, cutlight),
+                # ('DKDflux above dark  VS wavelength', wavelength, DKDfluxDS, cutlight),
+                # ('DKDflux above dark VS PhDFlux', PhDFlux, DKDfluxDS, cutlight),
+                # ('DKDflux Over PhDFlux VS time', time, DKDfluxDS/PhDFluxDS, cutlight),
+                 ('darkDKD VS time', time[cutdark], darkDKD, np.ones(darkDKD.shape, dtype=bool) ),
+                ('darkPhD VS time', time[cutdark], darkPhD, np.ones(darkPhD.shape, dtype=bool) ),
+                ('darkDKDPercent VS time', time[cutdark], darkDKDpercent, np.ones(darkDKDpercent.shape, dtype=bool) ),
+                ('darkPhDPercent VS time', time[cutdark], darkPhDpercent, np.ones(darkPhDpercent.shape, dtype=bool) ),
                  ]
                 # cut_oneloop = ((time > 1429939335.59) & (time < 1429964839.88))
 

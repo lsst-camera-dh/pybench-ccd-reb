@@ -632,3 +632,38 @@ Command : 6  Answer : 0
 
 - To do : in the blackbox and with the test target further
 
+- Do not move the light source !!!!
+- Do with objective + camera + led and objective+camera+led+target !
+- With no saturation the better focus !
+
+2015-05-15
+
+- First serie : with target 5ms
+- same as before
+- 10 ms
+- 10 ms but saturation
+- 8 ms target has been moved : min 20 max 210 interfringes 7 pix
+
+- Kind of circular pattern of blur : seems to be the parallelism of the different element
+
+2015-05-18
+
+- Series of focus with 5ms, the LED further away and brigth, area of illumination about 2*2cm
+- 25ms
+- 50ms
+- five flat at 50ms
+
+2015-05-19
+
+- Series with vertical stripes.
+- Autofocus do not work if there (see 20150519/*fits)
+- Do not forget that the amateur camera is special : there is a vertical serie register for all the vertical array of pixels : hence the algorithm to find the wavelength of the fringes finds somethings shorter than in reality.
+- The algorithme does not really find the good wavelength. It is a mean avec the whole image.
+- Take series with a diffuser far from the target and then near (less than a cm, on the same support).
+
+- Put all the setup on the optical table with regularly spaced holes
+- Protect space between camera and objective.
+- Series with vertical stripes and diffuser (100ms).
+- Series with more flux, diffuser closer from LED (100ms).
+
+- End the auto-focus !
