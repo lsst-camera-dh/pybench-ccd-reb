@@ -7,7 +7,7 @@
 # and first version of the sequencer (with no pointers).
 # Take from wreb for more advanced REBs and DREBs.
 
-from py.camera.generic.fpga import *
+from lsst.camera.generic.fpga import *
 
 import cabac0 as cabac
 
