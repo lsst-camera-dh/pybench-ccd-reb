@@ -134,20 +134,11 @@ class Instrument(Driver):
         self.stripe_id = stripe_id
         self.reb.set_stripes([self.stripe_id])
 
-    def update_filetag(self, t):
+    def update_filetag(self):
         """
-        Updates the filetag to the FPGA timer.
-        :param t: int new numerical tag
+        Updates the filetag from the current time to the FPGA timer.
         """
-        self.reb.update_filetag(t)
-
-    def recover_filetag(self):
-        """
-        Reads the filetag from the FPGA timer and recovers imgtag if it is in the right format.
-        Returns the tag.
-        :return: string
-        """
-        return self.reb.recover_filetag()
+        self.reb.update_filetag()
 
     # --------------------------------------------------------------------
     # Sequencer configuration
