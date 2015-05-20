@@ -6,8 +6,11 @@
 Testbench driver for REB (through direct calls to rriClient)
 """
 
-import py.camera.reb1.reb1 as reb1
-from py.camera.generic.reb import get_sequencer_string
+# import py.camera.reb1.reb1 as reb1
+# from py.camera.generic.reb import get_sequencer_string
+
+import lsst.camera.reb1.reb1 as reb1
+from lsst.camera.generic.reb import get_sequencer_string
 
 from driver import Driver
 
@@ -450,18 +453,3 @@ class Instrument(Driver):
         return get_sequencer_string(self.reb.seq)
 
 # TODO: add more meta to put in secondary headers
-
-# needed elsewhere
-
-#def mock_acquire():
-    # stuff to put elsewhere for a full acquisition with header
-    #primeheader = {}
-    #primeheader["TESTTYPE"] = "Test" DARK:FLAT:OBS:PPUMP:QE:SFLAT
-    #DATE
-    #TEMP_SET	-95.00
-#CCDTEMP	-95.12
-#MONDIODE	143.12
-#MONOWL	550.00
-#FILTER	'550LP'
-#FILENAME	[Original name of the file]
-#exthdu = get_sequencer_hdu(self.reb.fpga)
