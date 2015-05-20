@@ -6,8 +6,11 @@
 Testbench driver for REB (through direct calls to rriClient)
 """
 
-import py.camera.reb1.reb1 as reb1
-from py.camera.generic.reb import get_sequencer_string
+# import py.camera.reb1.reb1 as reb1
+# from py.camera.generic.reb import get_sequencer_string
+
+import lsst.camera.reb1.reb1 as reb1
+from lsst.camera.generic.reb import get_sequencer_string
 
 from driver import Driver
 
