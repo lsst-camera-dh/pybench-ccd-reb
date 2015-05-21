@@ -479,22 +479,4 @@ class PowerSupply(object):
             self.write("SYST:BEEP")
             time.sleep(.2)
 
-
-    def music(self, repeat=1):
-
-        self.reopen_if_needed()
-        self.purge()
-
-        for i in xrange(repeat):
-            self.write("SYST:BEEP")
-            time.sleep(.5)
-            self.write("SYST:BEEP")
-            time.sleep(.2)
-            self.write("SYST:BEEP")
-            time.sleep(.2)
-            self.write("SYST:BEEP")
-            time.sleep(.2)
-            self.write("SYST:BEEP")
-            time.sleep(1)
-
 # ==================================================================
