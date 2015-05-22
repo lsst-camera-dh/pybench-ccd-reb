@@ -614,14 +614,14 @@ class MetaData(object):
 
     def __init__(self, orderkeys=[], dictvalues={}, dictcomments={}, name=''):
         self.name = name
-        self.keys = []
-        self.values = {}
-        self.comments = {}
+        self.keys = orderkeys
+        self.values = dictvalues
+        self.comments = dictcomments
         self.update_ordered(orderkeys, dictvalues, dictcomments)
 
     def __repr__(self):
         s = 'MetaData object %s:\n' % self.name
-        s += 'keys    =               values # comments\n'
+        s += 'keys    = values               # comments\n'
         for key in self.keys:
             s += '%-8s= %-20s # %s\n' % (key, str(self.values[key]), self.comments[key])
         return s
