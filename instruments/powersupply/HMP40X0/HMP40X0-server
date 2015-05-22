@@ -4,13 +4,14 @@
 #
 # LSST
 #
-# Remote control (XPL-RPC) of the Keithley for the LSST testbench
+# Remote control (XPL-RPC) of the HMP4040 power supply 
+# for the LSST testbench
 # XML-RPC server to control it remotely
-# default device: /dev/ttyS1
-# default port: 8102
+# default device: /dev/hmp4040
+# default port: 8302
 #
 # Authors: Laurent Le Guillou 
-# (recycled from DICE control system code)
+# Date: 2015-05-21
 #
 # ==================================================================
 
@@ -45,16 +46,16 @@ from exceptions import Exception
 
 # DEFAULT_HOSTNAME = "lpnlsstbench"
 DEFAULT_HOSTNAME = "134.158.155.98"
-DEFAULT_PORT     = 8211
-DEFAULT_DEVICE   = "/dev/ttyS1"
+DEFAULT_PORT     = 8302
+DEFAULT_DEVICE   = "/dev/hmp4040"
 
-SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
-SERVER_PORT     = int(os.getenv("KEITHLEY_SERVER_PORT", DEFAULT_PORT))
-SERVER_DEVICE   = os.getenv("KEITHLEY_SERVER_DEVICE", DEFAULT_DEVICE)
+SERVER_HOSTNAME = os.getenv("HMP4040_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
+SERVER_PORT     = int(os.getenv("HMP4040_SERVER_PORT", DEFAULT_PORT))
+SERVER_DEVICE   = os.getenv("HMP4040_SERVER_DEVICE", DEFAULT_DEVICE)
 
 # ==================================================================
 
-class KeithleyServer(SimpleXMLRPCServer):
+class HMP40X0Server(SimpleXMLRPCServer):
     def serve_forever(self):
 	self.quit = 0
 	while not self.quit:
@@ -68,11 +69,11 @@ class KeithleyServer(SimpleXMLRPCServer):
 
 # ==================================================================
 
-import lsst.instruments.keithley as keithley
+import lsst.instruments.HMP40X0 as HMP40X0
 
 # ==================================================================
 
-class KeithleyRemote(object):
+class HMP40X0Remote(object):
     
     instance = None
 
@@ -84,12 +85,12 @@ class KeithleyRemote(object):
         return cls.instance
     
     def __init__(self,
-                 device = '/dev/ttyS0',
+                 device = '/dev/hmp4040',
                  debug = True):
         self.state = 1
         self.device = device
-        self.keithley = keithley.Multimeter(device = device,
-                                            debug = debug)
+        self.HMP40X0 = HMP40X0.PowerSupply(device = device,
+                                           debug = debug)
 
     # --------------------------------------------------------------
 
@@ -103,20 +104,20 @@ class KeithleyRemote(object):
 
     def open(self):
         """
-        Open the connection with the Keithley multimeter.
+        Open the connection with the HMP40X0 multimeter.
         """
-        logging.info("Keithley.open() called.")
+        logging.info("HMP40X0.open() called.")
         self.keithley.open()
-        logging.info("Keithley.open() done.")
+        logging.info("HMP40X0.open() done.")
         return True
 
     def close(self):
         """
-        Close the connection with the Keithley multimeter.
+        Close the connection with the HMP40X0 multimeter.
         """ 
-        logging.info("Keithley.close() called.")
+        logging.info("HMP40X0.close() called.")
         self.keithley.close()
-        logging.info("Keithley.close() done.")
+        logging.info("HMP40X0.close() done.")
         return True
 
     def reset(self):
@@ -124,21 +125,21 @@ class KeithleyRemote(object):
         Reset the instrument to the factory default settings
         (with the exception of all remote interface settings).
         """
-        logging.info("Keithley.reset() called.")
+        logging.info("HMP40X0.reset() called.")
         self.keithley.reset()
-        logging.info("Keithley.reset() done.")
+        logging.info("HMP40X0.reset() done.")
         return True
 
     def clear(self):
         """
         Clear the instrument status.
         """ 
-        logging.info("Keithley.clear() called.")
+        logging.info("HMP40X0.clear() called.")
         self.keithley.clear()
-        logging.info("Keithley.clear() done.")
+        logging.info("HMP40X0.clear() done.")
         return True
     
-    # ----------------------- Keithley generic command ------------------
+    # ----------------------- HMP40X0 generic command ------------------
 
     def send(self, command, timeout = None):
         """
@@ -150,11 +151,11 @@ class KeithleyRemote(object):
         for data with the specified timeout (instead of the default one). 
         """
 
-        logging.info("Keithley.send() called.")
+        logging.info("HMP40X0.send() called.")
         logging.info("  command = [%s]" % command)
         answer = self.keithley.send(command, timeout = timeout)
         logging.info("  answer = [%s]" % answer)
-        logging.info("Keithley.send() done.")
+        logging.info("HMP40X0.send() done.")
         return answer
 
     def get_error_status(self):
@@ -162,42 +163,42 @@ class KeithleyRemote(object):
         Get (and clear) the Standard Event Status Register.
         Return ESR value.
         """
-        logging.info("Keithley.get_error_status() called.")
+        logging.info("HMP40X0.get_error_status() called.")
         esr = self.keithley.get_error_status()
         logging.info("  ESR = [%d]" % esr)
-        logging.info("Keithley.get_error_status() done.")
+        logging.info("HMP40X0.get_error_status() done.")
         return esr
 
-    # ----------------------- Keithley identification -------------------
+    # ----------------------- HMP40X0 identification -------------------
 
     def get_serial(self):
         """
-        Return the identification string of the Keithley.
+        Return the identification string of the HMP40X0.
         """
-        logging.info("Keithley.get_serial() called.")
+        logging.info("HMP40X0.get_serial() called.")
         serial = self.keithley.get_serial()
         logging.info("  serial = [%s]" % serial)
-        logging.info("Keithley.get_serial() done.")
+        logging.info("HMP40X0.get_serial() done.")
         return serial
 
     # ----------------------- Various methods ---------------------------
 
     def scroll_text(self, msg):
         """
-        Scroll text 'msg' on the Multimeter display.
+        Scroll text 'msg' on the Power Supply display.
         For debug purpose only.
         """
-        logging.info("Keithley.scroll_text() called.")
+        logging.info("HMP40X0.scroll_text() called.")
         self.keithley.scroll_text(msg)
-        logging.info("Keithley.scroll_text() done.")
+        logging.info("HMP40X0.scroll_text() done.")
         return True
 
     # ----------------------- Introspection -----------------------------
 
     def _listMethods(self):
-        logging.info("Keithley._listMethods() called.")
+        logging.info("HMP40X0._listMethods() called.")
         methods = list_public_methods(self)
-        logging.info("Keithley._listMethods() done.")
+        logging.info("HMP40X0._listMethods() done.")
         return methods
 
     def _methodHelp(self, method):
@@ -281,30 +282,30 @@ def main(options, args):
     redirect_stream(sys.stderr, None)    
 
     # General Control Functions 
-    server.register_function(keithley.status,       "status")
-    server.register_function(keithley.open,         "open")
-    server.register_function(keithley.close,        "close")
-    server.register_function(keithley.reset,        "reset")
-    server.register_function(keithley.clear,        "clear")
-    server.register_function(keithley.get_serial,   "get_serial")
-    server.register_function(keithley.get_serial,   "checkConnection")
+    server.register_function(HMP40X0.status,       "status")
+    server.register_function(HMP40X0.open,         "open")
+    server.register_function(HMP40X0.close,        "close")
+    server.register_function(HMP40X0.reset,        "reset")
+    server.register_function(HMP40X0.clear,        "clear")
+    server.register_function(HMP40X0.get_serial,   "get_serial")
+    server.register_function(HMP40X0.get_serial,   "checkConnection")
 
-    # Keithley generic command
-    server.register_function(keithley.send,         "send")
-    # server.register_function(keithley.check_error_status,"check_error_status")
-    server.register_function(keithley.get_error_status,  "get_error_status")
+    # HMP40X0 generic command
+    server.register_function(HMP40X0.send,         "send")
+    # server.register_function(HMP40X0.check_error_status,"check_error_status")
+    server.register_function(HMP40X0.get_error_status,  "get_error_status")
 
     # misc 
-    server.register_function(keithley.scroll_text,  "scroll_text")
+    server.register_function(HMP40X0.scroll_text,  "scroll_text")
     server.register_function(server_quit,           "quit")
 
     # for remote introspection (tab completion with ipython)
-    server.register_function(keithley._listMethods, "__dir__")
-    server.register_function(keithley._listMethods, "system.listMethods")
-    server.register_function(keithley._listMethods,  "trait_names")
-    server.register_function(keithley._listMethods,  "_getAttributeNames")
+    server.register_function(HMP40X0._listMethods, "__dir__")
+    server.register_function(HMP40X0._listMethods, "system.listMethods")
+    server.register_function(HMP40X0._listMethods,  "trait_names")
+    server.register_function(HMP40X0._listMethods,  "_getAttributeNames")
     # TODO: implement: system.methodSignature
-    server.register_function(keithley._methodHelp,  "system.methodHelp")
+    server.register_function(HMP40X0._methodHelp,  "system.methodHelp")
 
     logging.info("Server going up.")
     server.serve_forever()
@@ -317,12 +318,13 @@ if __name__ == '__main__':
 
     # ------------- log file ----------------------
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.now().date()
+    
     # logname = ( "keithley-server-%s-%d-%s.log" % 
     #             ( SERVER_DEVICE, SERVER_PORT,
     #               now.isoformat().split('T')[0] ) )
-    logname = ( "keithley-server-%s.log" % 
-                now.isoformat().split('T')[0] )
+    logname = ( "HMP40X0-server-%s.log" % 
+                now.isoformat() )
                 
     # ------------- parsing command line ----------
 
@@ -330,7 +332,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage="""
 %prog [-d] 
 
-Start the Keithley Electrometer remote control server. 
+Start the HMP40X0 Power Supply remote control server. 
 """)
     parser.add_option('-d', '--daemon', default=False, action='store_true',
                       help='Run as a background daemon')
@@ -353,15 +355,13 @@ Start the Keithley Electrometer remote control server.
     
     # ------------- Initialize Instrument ---------
 
-    keithley = KeithleyRemote(device = SERVER_DEVICE)
-
-    # server = SimpleXMLRPCServer(("dicehead", 8001))
-    server = KeithleyServer((SERVER_HOSTNAME, SERVER_PORT))
+    HMP40X0 = HMP40X0Remote(device = SERVER_DEVICE)
+    server = HMP40X0Server((SERVER_HOSTNAME, SERVER_PORT))
     server.register_introspection_functions()
 
     # ---------------------------------------------
 
-    print "Keithley: talking to device %s: listening on port %s:%d. Waiting for commands." % (SERVER_DEVICE, SERVER_HOSTNAME, SERVER_PORT)
+    print "HMP40X0: talking to device %s: listening on port %s:%d. Waiting for commands." % (SERVER_DEVICE, SERVER_HOSTNAME, SERVER_PORT)
     
     if options.daemon:
         daemonize(options, args)
