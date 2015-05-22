@@ -52,6 +52,7 @@ Testbench driver for the Keithley multimeter 6487 [power source] (through keithl
 
 import xmlrpclib
 import time
+import logging
 
 from driver import Driver
 
@@ -247,6 +248,7 @@ class Instrument(Driver):
         """
         command = "SOUR:VOLT:ILIM %f" % float(limit)
         answer = self.send(command)
+        logging.info("Keithley.setCurrentLimit to %f" % limit)
         return answer
     
     # ----- Voltage settings
@@ -268,6 +270,7 @@ class Instrument(Driver):
         command = "SOUR:VOLT:RANGE %f" % float(voltagerange)
         # print command
         answer = self.send(command)
+        logging.info("Keithley.setVoltageRange to %f" % voltagerange)
         return answer
 
     # ------
@@ -289,6 +292,7 @@ class Instrument(Driver):
         command = "SOUR:VOLT %f" % float(voltage)
         # print command
         answer = self.send(command)
+        logging.info("Keithley.setVoltage to %f" % voltage)
         return answer
 
     # source enable and source status
@@ -300,6 +304,7 @@ class Instrument(Driver):
         command = "SOUR:VOLT:STAT?"
         # print command
         answer = int(self.send(command))
+        logging.info("Keithley.voltageStatus is " % answer)
         return answer
 
 
@@ -314,6 +319,7 @@ class Instrument(Driver):
         command = "SOUR:VOLT:STAT "  + arg
         # print command
         answer = self.send(command)
+        logging.info("Sent Keithley.sourceVoltage %s" % arg)
         return answer
 
     # ===================================================================
@@ -639,34 +645,6 @@ class Instrument(Driver):
 #         return result
 
 
-#     # ===================================================================
-#     #  Meta data / state of the instrument 
-#     # ===================================================================
-
-
-#     def get_meta(self):
-#         """
-#         Returns meta data describing the current state
-#         of the instrument. 
-#         Useful to fill the FITS headers.
-#         """
-
-#         # keys : specify the key order
-#         keys = ['MODEL',
-#                 'DRIVER']
-
-#         # comments : meaning of the keys
-#         comments = {
-#             'MODEL'  : 'Instrument model',
-#             'DRIVER' : 'Instrument software driver' 
-#             }
-
-#         values = {
-#             'MODEL'  : self.get_serial(),
-#             'DRIVER' : 'keithley-server / keithley' 
-#             }
-
-#         return keys, values, comments
 
 #     # ===================================================================
 
