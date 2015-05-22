@@ -1,7 +1,7 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.instruments.powersupply.TTiQL355TP'
-VERSION = '0.0.1'
+APPNAME = 'lsst.instruments.powersupply.HMP40X0'
+VERSION = '0.0.2'
 top = '.'
 build = 'build'
 
@@ -16,10 +16,13 @@ def configure(ctx):
     
 def build(ctx):
     ctx(features = 'py', 
-        source = ctx.path.ant_glob('*.py'), 
-        # source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/instruments/powersupply/TTiQL355TP')
+        # source = ctx.path.ant_glob('*.py'), 
+        source = ['__init__.py',
+                  'HMP40X0.py'], 
+        install_path = '${PYTHONDIR}/lsst/instruments/powersupply/HMP40X0')
 
-
+    ctx.install_as('${PREFIX}/bin/HMP40X0-server', 
+                   'HMP40X0-server', 
+                   chmod=0755)
 
     

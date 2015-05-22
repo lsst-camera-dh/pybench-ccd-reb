@@ -8,7 +8,7 @@
 # Low level control for the Power Supply - HMP4030/HMP4040
 #
 # Authors: Laurent Le Guillou 
-# Date: 2015-0-21
+# Date: 2015-05-21
 #
 # ==================================================================
 
