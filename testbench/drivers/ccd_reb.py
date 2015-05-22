@@ -13,6 +13,8 @@ import lsst.camera.reb1.reb1 as reb1
 from lsst.camera.generic.reb import get_sequencer_string
 
 from driver import Driver
+import logging
+import os.path
 
 # =======================================================================
 
@@ -149,18 +151,22 @@ class Instrument(Driver):
         Load the functions and the program from a file (by default if none given).
         """
         self.reb.load_sequencer(xmlfile)
+        logging.info("Loaded XML sequencer file %s" % os.path.join(self.reb.xmldir, self.reb.xmlfile))
 
     def select_subroutine(self, subname, repeat=1):
         """
         Selects the subroutine to be executed by changing the first (main) call in the program.
         """
         self.reb.select_subroutine(subname, repeat)
+        logging.info("Selected subroutine %s with repeat %d" % (self.reb.seqname, repeat))
 
     def config_sequence(self, subname, exptime=1, shutdelay=100):
         """
         Configure the programmed sequence, including selection, exposure time, and shutter delay.
         """
         self.reb.config_sequence(subname, exptime, shutdelay)
+        logging.info("Configured subroutine %s with exposure time %f and shutter delay %f"
+                     % (subname, exptime, shutdelay))
 
     # --------------------------------------------------------------------
 
@@ -216,6 +222,7 @@ class Instrument(Driver):
         Clear the FPGA sequencer program memory.
         """
         self.reb.fpga.clear_program()
+        logging.info("Cleared sequencer program.")
 
     # --------------------------------------------------------------------
     # Running the sequencer
@@ -226,6 +233,7 @@ class Instrument(Driver):
         Executes the currently loaded sequence.
         """
         self.reb.execute_sequence()
+        logging.info("Sent execute sequence %s to FPGA" % self.reb.seqname)
 
     def set_trigger(self, trigger):
         self.reb.fpga.set_trigger(trigger)
@@ -252,7 +260,9 @@ class Instrument(Driver):
         """
         Lets CCD wait by clearing periodically until keyboard interrupt is sent.
         """
+        logging.info("Starting wait sequence")
         self.reb.waiting_sequence(name)
+        logging.info("End wait sequence")
 
     # --------------------------------------------------------------------
     # Operating the board electronics
@@ -262,19 +272,25 @@ class Instrument(Driver):
         """
         Operations after powering the REB
         """
+        logging.info("Starting to initialize the REB")
         self.reb.REBpowerup()
+        logging.info("Initialized the REB")
 
     def CCDpowerup(self):
         """
         Sequence to power up the CCD safely.
         """
+        logging.info("Starting to power up the CCD on REB")
         self.reb.CCDpowerup()
+        logging.info("Powering up the CCD is done on REB")
 
     def CCDshutdown(self):
         """
         Sequence to shut down the CCD safely
         """
+        logging.info("Starting to shut down the CCD on REB")
         self.reb.CCDshutdown()
+        logging.info("CCD shut down sequence is done on REB")
 
     def REBshutdown(self):
         """
@@ -299,6 +315,7 @@ class Instrument(Driver):
         :param dacs: dict
         """
         self.reb.fpga.set_clock_voltages(dacs)
+        logging.info("Setting clock voltages")
 
     def set_current_source(self, dac):
         """
@@ -306,6 +323,7 @@ class Instrument(Driver):
         :param dac: int
         """
         self.reb.fpga.set_current_source(dac)
+        logging.info("Setting current source DACs to %d" % dac)
 
     # --------------------------------------------------------------------
 
@@ -320,12 +338,14 @@ class Instrument(Driver):
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
         """
         self.reb.send_cabac_config(params)
+        logging.info("Sent CABAC0 values")
 
     def cabac_reset(self):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
         """
         self.reb.cabac_reset()
+        logging.info("Sent CABAC0 reset")
 
     # --------------------------------------------------------------------
     # Building FITS frames
