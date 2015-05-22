@@ -639,34 +639,6 @@ class Instrument(Driver):
 #         return result
 
 
-#     # ===================================================================
-#     #  Meta data / state of the instrument 
-#     # ===================================================================
-
-
-#     def get_meta(self):
-#         """
-#         Returns meta data describing the current state
-#         of the instrument. 
-#         Useful to fill the FITS headers.
-#         """
-
-#         # keys : specify the key order
-#         keys = ['MODEL',
-#                 'DRIVER']
-
-#         # comments : meaning of the keys
-#         comments = {
-#             'MODEL'  : 'Instrument model',
-#             'DRIVER' : 'Instrument software driver' 
-#             }
-
-#         values = {
-#             'MODEL'  : self.get_serial(),
-#             'DRIVER' : 'keithley-server / keithley' 
-#             }
-
-#         return keys, values, comments
 
 #     # ===================================================================
 
