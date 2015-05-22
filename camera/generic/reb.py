@@ -11,7 +11,6 @@ talk to the appropriate FPGAs (which will inherit from the generic FPGA object).
 
 import time
 import os
-import string
 import numpy as N
 import astropy.io.fits as pyfits
 import fpga
@@ -286,7 +285,8 @@ class REB(object):
         Executes the currently loaded sequence.
         """
         self.wait_end_sequencer()
-        self.update_filetag()
+        if self.seqname != 'Wait':
+            self.update_filetag()
         self.tstamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
         self.fpga.start()
         print("Starting %s sequence with %f exposure time." % (self.seqname, self.exptime))
