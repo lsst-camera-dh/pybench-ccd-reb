@@ -8,9 +8,9 @@
 
 import os
 import time
+import logging
 import astropy.io.fits as pyfits
 
-#import py.testbench.drivers.ccd_reb as reb
 #import py.testbench.bench as bench
 import lsst.testbench.bench as bench
 
@@ -27,14 +27,13 @@ bench.Bench.load_sequencer = load_sequencer
 
 
 def initialize_REB(self):
-    print("Powering up the REB1")
     self.reb.REBpowerup()
 
 bench.Bench.initialize_REB = initialize_REB
 
 
 def powerup_CCD(self):
-    print "Powering up the CCD"
+    logging.info("Starting CCD power-up sequence")
     self.reb.CCDpowerup()
     time.sleep(1)
     # starts Keithley backsubstrate voltage
@@ -42,20 +41,21 @@ def powerup_CCD(self):
     self.bss.setup_current_measure(2e-5)
     self.bss.enable(delay=10.0)
     # TODO: wait until complete
-    print("Start-up sequence complete")
+    logging.info("CCD start-up sequence is complete")
     self.reb.waiting_sequence()
 
 bench.Bench.powerup_CCD = powerup_CCD
 
 
 def shutdown_CCD(self):
-    print("Shutting down the CCD")
+    print("Starting CCD shut-down sequence")
     self.reb.wait_end_sequencer()
     # Back-substrate first
     self.bss.disable()
     # extra wait time for safety
     time.sleep(10)
     self.reb.CCDshutdown()
+    logging.info("CCD shut-down sequence is complete")
 
 bench.Bench.shutdown_CCD = shutdown_CCD
 
@@ -167,7 +167,7 @@ def save_to_fits(self, hdulist, fitsname='', LSSTstyle = True):
     hdulist.append(seqhdu)
 
     hdulist.writeto(fitsname, clobber=True)
-    print("Wrote FITS file "+fitsname)
+    logging.info("Wrote FITS file "+fitsname)
 
 bench.Bench.save_to_fits = save_to_fits
 
