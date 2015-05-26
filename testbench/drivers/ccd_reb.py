@@ -166,7 +166,7 @@ class Instrument(Driver):
         """
         self.reb.config_sequence(subname, exptime, shutdelay)
         logging.info("Configured subroutine %s with exposure time %f and shutter delay %f"
-                     % (subname, exptime, shutdelay))
+                     % (self.reb.seqname, self.reb.exptime, self.reb.shutdelay))
 
     # --------------------------------------------------------------------
 

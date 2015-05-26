@@ -304,7 +304,7 @@ class Instrument(Driver):
         command = "SOUR:VOLT:STAT?"
         # print command
         answer = int(self.send(command))
-        logging.info("Keithley.voltageStatus is " % answer)
+        logging.info("Keithley.voltageStatus is %d" % answer)
         return answer
 
 
