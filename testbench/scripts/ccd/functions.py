@@ -37,8 +37,12 @@ def powerup_CCD(self):
     self.reb.CCDpowerup()
     time.sleep(1)
     # starts Keithley backsubstrate voltage
-    self.bss.setup(voltage=-60)
-    self.bss.setup_current_measure(2e-5)
+    if not self.bss.voltageStatus():
+        # reset only if not enabled
+        self.bss.send('*RST')
+        # reset is apparently needed before configuring (otherwise error 16 pops up)
+        self.bss.setup(voltage=-60)
+        self.bss.setup_current_measure(2e-5)
     self.bss.enable(delay=10.0)
     # TODO: wait until complete
     logging.info("CCD start-up sequence is complete")
