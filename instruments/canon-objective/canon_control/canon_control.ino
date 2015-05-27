@@ -184,36 +184,38 @@ void executeCommand(char buffer[], int & index)
                  instruction[2] = buffer[k];
                  instruction[3] = buffer[k+1];
                  
-                 //Serial.print("Check the buffer : ");
-                 //Serial.print(instruction[2],HEX);
-                 //Serial.print("   ");
-                 //Serial.println(instruction[3],HEX);
-                 
-                 unsigned char a = 0;
-                 //Serial.print("a and d before sscanf : ");
-                 //Serial.print(a,HEX);
-                 unsigned int d = 0;
-                 //Serial.print("   ");
-                 //Serial.println(d,HEX);
-                 sscanf(instruction, "%x", &d);
-                 
-                 //Serial.print("a and d after sscanf : ");
-                 a = (unsigned char)d;
-                 
-                 //Serial.print(a,HEX);
-                 //Serial.print("   ");
-                 //Serial.println(d,HEX);
-                 
-                 //Serial.print("Command : ");
-                 Serial.print(a, HEX);
-                 Serial.print(" ");
-                 //Serial.print("  Answer : ");
-                 Serial.println(send(a), HEX);
-                 delay(1000);
+                 if(buffer[k]=='0' && buffer[k+1]=='G')
+                     {
+                     //Before sending amoving command, power up of the motor.
+                     digitalWrite(vpowPin, LOW);
+                     delay(100);
+                     }
+                 else if(buffer[k]=='0' && buffer[k+1]=='H')
+                     {
+                       //After sending a moving command, power off of the motor
+                       delay(500);
+                       digitalWrite(vpowPin, HIGH);
+                       delay(100);
+                     }
+                 else
+                     {
+                       unsigned char a = 0;
+                       unsigned int d = 0;
+                       sscanf(instruction, "%x", &d);
+                       a = (unsigned char)d;
+                       
+                       //Serial.print("Command : ");  
+                       Serial.print(a, HEX);
+                       Serial.print(" ");
+                       //Serial.print("  Answer : ");
+                       Serial.println(send(a), HEX);
+                     }
+                
                  if(secure == 150)
                  {
                        break;
                  }
+                 
                  k = k + 2;
                  secure = secure + 1;
            }
@@ -293,21 +295,14 @@ void loop() {
               {
                       buffer[index] = incomingByte;
                       
-                       //Serial.print("Poll the lens : ");
-                       //Serial.print("Command : 0A-");
-                       send(0x0A);
-                       //Serial.print("  Answer : ");
-                       send(0x00);
-                      
-                      //Before sending the command, power up of the motor.
-                      digitalWrite(vpowPin, LOW);
-                      delay(100);
+                      //Serial.print("Poll the lens : ");
+                      //Serial.print("Command : 0A-");
+                      send(0x0A);
+                      //Serial.print("  Answer : ");
+                      send(0x00);
                       
                       executeCommand(buffer,index);
                       
-                      //After sending the command, power off of the motor
-                      digitalWrite(vpowPin, HIGH);
-                      delay(100);
               }
               else
               {
@@ -319,12 +314,12 @@ void loop() {
               if(index<100)
               {
                    if(((incomingByte >= '0') && (incomingByte <= '9')) ||
-                       ((incomingByte >= 'A') && (incomingByte <= 'F')) || 
-                       ((incomingByte >= 'a') && (incomingByte <= 'f')))
+                       ((incomingByte >= 'A') && (incomingByte <= 'H')) || 
+                       ((incomingByte >= 'a') && (incomingByte <= 'h')))
                    {
                                       buffer[index]= incomingByte;
                                       index = index + 1;
-                                      //Serial.print(buffer);
+                                      //Serial.println(buffer);
                                       //Serial.print("  ");
                                       //Serial.println(index);
                                       //Serial.println(index%2);
