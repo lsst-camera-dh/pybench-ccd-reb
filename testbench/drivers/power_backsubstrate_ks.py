@@ -436,7 +436,7 @@ class Instrument(Driver):
             }
 
         values = {
-            'MODEL'    : self.get_serial(),
+            'MODEL'    : self.get_serial()[:36],
             'DRIVER'   : 'keithley-server / power_backsubstrate_ks',
             'VOLTRANG' : self.getVoltageRange(),
             'VOLTILIM' : self.getCurrentLimit(),

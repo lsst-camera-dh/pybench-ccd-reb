@@ -217,7 +217,7 @@ class Instrument(Driver):
         logging.info("Keithley.setup_current_measurements() done.")
 
 
-    def read_measurement(self):
+    def )self):
         """
         Proceed to an individual measurement (READ?) and parse
         the resulting output (trying to take into account the
@@ -249,17 +249,20 @@ class Instrument(Driver):
 
         # keys : specify the key order
         keys = ['MODEL',
-                'DRIVER']
+                'DRIVER',
+                'CURRENT']
 
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
-            'DRIVER' : 'Instrument software driver' 
+            'DRIVER' : 'Instrument software driver',
+            'CURRENT': '[A] Current measurement in photodiode' 
             }
 
         values = {
-            'MODEL'  : self.get_serial(),
-            'DRIVER' : 'keithley-server / keithley' 
+            'MODEL'  : self.get_serial()[:36],
+            'DRIVER' : 'keithley-server / keithley_ks', 
+            'CURRENT': self.read_measurement()
             }
 
         return keys, values, comments

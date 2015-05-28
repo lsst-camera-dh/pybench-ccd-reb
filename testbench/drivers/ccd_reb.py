@@ -463,4 +463,4 @@ class Instrument(Driver):
         """
         return get_sequencer_string(self.reb.seq)
 
-# TODO: add more meta to put in secondary headers
+
