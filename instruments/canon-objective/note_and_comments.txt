@@ -679,3 +679,17 @@ Command : 6  Answer : 0
 
 - For next time : try to move the source ! Why is a decrease of flux on the left edge ?
 - Finish the autofocus
+
+2015-05-26
+
+- Delay, power, commands library, fonction global "send"
+- go toward max, then go back with a smaller step, stop, fit parabole, determination step
+
+2015-05-27
+
+- To avoid Delay, use busy Poll ? Seems to return always the same value "0xAA" !
+- Movement is constrained by the camera time to take a picture.
+- I have begun to optimize the time : motor are powered up only for movement and there is a delay only if there is a movement.
+- Need to refined the auto-focus. The turn back condition is not really the good one.
+
+- Take a finished auto-focus, and put the variance curve and the result in the note.
