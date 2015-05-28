@@ -289,10 +289,17 @@ class Instrument(Driver):
         """
         Set voltage for the voltage source.
         """
-        command = "SOUR:VOLT %f" % float(voltage)
-        # print command
-        answer = self.send(command)
-        logging.info("Keithley.setVoltage to %f" % voltage)
+        if voltage>0:
+            logging.info("Keithley.setVoltage parameter above 0V, not sending command.")
+            answer = 'ERRPOSVOLT'
+        elif voltage<-80:
+            logging.info("Keithley.setVoltage parameter below -80V, not sending command.")
+            answer = 'ERRNEGVOLT'
+        else:
+            command = "SOUR:VOLT %f" % float(voltage)
+            # print command
+            answer = self.send(command)
+            logging.info("Keithley.setVoltage to %f" % voltage)
         return answer
 
     # source enable and source status

@@ -11,6 +11,8 @@ import time
 import logging
 import astropy.io.fits as pyfits
 
+#reload(lsst.testbench.scripts.ccd.functions)
+
 #import py.testbench.bench as bench
 import lsst.testbench.bench as bench
 
@@ -64,6 +66,27 @@ def shutdown_CCD(self):
 bench.Bench.shutdown_CCD = shutdown_CCD
 
 
+def execute_reb_sequence(self, withmeta = True, name = '', exptime = None):
+    """
+    Configure new REB sequence if name and/or exptime are given.
+    Executes the sequence.
+    Acquires meta parameters if withmeta is True.
+    """
+    if name and exptime:
+        self.reb.config_sequence(name, exptime)
+    elif name:
+        self.reb.config_sequence(name)
+        
+    self.reb.execute_sequence()
+    
+    meta = {}
+    if withmeta:
+        meta = self.get_meta()
+    return meta
+
+bench.Bench.execute_reb_sequence = execute_reb_sequence
+
+
 def append_kvc(exthdu, keys, values, comments):
     """
     Appends the keywords to the header of exthdu
@@ -96,7 +119,7 @@ def conv_to_fits(self, channels=None, imgname=None):
 bench.Bench.conv_to_fits = conv_to_fits
 
 
-def save_to_fits(self, hdulist, fitsname='', LSSTstyle = True):
+def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
     """
     Saves the given FITS HDUlist to a file with auxiliary headers for instruments parameters.
     """
@@ -122,7 +145,7 @@ def save_to_fits(self, hdulist, fitsname='', LSSTstyle = True):
     # get the rest from the instrument meta of all registered bench instruments
     # one extension per instruments
     # if LSSTstyle, add specific parameters to primary, 'CCD_COND' and 'TEST_COND'
-    meta = self.get_meta()
+
     for identifier in meta:
         instrumentmeta = meta[identifier]
         extname = instrumentmeta['extname']
@@ -133,7 +156,7 @@ def save_to_fits(self, hdulist, fitsname='', LSSTstyle = True):
         if LSSTstyle:
             if extname == 'BSS':
                 if values['VOLTSRC']:  # if it is activated
-                    condhdu.header['V_BSS'] = (['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
+                    condhdu.header['V_BSS'] = (values['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
                 else:
                     condhdu.header['V_BSS'] = (0.0, '[V] Keithley Back-Substrate voltage')
                 condhdu.header['I_BSS'] = (values['CURRENT'], '[A] Keithley Back-Substrate current')
