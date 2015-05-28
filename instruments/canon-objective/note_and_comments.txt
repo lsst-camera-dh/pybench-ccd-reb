@@ -693,3 +693,10 @@ Command : 6  Answer : 0
 - Need to refined the auto-focus. The turn back condition is not really the good one.
 
 - Take a finished auto-focus, and put the variance curve and the result in the note.
+
+2015-05-28
+
+- Auto focus almost finished.
+- Need to put the theo_mov and position in the HDU list ?
+- After many auto_focus, it seems to be reproductible : the max is still around the same position (here it is about 600)
+- Strange shape in the variance plot : the is a small gap at the middle of the curve ?

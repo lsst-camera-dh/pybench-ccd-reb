@@ -9,6 +9,7 @@ import pyfits
 import xmlrpclib
 import ds9
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 INIT_STEP = 200
 
@@ -139,22 +140,15 @@ def init_auto_focus(arduino,camera):
         print "Step " + str(i) + "/" + str(nb_steps - 1) + " at relative " + str(position) + " and variance = "+ str(variances[i+1])
 
         if first:
-            if (variances[i+1] < variances[i]) and (abs(variances[i+1]/variances[i]) > 0.25):
-                step = step//2
+            if (variances[i+1] < variances[i]) and (abs(variances[i+1]/variances[i]) < 0.25):
+                print "Max passed, going back with smaller step"
+                step = 15
                 sign = -1*sign
                 step = sign*step
                 first = 0
-        else:
-            if (variances[i+1] < variances[i]):
-                step = step//2
-                sign = -1*sign
-                step = sign*step
 
         position += step
-        if abs(step) < 20:
-            print "Step < 20, stop"
-            break
-        elif position > 900:
+        if position > 900:
             print "Position > 900, stop"
             break
         elif i == (nb_steps - 1):
@@ -162,11 +156,36 @@ def init_auto_focus(arduino,camera):
 
     return images, test_pos, theo_mov, max_pos, variances
 
-def save_images_fits(images):
+def save_images_fits(images, images_pos, theo_mov, max_pos, variances, default_exposure):
     name = input("Directory name (date int) ? : ")
-    for i in images:
-        pyfits.writeto("/home/rlebret/Documents/Data/Fringes/" + str(name) + "/" + str(int(time.time())) + ".fits", i)
+    for i in range(len(images)):
+        head = pyfits.Header()
+        head['POSITION']=(images_pos[i], 'Relative position returned by camera')
+        head['THEO_MOV']=(theo_mov[i], 'Theoretical movement')
+        head['MAX_POS']=(max_pos[i], 'Position of the focus max (position reference)')
+        head['VARIANCE']=(variances[i], 'Variance of the image')
+        head['EXPO']=(default_exposure, 'Exposure time')
+        
+        pyfits.writeto("/home/rlebret/Documents/Data/Fringes/" + str(name) + "/" + str(int(time.time())) + ".fits", images[i], header = head)
         time.sleep(1.5)
+
+def gaus(x,a,x0,sigma,back):
+    return a*np.exp(-(x-x0)**2/(2*sigma**2)) + back
+
+def fit_find_max(variances,theo_mov):
+    variances = np.array(variances)
+    theo_mov = np.array(theo_mov)
+
+    back = np.min(variances)
+
+    mean = theo_mov[variances==np.max(variances)]
+    sigma = 100
+
+    popt,popv = curve_fit(gaus,theo_mov,variances,p0=[1,mean,sigma,back])
+
+    return popt
+
+    
 
 #------------------------------------------------------
 
@@ -184,5 +203,5 @@ pos_var_max = theo_mov[max_index]
 
 print "The final position for focus is : ", pos_var_max
 
-launch_command(arduino, "0G44" + convert_steps_in_hex(pos_var_max) + "0H/")
+launch_command(arduino, "0G060H0G44" + convert_steps_in_hex(pos_var_max) + "0H/")
     
