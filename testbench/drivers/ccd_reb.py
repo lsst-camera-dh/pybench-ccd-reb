@@ -55,6 +55,7 @@ class Instrument(Driver):
         self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe_id])
         self.reb.xmlfile = self.xmlfile
         self.version = self.reb.fpga.get_version()
+        self.testtype = 'TEST'
 
     def open(self):
         """
@@ -404,8 +405,8 @@ class Instrument(Driver):
             'DATE-OBS': 'Date of the observation (image acquisition), UTC',
             'LSST_LAB': 'Which site acquired the data',
             'TSTAND': 'Which Test stand at the site was used',
-            'INSTRUME': 'CCD Controller type',
-            'CCD_CTRL': 'Duplicates INSTRUME',
+            'INSTRUME': 'Camera',
+            'CCD_CTRL': 'CCD Controller type',
             'CTRL_SYS': 'Instrument Software Driver',
             'CTRL_ID': 'CCD Controller Serial Number',
             'FIRMWARE': 'CCD Controller Firmware Version',
@@ -428,7 +429,7 @@ class Instrument(Driver):
             'DATE-OBS': self.reb.tstamp,
             'LSST_LAB': 'LPNHE',
             'TSTAND': 'ISO7',
-            'INSTRUME': 'REB1',
+            'INSTRUME': 'LSST',
             'CCD_CTRL': 'REB1',
             'CTRL_SYS': 'PYREB',
             'CTRL_ID': self.reb_id,
