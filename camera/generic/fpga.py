@@ -661,7 +661,7 @@ class MetaData(object):
         """
         Add a number of data from a dictionary of values, plus optional comments,
         and puts the keys in the order given.
-        Note that this inputs meta-data only if the keys are in orderkeys.
+        Note that this appends the meta-data only if the keys are in orderkeys.
         :param orderkeys: list
         :param dictvalues: dict
         :param dictcomments: dict
@@ -670,7 +670,7 @@ class MetaData(object):
         for k in orderkeys:
             if k in self.keys:
                 self.keys.remove(k)
-                self.keys.append(k)
+            self.keys.append(k)
             if k in dictvalues:
                 self.values[k] = dictvalues[k]
             else:
@@ -699,7 +699,7 @@ class MetaData(object):
         for k in neworder:
             if k in self.keys:
                 self.keys.remove(k)
-            # if not already present, add it for later use
+            # if not already present, add value and comment for later use
             else:
                 self.values[k] = ''
                 self.comments[k] = ''
