@@ -66,7 +66,7 @@ def shutdown_CCD(self):
 bench.Bench.shutdown_CCD = shutdown_CCD
 
 
-def execute_reb_sequence(self, withmeta = True, name = '', exptime = None):
+def execute_reb_sequence(self, withmeta=True, name='', exptime=None):
     """
     Configure new REB sequence if name and/or exptime are given.
     Executes the sequence.
@@ -85,10 +85,10 @@ def execute_reb_sequence(self, withmeta = True, name = '', exptime = None):
         meta = self.get_meta()
         # additionnal meta from REB
         keys, values, comments = self.reb.get_meta_operating()
-        meta['REB_OPE'] = { 'extname' : 'CCD_COND',
-                                 'keys' : keys,
-                                 'values' : values,
-                                 'comments' : comments }
+        meta['reb_ope'] = {'extname': 'CCD_COND',
+                           'keys': keys,
+                           'values': values,
+                           'comments': comments}
     return meta
 
 bench.Bench.execute_reb_sequence = execute_reb_sequence
@@ -130,16 +130,14 @@ def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
     """
     Saves the given FITS HDUlist to a file with auxiliary headers for instruments parameters.
     """
-    # appending more keywords to header
     if not fitsname:
         fitsname = self.reb.make_fits_name(self.reb.make_img_name())
 
     primaryhdu = hdulist[0]
 
+    # appending more keywords to header
     primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'FITS file name')
     primaryhdu.header["DATE"] = (time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), 'FITS file creation date')
-    primaryhdu.header["TESTTYPE"] = ('TEST', 'TEST:DARK:FLAT:OBS:PPUMP:QE:SFLAT')
-    # this one is to be filled depending on the script
 
     # one extension per instrument
     for identifier in meta:
@@ -150,11 +148,12 @@ def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
         append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
         hdulist.append(exthdu)
         
-    # Test conditions (other instruments)
-    testhdu = pyfits.ImageHDU(name='TEST_COND')
 
     # if LSSTstyle, add specific parameters to primary, 'CCD_COND' and 'TEST_COND'
     if LSSTstyle:
+        # Test conditions (instruments other than REB)
+        testhdu = pyfits.ImageHDU(name='TEST_COND')
+
         if 'BSS' in hdulist:
             if hdulist['BSS'].header['VOLTSRC']:  # if it is activated
                 hdulist['CCD_COND'].header['V_BSS'] = (hdulist['BSS'].header['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
@@ -185,17 +184,17 @@ def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
             testhdu.header['SRCTYPE'] = ('LASER', 'Source type')
             for chan in range(1,5):
                 keylaser = 'POW_CH%d' % chan
-                testhdu.header[keylaser] = (hdulist['LASER'].header[keylaser], instrumentmeta['comments'][keylaser])
+                testhdu.header[keylaser] = hdulist['LASER'].header[keylaser]
         if 'PHD' in hdulist:
             testhdu.header['MONDIODE'] = (hdulist['PHD'].header['CURRENT'], '[A] Monitoring photodiode current')
+
+        hdulist.append(testhdu)
 
     # Sequencer content
     seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
                                                          array=self.reb.get_meta_sequencer(),
                                                          ascii=True)])
     seqhdu.header['EXTNAME'] = 'SEQUENCER'
-
-    hdulist.append(testhdu)
     hdulist.append(seqhdu)
 
     hdulist.writeto(fitsname, clobber=True)
