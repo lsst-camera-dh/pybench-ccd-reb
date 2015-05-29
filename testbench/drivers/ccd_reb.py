@@ -375,6 +375,14 @@ class Instrument(Driver):
         """
         return self.reb.make_fits_name(imgstr)
 
+    def set_testtype(self, name):
+        """
+        Sets the name of the test for the FITS header. Could be used for other things.
+        :param name:
+        :return:
+        """
+        self.testtype = name
+
     # ===================================================================
     #  Meta data / state of the instrument 
     # ===================================================================
@@ -388,7 +396,7 @@ class Instrument(Driver):
 
         # keys : specify the key order
         keys = ['DATE-OBS', 'LSST_LAB', 'TSTAND', 'INSTRUME', 'CCD_CTRL',
-                'CTRL_SYS', 'CTRL_ID', 'FIRMWARE', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'IMGTYPE',
+                'CTRL_SYS', 'CTRL_ID', 'FIRMWARE', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'TESTTYPE', 'IMGTYPE',
                 'EXPTIME', 'SHUT_DEL', 'CTRLCFG', 'IMAGETAG', 'DETSIZE', 'WIDTH', 'HEIGHT', 'SYSGAIN']
 
         # comments : meaning of the keys
@@ -404,6 +412,7 @@ class Instrument(Driver):
             'CCD_MANU': 'CCD Manufacturer: E2V, ITL',
             'CCD_TYPE': 'CCD Model Number',
             'CCD_SERN': 'LSST Assigned CCD Number ',
+            'TESTTYPE': 'TEST:DARK:FLAT:OBS:PPUMP:QE:SFLAT',
             'IMGTYPE': 'Image type',
             'EXPTIME': 'Exposure Time in Seconds',
             'SHUT_DEL': 'Delay between shutter close command and readout in ms',
@@ -427,6 +436,7 @@ class Instrument(Driver):
             'CCD_MANU': 'E2V',
             'CCD_TYPE': 'E2V250',
             'CCD_SERN': '100-00',
+            'TESTTYPE': self.testtype,
             'IMGTYPE': self.reb.seqname,
             'EXPTIME': self.reb.exptime,
             'SHUT_DEL': self.reb.shutdelay,
@@ -462,5 +472,4 @@ class Instrument(Driver):
         :return: numpy.array
         """
         return get_sequencer_string(self.reb.seq)
-
 
