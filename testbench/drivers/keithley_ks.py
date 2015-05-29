@@ -66,6 +66,7 @@ class Instrument(Driver):
 
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
+        self.lastmeasure = 0
 
 
     def open(self):
@@ -217,7 +218,7 @@ class Instrument(Driver):
         logging.info("Keithley.setup_current_measurements() done.")
 
 
-    def )self):
+    def read_measurement(self):
         """
         Proceed to an individual measurement (READ?) and parse
         the resulting output (trying to take into account the
@@ -233,6 +234,8 @@ class Instrument(Driver):
         measure = float(elts[0].replace('A', '')) # sometime the unit is there
         logging.info("   measure = %g" % measure)
         logging.info("Keithley.read_measurements() done.")
+        self.lastmeasure = measure
+        
         return measure
 
     # ===================================================================
@@ -262,7 +265,7 @@ class Instrument(Driver):
         values = {
             'MODEL'  : self.get_serial()[:36],
             'DRIVER' : 'keithley-server / keithley_ks', 
-            'CURRENT': self.read_measurement()
+            'CURRENT': self.lastmeasure
             }
 
         return keys, values, comments

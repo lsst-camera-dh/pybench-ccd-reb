@@ -6,6 +6,7 @@ import lsst.testbench.scripts.ccd.functions
 B.initialize_REB()
 # AFTER connecting to CCD
 B.powerup_CCD()
+B.reb.set_testtype('TEST')
 m = B.execute_reb_sequence(True, 'Acquisition', 2)
 # to execute again the same sequence :
 m = B.execute_reb_sequence()
@@ -18,11 +19,15 @@ i = B.conv_to_fits([4,5])
 # to save FITS HDU with headers
 B.save_to_fits(i, m) 
 
+# between exposures
+B.reb.waiting_sequence()
+
 # when finished
 B.shutdown_CCD()
 
 B.register('laser')
 B.laser.select(2)
+B.laser.setCurrent(2,55.0)
 B.laser.enable()
 B.laser.disable()
 
@@ -30,6 +35,8 @@ B.laser.disable()
 B.register("PhD")
 B.PhD.setup_current_measurements(2e-6)
 B.PhD.read_measurement()
+
+B.register('lakeshore1')
 
 
 # to recover REB object after Python reboot without reloading the whole sequencer

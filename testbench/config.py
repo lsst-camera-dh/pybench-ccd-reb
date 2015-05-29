@@ -194,14 +194,14 @@ config = {
         'port'        : 8091,
         'commandline' : 'lakeshore %device %port'
         },
-    #
-    # 'lakeshore1': {
-    #     'host'        : 'lpnlsstbench',
-    #     'devices'     : ['/dev/ttyS8'],
-    #     'driver'      : 'thermal_lakeshore',
-    #     'port'        : 8091,
-    #     'commandline' : 'lakeshore %device %port'
-    #     },
+    
+    'lakeshore1': {
+        'host'        : 'lpnlsstbench',
+        'devices'     : ['/dev/ttyS8'],
+        'driver'      : 'thermal_lakeshore',
+        'port'        : 8091,
+        'commandline' : 'lakeshore %device %port'
+        },
     # ---------------------------------------------------------------------
     # pressure sensors (Pumps & Pfeiffer)
     #

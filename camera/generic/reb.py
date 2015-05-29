@@ -291,7 +291,7 @@ class REB(object):
         self.fpga.start()
         print("Starting %s sequence with %f exposure time." % (self.seqname, self.exptime))
         #freeze until image output (do not send commands while the COB is acquiring)
-        time.sleep(self.exptime+3)
+        #time.sleep(self.exptime+3)
 
     def waiting_sequence(self, name="Wait"):
         """

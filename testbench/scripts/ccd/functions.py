@@ -20,7 +20,7 @@ B = bench.Bench()  # singleton
 
 B.register('reb')  # connect to the REB
 B.register('bss')  # connect (remotely) to the BackSubstrate Power
-
+B.register('PhD')
 
 def load_sequencer(self, filename=None):
     self.reb.load_sequencer(filename)
@@ -76,8 +76,14 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None):
         self.reb.config_sequence(name, exptime)
     elif name:
         self.reb.config_sequence(name)
-        
+       
+    # this waits until the sequencer stops then send the execute sequence command 
     self.reb.execute_sequence()
+    # delay for clear before exposure
+    time.sleep(3)
+    self.phd.read_measurement()
+    # delay for exposure plus readout
+    time.sleep(self.reb.reb.exptime+3)
     
     meta = {}
     if withmeta:
@@ -144,9 +150,12 @@ def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
         instrumentmeta = meta[identifier]
         extname = instrumentmeta['extname']
         values = instrumentmeta['values']
-        exthdu = pyfits.ImageHDU(name=extname)
-        append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
-        hdulist.append(exthdu)
+        if extname == 'REB':
+            append_kvc(primaryhdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
+        else:
+            exthdu = pyfits.ImageHDU(name=extname)
+            append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
+            hdulist.append(exthdu)
         
 
     # if LSSTstyle, add specific parameters to primary, 'CCD_COND' and 'TEST_COND'
