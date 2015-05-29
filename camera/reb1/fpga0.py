@@ -97,7 +97,7 @@ class FPGA0(FPGA):
         No readback available, using values stored in fpga object.
         """
         fitsheader = {}
-        for key in iter(self.dacs):
+        for key in self.dacs:
             if key in ["V_SL", "V_SH", "V_RGL", "V_RGH"]:
                 # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
                 fitsheader[key] = self.dacs[key] * self.serial_conv
@@ -145,8 +145,7 @@ class FPGA0(FPGA):
         No readback available, using values stored in fpga object.
         :return: MetaData
         """
-        keys = ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH",
-                "HEAT1", "HEAT2", "I_OS"]
+        keys = self.dacs.keys()
         fitsheader = self.get_clock_voltages()
 
         comments = {
