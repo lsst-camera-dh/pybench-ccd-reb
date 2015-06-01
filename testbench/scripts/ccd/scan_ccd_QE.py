@@ -1,5 +1,5 @@
 
-import os.path
+import os
 import lsst.testbench
 import time
 
@@ -34,7 +34,8 @@ B.qth_flux(exptimes = [0.5, 2],
 validamps = [2, 3, 4, 5, 6, 11, 12, 13, 14, 15]
 serno = '100-00'
 eodir = os.path.join('/data/eotest/', serno, 'qe/scan_ccd_QE-v0/', time.strftime('%Y%m%d'))
-
+if not os.path.isdir(eodir):
+    os.mkdir(eodir)
 
 # ==============================================================================
 
