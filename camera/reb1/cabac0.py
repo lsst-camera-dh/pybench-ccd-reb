@@ -211,7 +211,7 @@ class CABAC(object):
             key = "V_" + field + suffix
             keys.append(key)
             header[key] = self.__dict__[field] * self.conv[field]
-            comment = 'CABAC0 ' + field + 'voltage setting'
+            comment = 'CABAC0 ' + field + ' voltage setting'
             if position:
                 comment += ' at position ' + position
             comments[key] = comment

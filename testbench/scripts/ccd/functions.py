@@ -13,7 +13,6 @@ import astropy.io.fits as pyfits
 
 #reload(lsst.testbench.scripts.ccd.functions)
 
-#import py.testbench.bench as bench
 import lsst.testbench.bench as bench
 
 B = bench.Bench()  # singleton
@@ -83,7 +82,7 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None):
     time.sleep(3)
     self.phd.read_measurement()
     # delay for exposure plus readout
-    time.sleep(self.reb.reb.exptime+3)
+    time.sleep(self.reb.reb.exptime+4)
     
     meta = {}
     if withmeta:
@@ -132,7 +131,7 @@ def conv_to_fits(self, channels=None, imgname=None):
 bench.Bench.conv_to_fits = conv_to_fits
 
 
-def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
+def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
     """
     Saves the given FITS HDUlist to a file with auxiliary headers for instruments parameters.
     """
@@ -156,10 +155,9 @@ def save_to_fits(self, hdulist, meta, fitsname='', LSSTstyle = True):
             exthdu = pyfits.ImageHDU(name=extname)
             append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
             hdulist.append(exthdu)
-        
 
     # if LSSTstyle, add specific parameters to primary, 'CCD_COND' and 'TEST_COND'
-    if LSSTstyle:
+    if LSSTstyle and meta:
         # Test conditions (instruments other than REB)
         testhdu = pyfits.ImageHDU(name='TEST_COND')
 
