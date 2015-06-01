@@ -74,7 +74,7 @@ def qth_flux(self,
     # Setup of the 2 Keithleys
     self.log("Setting up the Keithley...")
     #self.DKD.setup_current_measurements(DKD_range)
-    self.PhD.setup_current_measurements(PhD_range)
+    self.PhD.setup_current_measurements(2e-8)
     self.log("Setting up the Keithley done.")
 
     # Set up the Triax monochromator
@@ -85,16 +85,14 @@ def qth_flux(self,
 
     # Create the logging summary file
     # TODO: build file structure and file names
-    summaryfile = os.path.join(datadir,
-                            ("DKD-PhD-QTH-triax-fluxes-%s.data"
-                            % now.isoformat()))
-    f = open(datafile, "w")
+    summaryfile = os.path.join(eodir, 'summary.log')
+    f = open(summaryfile, "w")
 
     print >>f, "# fluxes on the LSST CCD testbench"
     print >>f, "# QTH lamp through monochromator"
     print >>f, "# Entrance slit = ", self.triax.getInSlit()
     print >>f, "# Exit slit = ", self.triax.getOutSlit()
-    print >>f, "# time\t filter\t grating\t wavelength\t lamp current\t lamp power\t DKD flux\t Sphere flux\t On/Off"
+    print >>f, "# wavelength\t exposure time\t file name"
 
     self.log("Changing to filter %d ..." % filt)
     # Important: first close the safety shutter (as the wheel may go to unprotected positions)
@@ -119,10 +117,11 @@ def qth_flux(self,
         self.ttl.closeSafetyShutter(wait=True)
         m = self.execute_reb_sequence(True, 'Bias', 0)
         #to have only useful channels:
-        i = B.conv_to_fits(channels=validamps, imgname=fname)
+        fname = "%s_lambda_%04d_bias_%s.fits" % (serno, int(eff_wl), self.reb.reb.imgtag)
+        i = B.conv_to_fits(channels=validamps, imgname=os.path.join(eodir, fname))
         # to save FITS HDU with headers
         B.save_to_fits(i, m)
-        fname = "%s_lambda_%04d_bias_%s.fits" % (serno, int(eff_wl), self.reb.reb.imgtag)
+
         print >>f, eff_wl, 0, fname
 
         # Turn on the light
@@ -134,7 +133,7 @@ def qth_flux(self,
             #to have only useful channels:
              #fname = lab['camera'].exp_acq(fname, exptime, path=datadir,  )
             fname = "%s_lambda_%04d_qe_%05u_1_%s.fits" % (serno, int(eff_wl), int(t*100), self.reb.reb.imgtag)
-            i = B.conv_to_fits(channels=validamps, imgname=fname)
+            i = B.conv_to_fits(channels=validamps, imgname=os.path.join(eodir, fname))
             # to save FITS HDU with headers
             B.save_to_fits(i, m)
 
@@ -143,7 +142,7 @@ def qth_flux(self,
             m = self.execute_reb_sequence(True, 'Acquisition', t)
             #to have only useful channels:
             fname = "%s_lambda_%04d_flat_%05u_2_%s.fits" % (serno, int(eff_wl), int(t*100), self.reb.reb.imgtag)
-            i = B.conv_to_fits(channels=validamps, imgname=fname)
+            i = B.conv_to_fits(channels=validamps, imgname=os.path.join(eodir, fname))
             # to save FITS HDU with headers
             B.save_to_fits(i, m)
 
