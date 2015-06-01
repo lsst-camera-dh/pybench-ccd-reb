@@ -1,5 +1,5 @@
-import lsst.testbench.bench as bench
-B = bench.Bench()
+import lsst.testbench
+B = lsst.testbench.Bench()
 import lsst.testbench.scripts.ccd.functions
 
 # BEFORE connecting to CCD
