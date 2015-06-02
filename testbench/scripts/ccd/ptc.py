@@ -102,7 +102,7 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
     # Shutting down (not the lamp by default)
     self.laser.disable()
     #self.shutdown_CCD()
-    self.reb.waiting_sequence()
+    # p = self.reb.start_waiting_sequence()
 
 # Attach this method to the Bench class / instance
 lsst.testbench.Bench.ptc_acquisition = ptc_acquisition

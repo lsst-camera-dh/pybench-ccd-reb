@@ -2,7 +2,7 @@
 #
 # LSST / LPNHE
 #
-# Testing WREB
+# Testing WREB with CABAC2
 
 __author__ = 'juramy'
 
@@ -14,7 +14,7 @@ import astropy.io.fits as pyfits
 
 
 class WREB(reb.REB):
-    useCABACbias = False
+    useCABACbias = True
     xmldir = "/home/lsst/lsst/py/camera/wreb/"
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
