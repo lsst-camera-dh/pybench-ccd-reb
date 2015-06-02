@@ -10,9 +10,10 @@ B.register("triax")
 B.register("ttl")
 B.register('lakeshore1')
 #B.register("DKD")
-B.register("PhD")
-B.register('reb')  # connect to the REB
-B.register('bss')  # connect (remotely) to the BackSubstrate Power
+# done in ccd.functions:
+#B.register("PhD")
+#B.register('reb')  # connect to the REB
+#B.register('bss')  # connect (remotely) to the BackSubstrate Power
 
 import lsst.testbench.scripts.ccd.functions
 

@@ -80,7 +80,7 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None):
     self.reb.execute_sequence()
     # delay for clear before exposure
     time.sleep(3)
-    self.phd.read_measurement()
+    self.PhD.read_measurement()
     # delay for exposure plus readout
     time.sleep(self.reb.reb.exptime+4)
     
@@ -209,12 +209,52 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
 
 bench.Bench.save_to_fits = save_to_fits
 
+def basic_stats(self, hdulist, logtofile=False):
+    """
+    Basic statistics on the frame from the fits HDUlist. 
+    Printed to screen and saved to a txt file.
+    Appends estimated values to the fits extension header.
+    """
+    summaryfile = "stats_"+time.strftime("%Y%m%d",time.localtime())+".txt"
+    if logtofile:
+        logger = open(logfile, 'a')
 
+    print("Channel\t MeanLight  SdevLight   MeanOverS   SdevOverS   MeanOverP   SdevOverP")
+    for ichan in range(16):
+        name = "CHAN_%d" % ichan
+        if name not in hdulist:
+            continue
+        hdr = hdulist[name].header
+        img = hdulist[name].data
+        imgcols = 512
+        colstart = 10
+        imglines = 2002
+        light = img[:imglines, colstart:colstart+imgcols].flatten()
+        dark = img[:imglines, colstart+imgcols:].flatten()
+        overp = img[imglines+2:, colstart:].flatten()
+        
+        hdr['AVLIGHT'] = light.mean()
+        hdr['STDLIGHT'] = light.std()
+        hdr['AVOVERS'] = dark.mean()
+        hdr['STDOVERS'] = dark.std()
+        hdr['AVOVERP'] = overp.mean()
+        hdr['STDOVERP'] = overp.std()
+        
+        out = "{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f}".format(name,
+                                                                                 hdr['AVLIGHT'], hdr['STDLIGHT'],
+                                                                                 hdr['AVOVERS'], hdr['STDOVERS'],
+                                                                                 hdr['AVOVERP'], hdr['STDOVERP'])
+        print(out)
+        if logtofile:
+            logger.write(out+'\n')
+        
+
+bench.Bench.basic_stats = basic_stats
 
 # def wait_for_action(action):
 #     """
 #     Pause the execution until the specified action has been recorded as 'done' by the user.
-#     :param action:
+#     :param action:basic_stats
 #     """
 #     print(action)
 #     s = ""
