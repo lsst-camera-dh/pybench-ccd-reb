@@ -2,6 +2,7 @@
 import os
 import lsst.testbench
 import time
+import numpy as np
 
 B = lsst.testbench.Bench()
 
@@ -30,13 +31,17 @@ B.qth_flux(exptimes = [0.5, 2],
      in the integral sphere and take a pair of flats with the given
      exposure times (plus a bias).
 
+CCD must be powered up BEFORE running the script
+
 """
 
 validamps = [2, 3, 4, 5, 6, 11, 12, 13, 14, 15]
 serno = '100-00'
 eodir = os.path.join('/data/eotest/', serno, 'qe/scan_ccd_QE-v0/', time.strftime('%Y%m%d'))
 if not os.path.isdir(eodir):
-    os.mkdir(eodir)
+    os.makedirs(eodir)
+
+# CCD must be powered up before running the script
 
 # ==============================================================================
 
@@ -50,6 +55,9 @@ def qth_flux(self,
     in the integral sphere and take a pair of flats with the given
     exposure times (plus a bias).
     """
+
+    # In case it is still open, close the safety shutter
+    self.ttl.closeSafetyShutter(wait=True)
 
     # # Turn on the QTH lamp
     # self.log("Turning the QTH lamp on...")
@@ -67,10 +75,8 @@ def qth_flux(self,
     if not(self.QTH.isFluxControlled()):
         self.log("Error: you should turn the lamp flux control on first.")
         return
-    # In case it is still open, close the safety shutter
-    self.ttl.closeSafetyShutter(wait=True)
 
-    self.powerup_CCD()
+    #self.powerup_CCD()
     self.reb.set_testtype('QE')
 
     # Setup of the 2 Keithleys
@@ -108,11 +114,11 @@ def qth_flux(self,
     self.log("Changing to grating %d done." % grating)
 
     # start wavelength scan
-    for wl in range(wlrange[0], wlrange[1] + dwl, dwl):
+    for wl in np.arange(wlrange[0], wlrange[1] + dwl, dwl):
         print "set wavelength to ", wl, "nm"
         self.triax.setWavelength(wl, wait=True)
         time.sleep(2)
-        eff_wl = self.triax.getWavelength() # there seems to be a bug
+        eff_wl = self.triax.getWavelength()  # there seems to be a bug
 
         # First take bias frame
         self.log("Taking bias")
@@ -120,9 +126,9 @@ def qth_flux(self,
         m = self.execute_reb_sequence(True, 'Bias', 0)
         #to have only useful channels:
         fname = "%s_lambda_%04d_bias_%s.fits" % (serno, int(eff_wl), self.reb.reb.imgtag)
-        i = B.conv_to_fits(channels=validamps, imgname=os.path.join(eodir, fname))
+        i = self.conv_to_fits(channels=validamps)
         # to save FITS HDU with headers
-        B.save_to_fits(i, m)
+        self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
         print >>f, eff_wl, 0, fname
 
@@ -135,18 +141,18 @@ def qth_flux(self,
             #to have only useful channels:
              #fname = lab['camera'].exp_acq(fname, exptime, path=datadir,  )
             fname = "%s_lambda_%04d_qe_%05u_1_%s.fits" % (serno, int(eff_wl), int(t*100), self.reb.reb.imgtag)
-            i = B.conv_to_fits(channels=validamps, imgname=os.path.join(eodir, fname))
+            i = self.conv_to_fits(channels=validamps)
             # to save FITS HDU with headers
-            B.save_to_fits(i, m)
+            self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
             print >>f, eff_wl, t, fname
 
             m = self.execute_reb_sequence(True, 'Acquisition', t)
             #to have only useful channels:
             fname = "%s_lambda_%04d_flat_%05u_2_%s.fits" % (serno, int(eff_wl), int(t*100), self.reb.reb.imgtag)
-            i = B.conv_to_fits(channels=validamps, imgname=os.path.join(eodir, fname))
+            i = self.conv_to_fits(channels=validamps)
             # to save FITS HDU with headers
-            B.save_to_fits(i, m)
+            self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
             print >>f, eff_wl, t, fname
 
@@ -154,7 +160,8 @@ def qth_flux(self,
 
     # Shutting down (not the lamp by default)
     self.ttl.closeSafetyShutter()
-    self.shutdown_CCD()
+    #self.shutdown_CCD()
+    self.reb.waiting_sequence()
 
 
 # Attach this method to the Bench class / instance

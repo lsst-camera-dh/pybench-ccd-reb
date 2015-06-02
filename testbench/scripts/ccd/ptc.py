@@ -33,7 +33,7 @@ validamps = [2, 3, 4, 5, 6, 11, 12, 13, 14, 15]
 serno = '100-00'
 eodir = os.path.join('/data/eotest/', serno, 'ptc/ptc-v0/', time.strftime('%Y%m%d'))
 if not os.path.isdir(eodir):
-    os.mkdir(eodir)
+    os.makedirs(eodir)
 
 # CCD must be powered up before running the script
 
@@ -101,8 +101,8 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
 
     # Shutting down (not the lamp by default)
     self.laser.disable()
-    self.shutdown_CCD()
-
+    #self.shutdown_CCD()
+    self.reb.waiting_sequence()
 
 # Attach this method to the Bench class / instance
 lsst.testbench.Bench.ptc_acquisition = ptc_acquisition
