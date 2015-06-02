@@ -21,7 +21,7 @@ def configure(conf):
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['functions.py', '__init__.py', 'scan_ccd_QE.py', 'ptc.py'], 
+        source = ['functions.py', '__init__.py', 'qe.py', 'ptc.py'],
         install_path = '${PYTHONDIR}/lsst/testbench/scripts/ccd')
 
     bld.recurse(submodules)
