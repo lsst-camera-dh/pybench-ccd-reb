@@ -33,6 +33,13 @@ def initialize_REB(self):
 bench.Bench.initialize_REB = initialize_REB
 
 
+def shutdown_REB(self):
+    self.reb.REBshutdown()
+    # TODO: need to add power supplies here for WREB shutdown
+
+bench.Bench.shutdown_REB = shutdown_REB
+
+
 def powerup_CCD(self):
     logging.info("Starting CCD power-up sequence")
     self.reb.CCDpowerup()
@@ -217,7 +224,7 @@ def basic_stats(self, hdulist, logtofile=False):
     """
     summaryfile = "stats_"+time.strftime("%Y%m%d",time.localtime())+".txt"
     if logtofile:
-        logger = open(logfile, 'a')
+        logger = open(summaryfile, 'a')
 
     print("Channel\t MeanLight  SdevLight   MeanOverS   SdevOverS   MeanOverP   SdevOverP")
     for ichan in range(16):
@@ -247,7 +254,7 @@ def basic_stats(self, hdulist, logtofile=False):
         print(out)
         if logtofile:
             logger.write(out+'\n')
-        
+        return out
 
 bench.Bench.basic_stats = basic_stats
 

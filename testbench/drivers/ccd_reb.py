@@ -10,6 +10,7 @@ Testbench driver for REB (through direct calls to rriClient)
 # from py.camera.generic.reb import get_sequencer_string
 
 import lsst.camera.reb1.reb1 as reb1
+import lsst.camera.wreb.wreb as wreb
 from lsst.camera.generic.reb import get_sequencer_string
 
 from driver import Driver
@@ -52,7 +53,10 @@ class Instrument(Driver):
         if 'xmlfile' not in kargs:
             raise ValueError("XML sequencer file is requested")
 
-        self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe_id])
+        if identifier == 'reb':
+            self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe_id])
+        else:
+            self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe_id])
         self.reb.xmlfile = self.xmlfile
         self.version = self.reb.fpga.get_version()
         self.testtype = 'TEST'
@@ -234,7 +238,7 @@ class Instrument(Driver):
         Executes the currently loaded sequence.
         """
         self.reb.execute_sequence()
-        logging.info("Sent execute sequence %s to FPGA" % self.reb.seqname)
+        logging.info("REB: sent execute sequence %s to FPGA" % self.reb.seqname)
 
     def set_trigger(self, trigger):
         self.reb.fpga.set_trigger(trigger)
@@ -261,9 +265,9 @@ class Instrument(Driver):
         """
         Lets CCD wait by clearing periodically until keyboard interrupt is sent.
         """
-        logging.info("Starting wait sequence")
+        logging.info("REB: starting wait sequence")
         self.reb.waiting_sequence(name)
-        logging.info("End wait sequence")
+        logging.info("REB: end wait sequence")
 
     # --------------------------------------------------------------------
     # Operating the board electronics
@@ -296,9 +300,12 @@ class Instrument(Driver):
     def REBshutdown(self):
         """
         Operations to shut down the REB. With REB1, once the CCD is shut down, this
-        is only powering down the power supplies.
+        would be only powering down the power supplies. For WREB, this is where we should
+        power down CABAC safely (clock rails and low voltage supplies).
         """
-        pass
+        logging.info("Starting to shut down the REB")
+        self.reb.REBshutdown()
+        logging.info("REB shut down sequence is done")
 
     # --------------------------------------------------------------------
 
@@ -314,6 +321,7 @@ class Instrument(Driver):
         """
         Sets clock voltage DACs.
         :param dacs: dict
+        Beware: clock rail names depend on REB version.
         """
         self.reb.fpga.set_clock_voltages(dacs)
         logging.info("Setting clock voltages")
@@ -339,14 +347,14 @@ class Instrument(Driver):
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
         """
         self.reb.send_cabac_config(params)
-        logging.info("Sent CABAC0 values")
+        logging.info("REB: sent CABAC values")
 
     def cabac_reset(self):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
         """
         self.reb.cabac_reset()
-        logging.info("Sent CABAC0 reset")
+        logging.info("REB: sent CABAC resets")
 
     # --------------------------------------------------------------------
     # Building FITS frames
@@ -430,8 +438,8 @@ class Instrument(Driver):
             'LSST_LAB': 'LPNHE',
             'TSTAND': 'ISO7',
             'INSTRUME': 'LSST',
-            'CCD_CTRL': 'REB1',
-            'CTRL_SYS': 'PYREB',
+            'CCD_CTRL': self.identifier.upper(),
+            'CTRL_SYS': 'CCD_REB',
             'CTRL_ID': self.reb_id,
             'FIRMWARE': self.version,
             'CCD_MANU': 'E2V',

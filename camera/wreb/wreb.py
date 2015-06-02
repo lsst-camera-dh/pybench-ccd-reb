@@ -40,6 +40,29 @@ class WREB(reb.REB):
             time.sleep(0.1)
             self.config.update(self.f.get_cabac_config(s), check=True)
 
+    def get_cabac_config(self):
+        """
+        Read CABAC configurations and store it to config.
+        Useful for recovery and headers.
+        """
+        config = {}
+        for s in self.stripes:
+            config.update(self.f.get_cabac_config(s), check=False)
+
+        self.config.update(config)
+
+        return config
+
+    def cabac_reset(self):
+        """
+        Resets all CABACs.
+        This should not be done just because you thought it was a good idea at the time.
+        :return:
+        """
+        for s in self.stripes:
+            self.f.reset_cabac(s)
+        self.get_cabac_config()  # updates CABAC fields
+
     def send_aspic_config(self, params):
         """
         Sets ASPIC parameters, writes to ASPIC, then check readback.
