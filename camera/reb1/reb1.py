@@ -113,6 +113,12 @@ class REB1(reb.REB):
 
         print("CCD shutdown complete")
 
+    def REBshutdown(self):
+        """
+        Sequence to shut down the REB, needed for compatibility with other REBs.
+        """
+        pass
+
    # --------------------------------------------------------------------
 
     def get_cabac_config(self):

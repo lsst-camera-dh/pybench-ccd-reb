@@ -11,21 +11,20 @@ import cabac
 import aspic
 
 
-## -----------------------------------------------------------------------
+# # -----------------------------------------------------------------------
 
 class FPGA1(FPGA):
-
     # ctrl_host = "lpnws4122"
     # reb_id = 2
 
-    clock_conv = 0.00357 # conversion for DAC (V/LSB)
+    clock_conv = 0.00357  # conversion for DAC (V/LSB)
     bias_conv = 0.00725  # conversion for alternative biases
     od_conv = 0.0195  # placeholder for alternative OD
     og_conv = 0.00122  # placeholder for alternative OG
 
     # --------------------------------------------------------------------
 
-    def __init__(self, ctrl_host = None, reb_id = 2):
+    def __init__(self, ctrl_host=None, reb_id=2):
         FPGA.__init__(self, ctrl_host, reb_id)
         # declare two CABACs and two ASPICs for each stripe even if they will not be used
         # (at least we will want to initialize to 0)
@@ -52,32 +51,32 @@ class FPGA1(FPGA):
         self.write(0x330001, 0)
 
     # ----------------------------------------------------------
-    
+
     def set_clock_voltages(self, voltages):
         """
         Sets voltages as defined in the input dictionary, keeps others as previously defined.
         Note that order in which they are programmed does not matter as they are all activated together.
         """
         #values to be set in the register for each output (shift will be +1)
-        outputnum = {"SL":0, "SU":2, "RGL":4, "RGU":6, "PL":16, "PU":18}
+        outputnum = {"SL": 0, "SU": 2, "RGL": 4, "RGU": 6, "PL": 16, "PU": 18}
         # shift: output will follow positive dac minus (factor tbc) shift dac
         for key in iter(voltages):
-            key_shift = key+"_S"
-            if key in ["SL","SU","RGL","RGU","PL", "PU"]:
+            key_shift = key + "_S"
+            if key in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
                 if voltages[key] > 0:
-                    self.dacs[key] = int(voltages[key]/self.clock_conv)& 0xfff
+                    self.dacs[key] = int(voltages[key] / self.clock_conv) & 0xfff
                     self.dacs[key_shift] = 0
                 else:
                     self.dacs[key] = 0
-                    self.dacs[key_shift] = int(-voltages[key]/self.clock_conv)& 0xfff
+                    self.dacs[key_shift] = int(-voltages[key] / self.clock_conv) & 0xfff
             # TODO: check factor for shift
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
 
-            self.write(0x400000, self.dacs[key] + (outputnum[key]<<12))
+            self.write(0x400000, self.dacs[key] + (outputnum[key] << 12))
             # shift at address+1
-            self.write(0x400000, self.dacs[key_shift] + ((outputnum[key]+1) << 12))
-         
+            self.write(0x400000, self.dacs[key_shift] + ((outputnum[key] + 1) << 12))
+
         # activates DAC outputs
         self.write(0x400001, 1)
 
@@ -88,31 +87,31 @@ class FPGA1(FPGA):
         No readback available, using values stored in fpga object.
         """
         fitsheader = {}
-        for key in ["SL","SU","RGL","RGU","PL", "PU"]:
+        for key in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
             # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
-            fitsheader[key]= (self.dacs[key]-self.dacs[key+"_S"])*self.clock_conv
+            fitsheader[key] = (self.dacs[key] - self.dacs[key + "_S"]) * self.clock_conv
             #TODO: check appropriate factor for shift
 
         return fitsheader
 
     # ----------------------------------------------------------
 
-    def set_current_source(self, currents, ccdnum = 0):
+    def set_current_source(self, currents, ccdnum=0):
         """
         Sets current source DAC value for given CCD (0, 1, 2).
         The same FPGA registers are also used to write OD and FS if used, see set_bias_voltages()
         """
-        
+
         key = "I_OS"
-        
+
         if key in currents:
             self.dacs[key] = currents[key] & 0xfff
         else:
             raise ValueError(
                 "No key found for current source (%s), could not be set." % key)
-            
-        self.write(0x400010, self.dacs[key] + (ccdnum <<12))
-                
+
+        self.write(0x400010, self.dacs[key] + (ccdnum << 12))
+
         #activates DAC output
         self.write(0x400011, 1)
 
@@ -122,9 +121,9 @@ class FPGA1(FPGA):
         """
         No readback available, using values stored in fpga object.
         """
-        
+
         key = "I_OS"
-    
+
         return {key: self.dacs[key]}
 
     # ----------------------------------------------------------
@@ -135,28 +134,28 @@ class FPGA1(FPGA):
         :param biases: dict
         :return:
         """
-        outputnum = {"GD":0,"RD":1,"OG":2,"OGS":3}
+        outputnum = {"GD": 0, "RD": 1, "OG": 2, "OGS": 3}
         # OG seen by CCD will be the difference OG-OGS
         outputnum1 = {"FSB": 3, "OD": 6}
         for key in iter(biases):
-            if key in ["GD","RD"]:
-                self.dacs[key] = int(biases[key]/self.bias_conv)& 0xfff
-                self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
+            if key in ["GD", "RD"]:
+                self.dacs[key] = int(biases[key] / self.bias_conv) & 0xfff
+                self.write(0x400100, self.dacs[key] + (outputnum[key] << 12))
             elif key == "OD":
-                self.dacs[key] = int(biases[key]/self.od_conv)& 0xfff
-                self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
+                self.dacs[key] = int(biases[key] / self.od_conv) & 0xfff
+                self.write(0x400010, self.dacs[key] + (outputnum1[key] << 12))
             elif key == "OG":
                 if biases[key] > 0:
-                    self.dacs[key] = int(biases[key]/self.og_conv)& 0xfff
+                    self.dacs[key] = int(biases[key] / self.og_conv) & 0xfff
                     self.dacs["OGS"] = 0
                 else:
                     self.dacs[key] = 0
-                    self.dacs["OGS"] = int(-biases[key]/self.og_conv)& 0xfff
-                self.write(0x400100, self.dacs[key] + (outputnum[key]<<12))
-                self.write(0x400100, self.dacs["OGS"] + (outputnum["OGS"]<<12))
+                    self.dacs["OGS"] = int(-biases[key] / self.og_conv) & 0xfff
+                self.write(0x400100, self.dacs[key] + (outputnum[key] << 12))
+                self.write(0x400100, self.dacs["OGS"] + (outputnum["OGS"] << 12))
             elif key == "FSB":
-                self.dacs[key] = int(biases[key]/self.clock_conv)& 0xfff
-                self.write(0x400010, self.dacs[key] + (outputnum1[key]<<12))
+                self.dacs[key] = int(biases[key] / self.clock_conv) & 0xfff
+                self.write(0x400010, self.dacs[key] + (outputnum1[key] << 12))
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
 
@@ -182,14 +181,14 @@ class FPGA1(FPGA):
             time.sleep(0.2)
             self.write(0xD00001, 0)
 
-    def check_location(self, s, loc = 3):
-        if s not in [0,1,2]:
+    def check_location(self, s, loc=3):
+        if s not in [0, 1, 2]:
             raise ValueError("Invalid REB stripe (%d)" % s)
-        if loc not in [1,2,3]:
+        if loc not in [1, 2, 3]:
             raise ValueError("Invalid Location code (%d)" % loc)
         return True
 
-    def get_cabac_config(self, s, check=True): # stripe 's'
+    def get_cabac_config(self, s, check=True):  # stripe 's'
         """
         read CABAC configuration for stripe <s>,
         store it in the CABAC objects and the header string.
@@ -206,12 +205,12 @@ class FPGA1(FPGA):
             self.write_spi(0x500000, s, 2, regaddress)
             # read answer to dict
             #time.sleep(0.05)
-            topconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
+            topconfig[address] = self.read(0x500010 + s, 1)[0x500010 + s]
             # send for reading bottom CABAC
             self.write_spi(0x500000, s, 1, regaddress)
             # read answer to dict
             #time.sleep(0.05)
-            bottomconfig[address] = self.read(0x500010+s, 1)[0x500010+s]
+            bottomconfig[address] = self.read(0x500010 + s, 1)[0x500010 + s]
 
         self.cabac_top[s].read_all_registers(topconfig, check)
         self.cabac_bottom[s].read_all_registers(bottomconfig, check)
@@ -230,12 +229,12 @@ class FPGA1(FPGA):
         """
         self.check_location(s, loc)
 
-        if loc==1 or loc==3:
+        if loc == 1 or loc == 3:
             # bottom CABAC
             regs = self.cabac_bottom[s].set_cabac_fromstring(param, value)
             for reg in regs:
                 self.write_spi(0x500000, s, 1, reg, True)
-        if loc==2 or loc==3:
+        if loc == 2 or loc == 3:
             # top CABAC
             regs = self.cabac_top[s].set_cabac_fromstring(param, value)
             for reg in regs:
@@ -256,15 +255,15 @@ class FPGA1(FPGA):
         for reg in regs:
             self.write_spi(0x500000, s, 2, reg, True)
 
-     # ----------------------------------------------------------
+            # ----------------------------------------------------------
 
-    def reset_cabac(self, s=0): # stripe 's'
+    def reset_cabac(self, s=0):  # stripe 's'
         """
         Use CABAC reset for stripe s
         """
         self.check_location(s)
 
-        self.write(0x500001, s) # starts the CABAC reset
+        self.write(0x500001, s)  # starts the CABAC reset
 
     # ----------------------------------------------------------
 
@@ -283,11 +282,11 @@ class FPGA1(FPGA):
             # send for reading top ASPIC
             self.write_spi(0xB00000, s, 2, address << 16)
             # read answer
-            topconfig[address] = self.read(0xB00010+s, 1)[0xB00010+s]
+            topconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
             # send for reading bottom ASPIC
             self.write_spi(0xB00000, s, 1, address << 16)
             # read answer
-            bottomconfig[address] = self.read(0xB00010+s, 1)[0xB00010+s]
+            bottomconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
 
         self.aspic_top[s].read_all_registers(topconfig, True)
         self.aspic_bottom[s].read_all_registers(bottomconfig, True)
@@ -304,11 +303,11 @@ class FPGA1(FPGA):
         """
         self.check_location(s, loc)
 
-        if loc==1 or loc==3:
+        if loc == 1 or loc == 3:
             # bottom ASPIC
             reg = self.aspic_bottom[s].set_aspic_fromstring(param, value)
             self.write_spi(0xB00000, s, 1, reg, True)
-        if loc==2 or loc==3:
+        if loc == 2 or loc == 3:
             # top ASPIC
             reg = self.aspic_top[s].set_aspic_fromstring(param, value)
             self.write_spi(0xB00000, s, 2, reg, True)
@@ -320,12 +319,12 @@ class FPGA1(FPGA):
         """
         self.check_location(s, loc)
 
-        if loc==1 or loc==3:
+        if loc == 1 or loc == 3:
             # bottom ASPIC
             AspicData = self.aspic_bottom[s].write_all_registers()
             for address in range(2):
                 self.write_spi(0xB00000, s, 1, AspicData[address], True)
-        if loc==2 or loc==3:
+        if loc == 2 or loc == 3:
             # top ASPIC
             AspicData = self.aspic_top[s].write_all_registers()
             for address in range(2):
