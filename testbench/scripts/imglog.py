@@ -19,8 +19,9 @@ i = B.conv_to_fits([4,5])
 # to save FITS HDU with headers
 B.save_to_fits(i, m) 
 
-# between exposures
-B.reb.waiting_sequence()
+# between exposures TO BE TESTED
+p = B.reb.start_waiting_sequence()
+B.reb.stop_waiting_sequence(p)
 
 # when finished
 B.shutdown_CCD()

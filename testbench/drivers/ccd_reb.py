@@ -6,9 +6,6 @@
 Testbench driver for REB (through direct calls to rriClient)
 """
 
-# import py.camera.reb1.reb1 as reb1
-# from py.camera.generic.reb import get_sequencer_string
-
 import lsst.camera.reb1.reb1 as reb1
 import lsst.camera.wreb.wreb as wreb
 from lsst.camera.generic.reb import get_sequencer_string
@@ -16,6 +13,7 @@ from lsst.camera.generic.reb import get_sequencer_string
 from driver import Driver
 import logging
 import os.path
+import subprocess
 
 # =======================================================================
 
@@ -47,16 +45,16 @@ class Instrument(Driver):
         if 'host' not in kargs:
             self.host = None
 
-        if 'stripe_id' not in kargs:
-            self.stripe_id = 0
+        if 'stripe' not in kargs:
+            self.stripe = 0
 
         if 'xmlfile' not in kargs:
             raise ValueError("XML sequencer file is requested")
 
         if identifier == 'reb':
-            self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe_id])
+            self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
         else:
-            self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe_id])
+            self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
         self.reb.xmlfile = self.xmlfile
         self.version = self.reb.fpga.get_version()
         self.testtype = 'TEST'
@@ -138,8 +136,8 @@ class Instrument(Driver):
         Set which REB stripe is read out.
         At this level, accepts only one stripe, but the underlying structure is valid for more.
         """
-        self.stripe_id = stripe_id
-        self.reb.set_stripes([self.stripe_id])
+        self.stripe = stripe_id
+        self.reb.set_stripes([self.stripe])
 
     def update_filetag(self):
         """
@@ -261,13 +259,22 @@ class Instrument(Driver):
         """
         self.reb.wait_end_sequencer()
 
-    def waiting_sequence(self, name="Wait"):
+    def start_waiting_sequence(self, name="Wait"):
+        """
+        Launches a CCD waiting sequence as a subprocess.
+        """
+        logging.info("REB: starting wait sequence subprocess")
+        self.reb.config_sequence(name, 0)
+        command = '/home/lsst/lsst/py/testbench/scripts/ccd/repeat_sequence.sh'
+        proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return proc
+
+    def stop_waiting_sequence(self, proc):
         """
         Lets CCD wait by clearing periodically until keyboard interrupt is sent.
         """
-        logging.info("REB: starting wait sequence")
-        self.reb.waiting_sequence(name)
-        logging.info("REB: end wait sequence")
+        proc.terminate()
+        logging.info("REB: end wait sequence subprocess")
 
     # --------------------------------------------------------------------
     # Operating the board electronics
@@ -481,4 +488,3 @@ class Instrument(Driver):
         :return: numpy.array
         """
         return get_sequencer_string(self.reb.seq)
-

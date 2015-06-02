@@ -161,7 +161,7 @@ def qth_flux(self,
     # Shutting down (not the lamp by default)
     self.ttl.closeSafetyShutter()
     #self.shutdown_CCD()
-    self.reb.waiting_sequence()
+    # p = self.reb.start_waiting_sequence()
 
 
 # Attach this method to the Bench class / instance

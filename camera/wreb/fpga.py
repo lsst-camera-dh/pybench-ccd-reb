@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #
 # LSST
-# Python minimal interface for the REB FPGA
+# Python minimal interface for the REB FPGA new version (REB2/WREB)
 #
 #
 from py.camera.generic.fpga import *
