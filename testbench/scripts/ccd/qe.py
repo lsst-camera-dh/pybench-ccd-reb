@@ -94,7 +94,7 @@ def qth_flux(self,
     # Create the logging summary file
     # TODO: build file structure and file names
     summaryfile = os.path.join(eodir, 'summary.log')
-    f = open(summaryfile, "w")
+    f = open(summaryfile, 'a')
 
     print >>f, "# fluxes on the LSST CCD testbench"
     print >>f, "# QTH lamp through monochromator"
@@ -123,7 +123,7 @@ def qth_flux(self,
         # First take bias frame
         self.log("Taking bias")
         self.ttl.closeSafetyShutter(wait=True)
-        m = self.execute_reb_sequence(True, 'Bias', 0)
+        m = self.execute_reb_sequence(True, 'ClearBias', 0, 20)
         #to have only useful channels:
         fname = "%s_lambda_%04d_bias_%s.fits" % (serno, int(eff_wl), self.reb.reb.imgtag)
         i = self.conv_to_fits(channels=validamps)
@@ -137,24 +137,16 @@ def qth_flux(self,
 
         for t in exptimes:
             # pair of flats
-            m = self.execute_reb_sequence(True, 'Acquisition', t)
-            #to have only useful channels:
-             #fname = lab['camera'].exp_acq(fname, exptime, path=datadir,  )
-            fname = "%s_lambda_%04d_qe_%05u_1_%s.fits" % (serno, int(eff_wl), int(t*100), self.reb.reb.imgtag)
-            i = self.conv_to_fits(channels=validamps)
-            # to save FITS HDU with headers
-            self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
+            for numpair in [1, 2]:
+                m = self.execute_reb_sequence(True, 'Acquisition', t)
+                #to have only useful channels:
+                 #fname = lab['camera'].exp_acq(fname, exptime, path=datadir,  )
+                fname = "%s_lambda_%04d_qe%d_%05u_%s.fits" % (serno, int(eff_wl), numpair, int(t*100), self.reb.reb.imgtag)
+                i = self.conv_to_fits(channels=validamps)
+                # to save FITS HDU with headers
+                self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
-            print >>f, eff_wl, t, fname
-
-            m = self.execute_reb_sequence(True, 'Acquisition', t)
-            #to have only useful channels:
-            fname = "%s_lambda_%04d_flat_%05u_2_%s.fits" % (serno, int(eff_wl), int(t*100), self.reb.reb.imgtag)
-            i = self.conv_to_fits(channels=validamps)
-            # to save FITS HDU with headers
-            self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
-
-            print >>f, eff_wl, t, fname
+                print >>f, eff_wl, t, fname
 
     f.close()
 

@@ -20,13 +20,13 @@ class WREB(reb.REB):
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
-        self.f = fpga.FPGA1(ctrl_host, rriaddress)
-        self.f.stop_clock()  # stops the clocks to use as image tag
-        self.f.write(0x400006, 0)  # pattern generator off
+        self.fpga = fpga.FPGA1(ctrl_host, rriaddress)
+        self.fpga.stop_clock()  # stops the clocks to use as image tag
+        self.fpga.write(0x400006, 0)  # pattern generator off
         self.config = {}
         self.xmlfile = "sequencer-wreb.xml"
         # load 0 on default state to prep for REB start-up
-        self.f.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
      # --------------------------------------------------------------------
 
@@ -38,9 +38,9 @@ class WREB(reb.REB):
         """
         for s in self.stripes:
             for param in iter(params):
-                self.f.set_cabac_value(param, params[param], s)
+                self.fpga.set_cabac_value(param, params[param], s)
             time.sleep(0.1)
-            self.config.update(self.f.get_cabac_config(s), check=True)
+            self.config.update(self.fpga.get_cabac_config(s), check=True)
 
     def get_cabac_config(self):
         """
@@ -49,7 +49,7 @@ class WREB(reb.REB):
         """
         cabacconfig = {}
         for s in self.stripes:
-            cabacconfig.update(self.f.get_cabac_config(s), check=False)
+            cabacconfig.update(self.fpga.get_cabac_config(s), check=False)
 
         self.config.update(cabacconfig)
 
@@ -62,7 +62,7 @@ class WREB(reb.REB):
         :return:
         """
         for s in self.stripes:
-            self.f.reset_cabac(s)
+            self.fpga.reset_cabac(s)
         self.get_cabac_config()  # updates CABAC fields
 
     def send_aspic_config(self, params):
@@ -72,9 +72,9 @@ class WREB(reb.REB):
         """
         for s in self.stripes:
             for param in iter(params):
-                self.f.set_aspic_value(param, params[param], s)
+                self.fpga.set_aspic_value(param, params[param], s)
             time.sleep(0.1)
-            self.config.update(self.f.get_aspic_config(s, check=True))
+            self.config.update(self.fpga.get_aspic_config(s, check=True))
 
     def config_aspic(self):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
@@ -160,7 +160,7 @@ class WREB(reb.REB):
                     self.config.update(configsave)
                     break
             if valid:
-                self.f.set_bias_voltages(params)
+                self.fpga.set_bias_voltages(params)
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
@@ -169,23 +169,23 @@ class WREB(reb.REB):
         :param value:
         :return:
         """
-        if param in self.f.aspic_top[0].params:
-            self.f.set_aspic_value(param, value, stripe, location)
+        if param in self.fpga.aspic_top[0].params:
+            self.fpga.set_aspic_value(param, value, stripe, location)
             time.sleep(0.1)
-            self.config.update(self.f.get_aspic_config(stripe, check=True))
+            self.config.update(self.fpga.get_aspic_config(stripe, check=True))
 
-        elif param in self.f.cabac_top[0].params:
+        elif param in self.fpga.cabac_top[0].params:
             if self.check_bias_safety(param, value):
-                self.f.set_cabac_value(param, value, stripe, location)
+                self.fpga.set_cabac_value(param, value, stripe, location)
                 time.sleep(0.1)
-                self.config.update(self.f.get_cabac_config(stripe, check=True))
+                self.config.update(self.fpga.get_cabac_config(stripe, check=True))
 
         elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
-            self.f.set_clock_voltages({param: value})
+            self.fpga.set_clock_voltages({param: value})
             self.config.update({param: value})
 
         elif param == "I_OS":
-            self.f.set_current_source({param: value}, stripe)
+            self.fpga.set_current_source({param: value}, stripe)
             self.config.update({param: value})
 
         else:
@@ -199,10 +199,10 @@ class WREB(reb.REB):
         :return:
         """
         # power-up the CABAC low voltages
-        self.f.cabac_power(True)
+        self.fpga.cabac_power(True)
         # power-up the clock rails (in V)
         rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
-        self.f.set_clock_voltages(rails)
+        self.fpga.set_clock_voltages(rails)
         self.config.update(rails)
 
         # put all CABAC biases at board GND (must know Vsub), including spare
@@ -236,12 +236,12 @@ class WREB(reb.REB):
         #puts current on CS gate
         dacOS = {"I_OS": 0xfff}
         for s in self.stripes:
-            self.f.set_current_source(dacOS, s)
+            self.fpga.set_current_source(dacOS, s)
         self.config.update(dacOS)
 
         #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
         if self.seq:
-            self.f.send_function(0, self.seq.get_function(0))
+            self.fpga.send_function(0, self.seq.get_function(0))
         else:
             self.load_sequencer()
 
@@ -255,12 +255,12 @@ class WREB(reb.REB):
         time.sleep(5)
 
         #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
         #shuts current on CS gate
         dacOS = {"I_OS": 0}
         for s in self.stripes:
-            self.f.set_current_source(dacOS, s)
+            self.fpga.set_current_source(dacOS, s)
         self.config.update(dacOS)
 
         #shuts clock currents on CABAC
@@ -289,13 +289,13 @@ class WREB(reb.REB):
         """
         # clock rails first (in V)
         rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
-        self.f.set_clock_voltages(rails)
+        self.fpga.set_clock_voltages(rails)
         self.config.update(rails)
         # shutdown the CABAC low voltages
-        self.f.cabac_power(False)
+        self.fpga.cabac_power(False)
         # need to shutdown VddOD right here
         #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
     # --------------------------------------------------------------------
 

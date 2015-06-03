@@ -119,7 +119,7 @@ def append_kvc(exthdu, keys, values, comments):
         exthdu.header[key] = (values[key], comments[key])
 
 
-def conv_to_fits(self, channels=None, imgname=None):
+def conv_to_fits(self, channels=None, borders=False, imgname=None):
     """
     Converts the given raw image to FITS data.
     """
@@ -131,7 +131,7 @@ def conv_to_fits(self, channels=None, imgname=None):
     if not os.path.isfile(rawfile):
         logging.info("Did not find the expected raw file: %s " % rawfile)
 
-    hdulist = self.reb.conv_to_fits(rawfile, channels)
+    hdulist = self.reb.conv_to_fits(rawfile, channels, displayborders=borders)
 
     return hdulist
 
