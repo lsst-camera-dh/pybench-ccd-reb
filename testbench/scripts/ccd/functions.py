@@ -60,7 +60,7 @@ bench.Bench.powerup_CCD = powerup_CCD
 
 
 def shutdown_CCD(self):
-    print("Starting CCD shut-down sequence")
+    logging.info("Starting CCD shut-down sequence")
     self.reb.wait_end_sequencer()
     # Back-substrate first
     self.bss.disable()
@@ -129,7 +129,7 @@ def conv_to_fits(self, channels=None, imgname=None):
         rawfile = self.reb.make_img_name()
 
     if not os.path.isfile(rawfile):
-        print("Did not find the expected raw file: %s " % rawfile)
+        logging.info("Did not find the expected raw file: %s " % rawfile)
 
     hdulist = self.reb.conv_to_fits(rawfile, channels)
 
