@@ -146,11 +146,13 @@ config = {
     #
     # ---------------------------------------------------------------------
     # Triax monochromator
-    # triax /dev/ttyS0 8086
+    # triax /dev/ttyS0 8086 --> not working on June 03 2015
+    # triax /dev/ttyS5 
     #
     'triax': {
         'host'        : 'lpnlsstbench',
-        'devices'     : ['/dev/ttyS0'],
+#SK edit 03062015        'devices'     : ['/dev/ttyS0'],
+	'devices'     : ['/dev/ttyS5'],
         'driver'      : 'monochromator_triax',
         'port'        : 8086,
         'commandline' : 'triax %device %port'
