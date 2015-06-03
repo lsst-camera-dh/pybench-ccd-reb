@@ -458,6 +458,128 @@
                     <constant ref="RST"> 1 </constant>
                 </constants>
             </function>
+            <function id="PulsePixel">
+                <fullname>Single pixel read with pulser</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                    <clock ref="CL"/>
+                    <clock ref="RST"/>
+                    <clock ref="RD"/>
+                    <clock ref="RU"/>
+                    <clock ref="SPL"/>
+                    <clock ref="PULS"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeS</duration>
+                        <value>1010110000</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>BufferS</duration>
+                        <value>1011110000</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>BufferS</duration>
+                        <value>1001110000</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>1001000000</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>360 ns</duration>
+                        <value>1001001000</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>1101001000</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>ISO2</duration>
+                        <value>1100000001</value>
+                    </timeslice>
+                    <timeslice id="slice8">
+                        <duration>RampTime</duration>
+                        <value>1100000101</value>
+                    </timeslice>
+                    <timeslice id="slice9">
+                        <duration>BufferS</duration>
+                        <value>1110000001</value>
+                    </timeslice>
+                    <timeslice id="slice10">
+                        <duration>50 ns</duration>
+                        <value>1010000010</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                </constants>
+            </function>
+            <function id="PulseSignal">
+                <fullname>Single pixel-like signal with pulser</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="CL"/>
+                    <clock ref="RST"/>
+                    <clock ref="RD"/>
+                    <clock ref="RU"/>
+                    <clock ref="SPL"/>
+                    <clock ref="PULS"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeS</duration>
+                        <value>1110000</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>BufferS</duration>
+                        <value>1110000</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>BufferS</duration>
+                        <value>1110000</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>1000000</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>360 ns</duration>
+                        <value>1001000</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>1001000</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>ISO2</duration>
+                        <value>1000001</value>
+                    </timeslice>
+                    <timeslice id="slice8">
+                        <duration>RampTime</duration>
+                        <value>1000101</value>
+                    </timeslice>
+                    <timeslice id="slice9">
+                        <duration>BufferS</duration>
+                        <value>1000001</value>
+                    </timeslice>
+                    <timeslice id="slice10">
+                        <duration>50 ns</duration>
+                        <value>1000010</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                    <constant ref="R1">1</constant>
+                    <constant ref="R2">1</constant>
+                    <constant ref="R3">0</constant>
+                </constants>
+            </function>
             <function id="FastFlush2">
                 <fullname>Second step of fast flush</fullname>
                 <clocklist>
@@ -603,6 +725,26 @@
                     <repeat>ReadLines</repeat>
                     <call ref="TransferLine"/>
                     <call ref="ReadPixel">
+                        <repeat>ReadColumns</repeat>
+                    </call>
+                </call>
+            </subroutine>
+            <subroutine id="PulseFrame">
+                <fullname>Readout with pulser equivalent to CCD frame</fullname>
+                <call>
+                    <repeat>ReadLines</repeat>
+                    <call ref="ReverseTransferLine"/>
+                    <call ref="PulseSignal">
+                        <repeat>ReadColumns</repeat>
+                    </call>
+                </call>
+            </subroutine>
+            <subroutine id="PulseClockFrame">
+                <fullname>Readout with pulser and clocks equivalent to CCD frame</fullname>
+                <call>
+                    <repeat>ReadLines</repeat>
+                    <call ref="TransferLine"/>
+                    <call ref="PulsePixel">
                         <repeat>ReadColumns</repeat>
                     </call>
                 </call>
@@ -757,6 +899,18 @@
                 <call ref="ReadFrame"/>
                 <call ref="EndOfImage"/>
             </subroutine>
+            <subroutine id="PulseAcquisition">
+                <fullname>One acquisition with pulser signal</fullname>
+                <call ref="StartOfImage"/>
+                <call ref="PulseFrame"/>
+                <call ref="EndOfImage"/>
+            </subroutine>
+            <subroutine id="PulseClockAcquisition">
+                <fullname>One acquisition with pulser signal and serial clocks running</fullname>
+                <call ref="StartOfImage"/>
+                <call ref="PulseClockFrame"/>
+                <call ref="EndOfImage"/>
+            </subroutine>
         </subroutines>
         <mains>
             <main id="Acquisition">
@@ -795,6 +949,17 @@
             <main id="PocketPump">
                 <fullname>Frame acquisition with pocket pumping</fullname>
                 <call ref="PumpedAcquisition"/>
+            </main>
+            <main id="Pulser">
+                <fullname>Frame acquisition with pulser signal</fullname>
+                <call ref="PulseAcquisition"/>
+            </main>
+            <main id="PulserClocks">
+                <fullname>Frame acquisition with pulser and serial clocking</fullname>
+                <call ref="ClearCCD">
+                    <repeat>5</repeat>
+                </call>
+                <call ref="PulseClockAcquisition"/>
             </main>
             <main id="Test">
                 <fullname>Test of sequencer</fullname>

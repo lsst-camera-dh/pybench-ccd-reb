@@ -269,7 +269,7 @@ class REB(object):
         self.wait_end_sequencer()
         self.select_subroutine(name)
 
-        if name in ["Bias", "Test", "Wait"]:
+        if name in ["Bias", "Test", "Wait", "ClearBias"]:
             self.shutdelay = 0
             self.exptime = 0
         else:
