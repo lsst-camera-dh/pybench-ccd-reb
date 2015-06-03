@@ -24,7 +24,7 @@ class REB1(reb.REB):
         reb.REB.__init__(self, reb_id, ctrl_host, stripe_id)
         self.fpga = fpga0.FPGA0(ctrl_host, reb_id)  # overwrites fpga from superclass
 
-   # --------------------------------------------------------------------
+    # --------------------------------------------------------------------
 
     def REBpowerup(self):
         """
@@ -164,6 +164,26 @@ class REB1(reb.REB):
 
         self.get_cabac_config()
 
+   # --------------------------------------------------------------------
 
+    def set_parameter(self, param, value, stripe = 0, location = 3):
+        """
+        Generic interface to set any single parameter of the REB, and check the readback if possible.
+        :param param:
+        :param value:
+        :return:
+        """
+        if param in self.fpga.cabac_top[0].params:
+            self.fpga.set_cabac_value(param, value, stripe)
+            time.sleep(0.1)
+            self.fpga.send_cabac_config(stripe)
 
+        elif param in ["V_SL", "V_SH", "V_RGL", "V_RGH", "V_PL", "V_PH"]:
+            self.fpga.set_clock_voltages({param: value})
+
+        elif param == "I_OS":
+            self.fpga.set_current_source(value, stripe)
+
+        else:
+            print("Warning: unidentified parameter for the REB: %s" % param)
 

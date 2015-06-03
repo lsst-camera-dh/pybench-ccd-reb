@@ -364,6 +364,21 @@ class Instrument(Driver):
         logging.info("REB: sent CABAC resets")
 
     # --------------------------------------------------------------------
+
+    def set_parameter(self, param, value, location=3):
+        """
+        Generic interface to set any single parameter of the REB, and check the readback if possible.
+        Acceptable parameters depend on the REB version.
+        Location value can be 3 for top and bottom of the stripe, 2 for top only, 1 for bottom only.
+        It applies only to CABAC and ASPIC parameters.
+        :param param: string
+        :param value:
+        :param location: int
+        """
+        self.reb.set_parameter(param, value, self.stripe, location)
+        logging.info("Set REB parameter %s to %s at location %d" % (param, repr(value), location))
+
+    # --------------------------------------------------------------------
     # Building FITS frames
     # --------------------------------------------------------------------
 
