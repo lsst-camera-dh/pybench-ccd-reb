@@ -36,12 +36,13 @@ class FPGA1(FPGA):
 
     # --------------------------------------------------------------------
 
-    def increment(self):
+    def increment(self, offset=0):
         """
         Send the command to increment the ADC sampling time by 1 cycle after
         each ADC trigger.
         """
         self.write(0x330000, 1)
+        self.write(0x330001, offset & 0xff)
 
     def stop_increment(self):
         """

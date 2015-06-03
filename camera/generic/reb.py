@@ -318,7 +318,7 @@ class REB(object):
 
     # --------------------------------------------------------------------
 
-    def conv_to_fits(self, imgname, channels=None):
+    def conv_to_fits(self, imgname, channels=None, displayborders=False):
         """
         Creates the fits object from the acquired data.
         If channels is not None but a list, saves the channels in the list (number 0 to 15).
@@ -354,7 +354,7 @@ class REB(object):
             # create extension to fits file for each channel
             exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
-            self.get_extension_header(num, exthdu)
+            self.get_extension_header(num, exthdu, displayborders)
             avchan = N.mean(y[11:self.imgcols-50, 2:self.imglines-20])
             exthdu.header["AVERAGE"] = avchan
             hdulist.append(exthdu)

@@ -17,7 +17,7 @@ B.register('lakeshore1')
 import lsst.testbench.scripts.ccd.functions
 
 print """
-CCD PTC with laser
+CCD output scanning with and without light source.
 --------------------
 
 B.ptc_acquisition(explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2, lasercurrent=55.0)
@@ -58,14 +58,14 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
 
     # Create the logging summary file
     summaryfile = os.path.join(eodir, 'summary.log')
-    f = open(summaryfile, "w")
+    f = open(summaryfile, 'a')
 
     print >>f, "# power\t exposure time\t file name"
 
     effpow = self.laser.getPower(laserchannel)
     # First take bias frames
     self.log("Taking bias")
-    m = self.execute_reb_sequence(True, 'Bias', 0)
+    m = self.execute_reb_sequence(True, 'ClearBias', 0, 20)
     #to have only useful channels:
     fname = "%s_ptc_bias_%s.fits" % (serno, self.reb.reb.imgtag)
     i = self.conv_to_fits(channels=validamps)
@@ -76,26 +76,16 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
 
     for t in np.arange(explow, exphigh+expdelta, expdelta):
         # pair of flats
-        effpow = self.laser.getPower(laserchannel)
-        m = self.execute_reb_sequence(True, 'Acquisition', t)
-        #to have only useful channels:
-         #fname = lab['camera'].exp_acq(fname, exptime, path=datadir,  )
-        fname = "%s_ptc_flat_%05d_1_%s.fits" % (serno, int(t*100), self.reb.reb.imgtag)
-        i = self.conv_to_fits(channels=validamps)
-        # to save FITS HDU with headers
-        self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
+        for numpair in [1, 2]:
+            effpow = self.laser.getPower(laserchannel)
+            m = self.execute_reb_sequence(True, 'Acquisition', t)
+            #to have only useful channels:
+            fname = "%s_ptc_flat%d_%05d_%s.fits" % (serno, numpair, int(t*100), self.reb.reb.imgtag)
+            i = self.conv_to_fits(channels=validamps)
+            # to save FITS HDU with headers
+            self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
-        print >>f, effpow, t, fname
-
-        effpow = self.laser.getPower(laserchannel)
-        m = self.execute_reb_sequence(True, 'Acquisition', t)
-        #to have only useful channels:
-        fname = "%s_ptc_flat_%05d_2_%s.fits" % (serno, int(t*100), self.reb.reb.imgtag)
-        i = self.conv_to_fits(channels=validamps)
-        # to save FITS HDU with headers
-        self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
-
-        print >>f, effpow, t, fname
+            print >>f, effpow, t, fname
 
     f.close()
 

@@ -276,6 +276,29 @@ class Instrument(Driver):
         proc.terminate()
         logging.info("REB: end wait sequence subprocess")
 
+    def start_adc_increment(self, offset=0):
+        """
+        Starts the counter that will increment the ADC convert offset by 10 ns every cycle.
+        :param offset: int
+        :return:
+        """
+        if self.identifier == 'wreb':
+            logging.info("Starting ADC increment at %d" % offset)
+            self.reb.fpga.increment(offset)
+        else:
+            logging.info("ADC increment not implemented in this version")
+
+    def stop_adc_increment(self):
+        """
+        Stops the counter that increments the ADC convert offset and resets the offset.
+        :return:
+        """
+        if self.identifier == 'wreb':
+            logging.info("Stopping ADC increment")
+            self.reb.fpga.stop_increment()
+        else:
+            logging.info("ADC increment not implemented in this version")
+
     # --------------------------------------------------------------------
     # Operating the board electronics
     # --------------------------------------------------------------------
@@ -389,14 +412,27 @@ class Instrument(Driver):
         """
         return self.reb.make_img_name()
 
-    def conv_to_fits(self, imgname, channels=None):
+
+    def set_amplifier_size(self, cols, lines):
+        """
+        Sets the dimensions of the image. This affects how the image is reconstituted, not the sequencer (yet).
+        :param cols: int
+        :param lines: int
+        :return:
+        """
+        self.reb.imgcols = cols
+        self.reb.imglines = lines
+
+    def conv_to_fits(self, imgname, channels=None, displayborders=False):
         """
         Creates the fits object from the acquired data.
         If channels is not None but a list, saves the channels in the list (number 0 to 15).
         :param imgname: string
+        :param channels: list
+        :param displayborders: bool
         :return: pyfits.HDUlist
         """
-        return self.reb.conv_to_fits(imgname, channels)
+        return self.reb.conv_to_fits(imgname, channels, displayborders)
 
     def make_fits_name(self, imgstr):
         """
