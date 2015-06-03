@@ -9,6 +9,7 @@ __author__ = 'juramy'
 import lsst.camera.generic.reb as reb
 import time
 import os
+import logging
 import fpga
 import astropy.io.fits as pyfits
 
@@ -25,14 +26,15 @@ class WREB(reb.REB):
         self.config = {}
         self.xmlfile = "sequencer-wreb.xml"
         # load 0 on default state to prep for REB start-up
-        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
+        self.f.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
      # --------------------------------------------------------------------
 
     def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionary and writes to CABAC, then checks the readback.
-        Notes: if params is empty, this simply rewrites the same parameters in the CABAC objects and updates config.
+        Note: if params is empty, this simply rewrites the same parameters in the CABAC objects and updates config.
+        THERE IS NO SAFETY CHECK on this function, use set_biases as a high-level function for biases.
         """
         for s in self.stripes:
             for param in iter(params):
@@ -45,13 +47,13 @@ class WREB(reb.REB):
         Read CABAC configurations and store it to config.
         Useful for recovery and headers.
         """
-        config = {}
+        cabacconfig = {}
         for s in self.stripes:
-            config.update(self.f.get_cabac_config(s), check=False)
+            cabacconfig.update(self.f.get_cabac_config(s), check=False)
 
-        self.config.update(config)
+        self.config.update(cabacconfig)
 
-        return config
+        return cabacconfig
 
     def cabac_reset(self):
         """
@@ -78,31 +80,87 @@ class WREB(reb.REB):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
         self.send_aspic_config(settings)
 
+    def check_bias_safety(self, param, value):
+        """
+        Checks that the given parameter is safe for the CCD, comparing to saved values.
+        :param param: string
+        :param value: float
+        :return: bool
+        """
+        # safety: OG<OD
+        if param == "OG":
+            if "OD" in self.config:
+                if self.config["OD"] < value:
+                    logging.info("Warning: trying to program OG at %f, higher than OD" % value)
+                    return False
+                else:
+                    return True
+            else:
+                logging.info("No saved value of OD to compare to OG")
+                return False
+        # safety: OD-RD < 20 V, but preferably also OD>RD
+        elif param in ['OD', 'RD']:
+            if param == "OD":
+                od = value
+                if "RD" in self.config:
+                    rd = self.config["RD"]
+                else:
+                    logging.info("No saved value of RD to compare to OD")
+                    return False
+            if param == "RD":
+                rd = value
+                if "OD" in self.config:
+                    od = self.config["OD"]
+                else:
+                    logging.info("No saved value of OD to compare to RD")
+                    return False
+            if od < rd:
+                logging.info("Warning: trying to program OD lower than RD")
+                return False
+            elif od > rd+20:
+                logging.info("Warning: trying to program OD higher than RD + 20 V")
+                return False
+            else:
+                return True
+        else:
+            return True
+
     def set_biases(self, params):
         """
-        Specific to CABAC1: safe change in bias values. Manages alternative biases.
+        Manages safe changes in bias values, from CABAC or alternative biases.
         :param params: dict
         :return:
         """
         if "OG" in params:
-            od = 0
-            try:
-                od = self.config["OD"]
-            except:
-                print("No saved value of OD to compare to OG")
-            if params["OG"]> od:
-                print("Warning: trying to program OG at %f, higher than OD, cancelling." % params["OG"])
+            if not self.check_bias_safety("OG", params["OG"]):
                 params.pop("OG")
 
         if self.useCABACbias:
-            #TODO: increasing CABAC1 slowly along with power supply
-            # this must include the spare output
-            for k,v in params.iteritems():
-                self.send_cabac_config({k:v})
-            #self.send_cabac_config({"SPA": v})
+            # by steps
+            for i in range(len(params)):
+                for param in params:
+                    if self.check_bias_safety(param, params[param]):
+                        self.send_cabac_config({param: params[param]})
+                        params.pop(param)
+                    else:
+                        # try half-way
+                        half = params[param]/2
+                        if self.check_bias_safety(param, half):
+                            self.send_cabac_config({param: half})
+
         else:
-            self.f.set_bias_voltages(params)
-        self.config.update(params)
+            # simultaneous activation works fine if all new values are valid
+            configsave = self.config
+            self.config.update(params)
+            valid = True
+            for param in params:
+                if not self.check_bias_safety(param, params[param]):
+                    # cancels change
+                    valid = False
+                    self.config.update(configsave)
+                    break
+            if valid:
+                self.f.set_bias_voltages(params)
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
@@ -117,9 +175,10 @@ class WREB(reb.REB):
             self.config.update(self.f.get_aspic_config(stripe, check=True))
 
         elif param in self.f.cabac_top[0].params:
-            self.f.set_cabac_value(param, value, stripe, location)
-            time.sleep(0.1)
-            self.config.update(self.f.get_cabac_config(stripe, check=True))
+            if self.check_bias_safety(param, value):
+                self.f.set_cabac_value(param, value, stripe, location)
+                time.sleep(0.1)
+                self.config.update(self.f.get_cabac_config(stripe, check=True))
 
         elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
             self.f.set_clock_voltages({param: value})
@@ -130,13 +189,13 @@ class WREB(reb.REB):
             self.config.update({param: value})
 
         else:
-            print("Warning: unidentified parameter for the REB: %s" % param)
+            logging.info("Warning: unidentified parameter for the REB: %s" % param)
 
     # --------------------------------------------------------------------
 
     def REBpowerup(self):
         """
-        To be executed at power-up to safeguard CABAC1.
+        To be executed at power-up to safeguard CABAC2.
         :return:
         """
         # power-up the CABAC low voltages
@@ -145,12 +204,12 @@ class WREB(reb.REB):
         rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
         self.f.set_clock_voltages(rails)
         self.config.update(rails)
-        # disable the high-Z safety features
-        self.f.cabac_safety()
-        if not self.useCABACbias:
-            # put CABAC biases just below power supply to VddOD
-            self.send_cabac_config({"OD": 5, "GD": 5, "RD": 5, "OG": 5, "SPA": 5})
-        # else: all values are at 0, VddOD must not be too high
+
+        # put all CABAC biases at board GND (must know Vsub), including spare
+        Vsuboffset = - self.config["VSUB"]
+        self.send_cabac_config({"OD": Vsuboffset, "GD": Vsuboffset, "RD": Vsuboffset})
+        # staged for CCD safety (although the diodes are supposed to do it)
+        self.send_cabac_config({"OG": Vsuboffset, "SPA": Vsuboffset})
 
     def CCDpowerup(self):
         """
@@ -158,18 +217,8 @@ class WREB(reb.REB):
         """
 
         #starting drain voltages
-        # safety: OD-RD < 20 V, but preferably also OD>RD
-        if self.useCABACbias:
-            #two steps
-            drains = {"OD": 18, "GD": 18}
-            self.set_biases(drains)
-            self.set_biases({"RD": 18})
-            drains = {"OD": 30, "GD": 24}
-            self.set_biases(drains)
-        else:
-            # simultaneous activation works fine
-            drains = {"RD": 18, "OD": 30, "GD": 24}
-            self.set_biases(drains)
+        drains = {"RD": 18, "OD": 30, "GD": 24}
+        self.set_biases(drains)
 
         time.sleep(0.5)
 
@@ -196,16 +245,17 @@ class WREB(reb.REB):
         else:
             self.load_sequencer()
 
-        # see control of BSS
+        logging.info('BSS can be powered on now.')
 
     def CCDshutdown(self):
         """
         Sequence to shutdown power to the CCD.
         """
-        # see control of BSS here
+        logging.info('BSS must be shutdown at this time.')
+        time.sleep(5)
 
         #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
+        self.f.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
         #shuts current on CS gate
         dacOS = {"I_OS": 0}
@@ -230,13 +280,13 @@ class WREB(reb.REB):
         self.set_biases(drains)
 
         time.sleep(0.5)
+        logging.info('CCD shutdown complete on WREB.')
 
     def REBshutdown(self):
         """
         To be executed when shutting down the WREB to safeguard CABAC1.
         :return:
         """
-        # need to bring down VddOD here to < 15V
         # clock rails first (in V)
         rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
         self.f.set_clock_voltages(rails)
@@ -245,7 +295,7 @@ class WREB(reb.REB):
         self.f.cabac_power(False)
         # need to shutdown VddOD right here
         #sets the default sequencer clock states to 0
-        self.f.send_function(0, fpga.Function( name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0} ))
+        self.f.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
     # --------------------------------------------------------------------
 
@@ -295,9 +345,9 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
 
         hdulist.writeto(fitsname, clobber=True)
 
-        print("Wrote FITS file "+fitsname)
+        logging.info("Wrote FITS file "+fitsname)
     else:
-        print("Did not find the expected raw file: %s " % imgname)
+        logging.info("Did not find the expected raw file: %s " % imgname)
 
 if __name__ == "__main__":
 
