@@ -4,10 +4,10 @@
 #
 # LSST
 #
-# Remote control (XPL-RPC) of the Keithley for the LSST testbench
+# Remote control (XPL-RPC) of the CLAP for the LSST testbench
 # XML-RPC server to control it remotely
-# default device: /dev/ttyS1
-# default port: 8102
+# default device: /dev/--- on lpnlsstclap
+# default port: 81
 #
 # Authors: Laurent Le Guillou 
 # (recycled from DICE control system code)
@@ -370,3 +370,273 @@ Start the Keithley Electrometer remote control server.
 
 
 # ==================================================================
+#! /usr/bin/env python
+
+import sys
+import os, os.path
+import time
+
+import struct
+from array import array
+
+import dice.control.backend as dcb
+
+# ----------------------------------------------------------------------------
+
+def remaining():
+    return dcb.read_at(0x17, 0x19)
+
+# ----------------------------------------------------------------------------
+
+# syntax: readclap <wordcount> <frequency> <channels> <repeat> <delay> <filename> [<blocksize>]
+
+if len(sys.argv) < 7:
+    print >>sys.stderr, "Usage: ",
+    print >>sys.stderr, "readclap <wordcount> <frequency> <channels> <repeat> <delay> <filename> [<blocksize>]"
+    sys.exit(1)
+
+wordcount = int(sys.argv[1])
+
+if wordcount > 8387583:
+    print >>sys.stderr, "wordcount too large. Should be <= 8387583 (FIFO size)."
+    sys.exit(1)
+
+frequency = float(sys.argv[2])
+
+if (frequency < 1.) or (frequency > 500.):
+    print >>sys.stderr, "frequency should be between 1kHz and 500kHz (specified in kHz)."
+    sys.exit(1)
+
+period_s = 1./(1000.*frequency)
+clock_period = 20.0e-9  # 20 ns
+period = int(period_s / clock_period)
+
+channels  = (sys.argv[3]).lower()
+repeat    = int(sys.argv[4])
+delay     = float(sys.argv[5])
+filename  = sys.argv[6]
+
+blocksize = 32768
+if len(sys.argv) >= 8:
+    blocksize = int(float(sys.argv[7]))
+    if blocksize > 32768:
+        print >>sys.stderr, "max blocksize is 32768 (reset to this value)"
+        blocksize = 32768
+
+end_of_loop = False
+
+if delay < 0.:
+    print >>sys.stderr, \
+        "delay between acquisitions periods should be > 0 (specified in s)."
+    sys.exit(1)
+
+
+channel_mask = 0x00
+if ("b0" in channels) or ("g1" in channels) or ("gain1" in channels):
+    channel_mask |= 0x01
+if ("b1" in channels) or ("g32" in channels) or ("gain32" in channels):
+    channel_mask |= 0x02
+if ("b2" in channels) or ("tclap0" in channels) or ("tempclap0" in channels):
+    channel_mask |= 0x04
+if ("b3" in channels) or ("tclap1" in channels) or ("tempclap1" in channels):
+    channel_mask |= 0x08
+if ("b4" in channels) or ("tbe" in channels) or ("tempbe" in channels):
+    channel_mask |= 0x10
+if ("b5" in channels) or ("lemo" in channels):
+    channel_mask |= 0x20
+if ("b6" in channels) or ("biasout" in channels) or ("bias" in channels):
+    channel_mask |= 0x40
+if ("b7" in channels) or ("groundfe" in channels) or ("gndfe" in channels):
+    channel_mask |= 0x80
+
+if channel_mask == 0x00:
+    print >> sys.stderr, "Warning: no channel specified: defaults to channel 1."
+    channel_mask = 0x01
+
+if ("LOOP" in channels) or ("loop" in channels):
+    end_of_loop = True
+
+
+# Open the USB port
+dcb.open(debug = False)
+
+# Reset HARD
+dcb.write(0x1b, bytearray([1]))
+
+# Choose the channels to be read
+# OLD WAY dcb.write(0x02, bytearray([channel_mask]))
+# new way:
+print("Channels mask: 0x%02X" % channel_mask)
+dcb.write(0x1c, bytearray([channel_mask]))
+
+# end-of-loop mark for interleaved data
+print("End-of-loop: ", end_of_loop)
+eol_byte = 0x00
+if end_of_loop:
+    eol_byte = 0x01
+dcb.write(0x1d, bytearray([eol_byte]))
+
+# OLD WAY # Choose the frequency
+# OLD WAY # dcb.write(0x04, bytearray([frequency]))
+# Now it is a period (expressed in clock cycles)
+# sampling_bytes = dcub.uint_to_n_bytes(period, 2)
+# dcb.write(0x04, bytearray([sampling_bytes[1]]))
+# dcb.write(0x05, bytearray([sampling_bytes[0]]))
+dcb.write_at(0x04, 0x05, period)
+
+# Choose the mode and number of words to be read
+dcb.write(0x06, bytearray([0]))
+
+print ( "Each data acquisition block will take %.2f s" % 
+        (wordcount / (1e3 * frequency) ) )
+
+# bytes = int_to_n_bytes(wordcount, 3)
+# dcb.write(0x16, bytearray([bytes[0]]))
+# dcb.write(0x15, bytearray([bytes[1]]))
+# dcb.write(0x14, bytearray([bytes[2]]))
+dcb.write_at(0x14, 0x16, wordcount)
+
+# Open the output file
+
+f = open(filename, 'w')
+
+print >>f, "## CLAP data acquisition"
+print >>f, "#channels = ", channels
+print >>f, "#wordcount = ", wordcount
+print >>f, "#frequency = ", frequency
+print >>f, "#period (x 20 ns) = ", period
+print >>f, "#repeat = ", repeat
+
+# And now repeat the readout
+
+for i in xrange(repeat):
+
+    # Optional delay between two acquisitions
+
+    if (delay > 0) and (i >= 1): 
+        print "Now waiting for %f seconds..."  % delay        
+        time.sleep(delay)
+        print "done."
+
+    print "----------------------------------------------------"
+    print "Block %d / %d starting..." % (i, repeat)
+
+    # Reset "soft" (TEST)
+
+    dcb.write(0x1a, bytearray([1]))
+
+    # Get a timestamp time.time()
+
+    host_timestamp = time.time()
+
+    # Start writing into the FIFO (from the ADC)
+    dcb.write(0x03, bytearray([0x02]))
+
+    time.sleep(1)
+
+    # Now, we have to wait until (0x0A & 0x01) is off
+
+    print "Starting to write ADC output to FIFO",
+
+    t_start = time.time()
+    while (dcb.read(0x0A)[0] & 0x01):
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        time.sleep(1)
+    t_stop = time.time()
+
+    print "\nEnd of FIFO writing."
+    print "Writing FIFO took %f s" % (t_stop - t_start)
+
+    # Now readout from the FIFO
+
+    print "Now we have to read %d 2-byte words" % remaining()
+
+    data = bytearray()
+    ### data = bytearray(2 * wordcount)
+    ### data_pos = 0
+
+    t_start = time.time()
+
+    print "Starting FIFO readout..."
+
+    while (dcb.read(0x0A)[0] & 0x04):
+        # How many remain to be read ?
+        amount = remaining()
+        print "remains: %d 2-byte words" % amount
+        if amount <= 0:
+            break
+    
+        if amount >= blocksize:
+            size = 2 * blocksize
+        else:
+            size = 2 * amount
+
+        rd = dcb.read(0x08, size)
+        chunk_length = len(rd)
+        print "read %d bytes" % chunk_length
+        data.extend(rd)
+        ### data[data_pos:data_pos+chunk_length] = rd  # Test
+        ### data_pos+=chunk_length                     
+        print "concatenated with already read data."
+        # latency (is it useful ???)
+        time.sleep(0.05)
+        # print "how much remain to be read ?"
+        amount = remaining()
+        print "remains after reading: %d" % amount
+
+
+    t_stop = time.time()
+
+    print "End of FIFO readout."
+    print "%d bytes received in %f s." % (len(data), t_stop - t_start)
+
+    # # Converting into unsigned words:
+    # nn = [ 256*data[2*i+1]+data[2*i] for i in xrange(len(data)/2) ]
+
+    # Converting into signed words:
+    # nn = [ 256*data[2*i+1]+data[2*i] for i in xrange(len(data)/2) ]
+    fmt = "<%dh" % (len(data) / 2)
+    # nn = struct.unpack(fmt, array('B', data))
+    converted_data = struct.unpack(fmt, str(data))
+
+    # Get Board timestamp
+
+    # board_timestamp = n_bytes_to_int([ dcb.read(0x22)[0],
+    #                                    dcb.read(0x21)[0],
+    #                                    dcb.read(0x20)[0],
+    #                                    dcb.read(0x1F)[0],
+    #                                    dcb.read(0x1E)[0] ])
+    board_timestamp = dcb.read_at(0x1E,0x22)
+    
+    # Write data to file
+
+    print >>f, "#" + 70 * "-"
+    print >>f, "#block = ", i
+    print >>f, "#host timestamp  (BIOS clock, time.time())            = %.14f" \
+        % host_timestamp
+    print >>f, "#board timestamp (board internal clock 20ns sampling) = %d" \
+        % board_timestamp
+
+    for idx in xrange(len(converted_data)):
+        print >>f, "%g" % converted_data[idx]
+
+
+    print "Block %d / %d done." % (i, repeat)
+
+
+# pylab.scatter(xrange(len(nn[-10000:])),nn[-10000:], marker='+', color='b')
+# pylab.show()
+
+# print "Press a key to continue."
+# raw_input()
+
+print "----------------------------------------------------"
+
+print >>f, "#" + 70 * "-"
+
+f.close()
+
+dcb.close()
+
+# ----------------------------------------------------------------------------

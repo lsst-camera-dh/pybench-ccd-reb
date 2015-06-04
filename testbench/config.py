@@ -268,7 +268,22 @@ config = {
         'driver'      : 'keithley_ks',
         'port'        : 8900,
         'commandline' : 'keithley-server -d'
-        }
+        },
+
+    # =====================================================================
+    #
+    # CLAP (from DICE)
+    #
+
+    'CLAP' : {
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
+        'devices'     : ['USB'],
+        'driver'      : 'sensor_clap',
+        'port'        : 8950,
+        'commandline' : 'keithley-server -d'
+        },
+
 
     # =====================================================================
 }    
