@@ -6,8 +6,8 @@
 #
 # Remote control (XPL-RPC) of the CLAP for the LSST testbench
 # XML-RPC server to control it remotely
-# default device: /dev/--- on lpnlsstclap
-# default port: 81
+# default device: USB on lpnlsstclap
+# default port: 8950
 #
 # Authors: Laurent Le Guillou 
 # (recycled from DICE control system code)
@@ -43,18 +43,18 @@ from exceptions import Exception
 
 # ==================================================================
 
-# DEFAULT_HOSTNAME = "lpnlsstbench"
-DEFAULT_HOSTNAME = "134.158.155.98"
-DEFAULT_PORT     = 8211
-DEFAULT_DEVICE   = "/dev/ttyS1"
+# DEFAULT_HOSTNAME = "lpnlsstclap"
+DEFAULT_HOSTNAME = "134.158.155.98" ### To change
+DEFAULT_PORT     = 8950
+# DEFAULT_DEVICE   = "/dev/ttyS1"
 
-SERVER_HOSTNAME = os.getenv("KEITHLEY_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
-SERVER_PORT     = int(os.getenv("KEITHLEY_SERVER_PORT", DEFAULT_PORT))
-SERVER_DEVICE   = os.getenv("KEITHLEY_SERVER_DEVICE", DEFAULT_DEVICE)
+SERVER_HOSTNAME = os.getenv("CLAP_SERVER_HOSTNAME", DEFAULT_HOSTNAME)
+SERVER_PORT     = int(os.getenv("CLAP_SERVER_PORT", DEFAULT_PORT))
+# SERVER_DEVICE   = os.getenv("CLAP_SERVER_DEVICE", DEFAULT_DEVICE)
 
 # ==================================================================
 
-class KeithleyServer(SimpleXMLRPCServer):
+class CLAPServer(SimpleXMLRPCServer):
     def serve_forever(self):
 	self.quit = 0
 	while not self.quit:
@@ -68,11 +68,13 @@ class KeithleyServer(SimpleXMLRPCServer):
 
 # ==================================================================
 
-import lsst.instruments.keithley as keithley
+import struct
+from array import array
+import dice.control.backend as dcb
 
 # ==================================================================
 
-class KeithleyRemote(object):
+class CLAPRemote(object):
     
     instance = None
 
@@ -83,13 +85,8 @@ class KeithleyRemote(object):
             cls.instance = object.__new__(cls, *args, **kargs)
         return cls.instance
     
-    def __init__(self,
-                 device = '/dev/ttyS0',
-                 debug = True):
-        self.state = 1
-        self.device = device
-        self.keithley = keithley.Multimeter(device = device,
-                                            debug = debug)
+    def __init__(self, debug = False):
+        self.debug = debug
 
     # --------------------------------------------------------------
 
@@ -97,107 +94,183 @@ class KeithleyRemote(object):
         """
         Return the status of the system.
         """
-        return self.state 
+        return True
 
     # --------------------------------------------------------------
 
     def open(self):
         """
-        Open the connection with the Keithley multimeter.
+        Open the CLAP connection and set up the CLAP.
         """
-        logging.info("Keithley.open() called.")
-        self.keithley.open()
-        logging.info("Keithley.open() done.")
+        logging.info("CLAP.open() called.")
+
+        # Open the USB port
+        dcb.open(debug = self.debug)
+
+        # Reset HARD
+        dcb.write(0x1b, bytearray([1]))
+
+        logging.info("CLAP.open() done.")
         return True
 
     def close(self):
         """
-        Close the connection with the Keithley multimeter.
+        Close the connection with the CLAP.
         """ 
-        logging.info("Keithley.close() called.")
-        self.keithley.close()
-        logging.info("Keithley.close() done.")
+        logging.info("CLAP.close() called.")
+        dcb.close()
+        logging.info("CLAP.close() done.")
         return True
 
     def reset(self):
         """
-        Reset the instrument to the factory default settings
+        Reset the CLAP (hard reset).
         (with the exception of all remote interface settings).
         """
-        logging.info("Keithley.reset() called.")
-        self.keithley.reset()
-        logging.info("Keithley.reset() done.")
+        logging.info("CLAP.reset() called.")
+
+        # Reset HARD
+        dcb.write(0x1b, bytearray([1]))
+
+        logging.info("CLAP.reset() done.")
         return True
 
     def clear(self):
         """
         Clear the instrument status.
         """ 
-        logging.info("Keithley.clear() called.")
-        self.keithley.clear()
-        logging.info("Keithley.clear() done.")
+        logging.info("CLAP.clear() called.")
+
+        # Reset HARD
+        dcb.write(0x1b, bytearray([1]))
+
+        logging.info("CLAP.clear() done.")
         return True
     
-    # ----------------------- Keithley generic command ------------------
+    # ----------------------- CLAP commands -----------------------------
 
-    def send(self, command, timeout = None):
-        """
-        Send a command through the serial port.
-        Read the answer from the serial port.
-        Return it as a string.
+    def read(self, addr):
+        return dcb.read(addr)
 
-        If <timeout> is specified, the function will wait
-        for data with the specified timeout (instead of the default one). 
+    def read_at(self, addr_start, addr_stop):
+        return dcb.read_at(addr_start, addr_stop)
+
+    def write(self, addr, word):
+        return dcb.write(addr, word)
+
+    def write_at(self, addr_start, addr_stop, value):
+        return dcb.write_at(addr_start, addr_stop, value)
+
+    def remaining(self):
+        """
+        Return the remaining word number to be read from the FIFO.
+        """
+        return dcb.read_at(0x17, 0x19)
+
+    def sample(self, 
+               channels = [1],
+               period = 1600, # in 20ns ticks
+               wordcount = 32000,  
+               blocksize = 32768,
+               label = None):
+        """
+        Request a sampling of the CLAP.
+        Return the result as a dictionary.
         """
 
-        logging.info("Keithley.send() called.")
-        logging.info("  command = [%s]" % command)
-        answer = self.keithley.send(command, timeout = timeout)
-        logging.info("  answer = [%s]" % answer)
-        logging.info("Keithley.send() done.")
-        return answer
+        # ------ First checking arguments
 
-    def get_error_status(self):
-        """
-        Get (and clear) the Standard Event Status Register.
-        Return ESR value.
-        """
-        logging.info("Keithley.get_error_status() called.")
-        esr = self.keithley.get_error_status()
-        logging.info("  ESR = [%d]" % esr)
-        logging.info("Keithley.get_error_status() done.")
-        return esr
+        if wordcount > 8387583:
+            logging.error(
+                "wordcount too large. Should be <= 8387583 (FIFO size).")
+            return
+            
+        # sampling frequency should be in [1 kHz: 500 kHz]
+        #   1 kHz -> period =   100 ticks of 20 ns
+        # 500 kHz -> period = 50000 ticks of 20 ns
+        # 
+        if not( (100 <= period) and (period <= 50000) ):
+            logging.error("period should be in range [100:50000].")
+            return
 
-    # ----------------------- Keithley identification -------------------
+        # ------ ADC + FIFO setup
+        # Choose the mode and number of words to be read
+        dcb.write(0x06, bytearray([0]))
 
-    def get_serial(self):
-        """
-        Return the identification string of the Keithley.
-        """
-        logging.info("Keithley.get_serial() called.")
-        serial = self.keithley.get_serial()
-        logging.info("  serial = [%s]" % serial)
-        logging.info("Keithley.get_serial() done.")
-        return serial
+        dcb.write_at(0x04, 0x05, period)    # choose ADC frequency
+        dcb.write_at(0x14, 0x16, wordcount) # choose wordcount
 
-    # ----------------------- Various methods ---------------------------
+        adc_multiplexer_mask = 0x00
+        for channel in channels:
+            adc_multiplexer_mask |= 2**(channel - 1) 
 
-    def scroll_text(self, msg):
-        """
-        Scroll text 'msg' on the Multimeter display.
-        For debug purpose only.
-        """
-        logging.info("Keithley.scroll_text() called.")
-        self.keithley.scroll_text(msg)
-        logging.info("Keithley.scroll_text() done.")
-        return True
+        logging.info("ADC mask = %02x" % adc_multiplexer_mask)
+        dcb.write(0x1c, bytearray([adc_multiplexer_mask]))
+
+        # ------ Sampling (and FIFO writing)
+
+        logging.info("Starting sampling... (and FIFO writing)")
+        t_start = time.time()
+        T = t_start
+        while (dcb.read(0x0A)[0] & 0x01):
+            logging.info('.')
+            # sys.stderr.flush()
+            time.sleep(1)
+        t_stop = time.time()
+        logging.info("End of sampling and FIFO writing.")
+        logging.info("Writing FIFO took %f s" % (t_stop - t_start))
+        logging.info("Now we have to read %d 2-byte words from the FIFO." 
+                 % remaining())
+
+        # Get Board timestamp
+        board_timestamp = dcb.read_at(0x1E, 0x22)
+
+        # ------ Reading the FIFO
+
+        data = bytearray()
+        t_start_read = time.time()
+        logging.info("Starting FIFO readout...")
+
+        while (dcb.read(0x0A)[0] & 0x04):
+            # How many remain to be read ?
+            amount = remaining()
+            logging.info("remains: %d" % amount)
+            if amount <= 0:
+                break
+    
+            if amount >= blocksize:
+                size = 2 * blocksize
+            else:
+                size = 2 * amount
+
+            data.extend(dcb.read(0x08, size))
+            amount = remaining()
+            logging.info("remains after reading: %d" % amount)
+
+        t_stop_read = time.time()
+
+        logging.info("End of FIFO readout.")
+        logging.info("%d bytes received in %f s." % 
+                 (len(data), t_stop_read - t_start_read))
+
+        # ------ Building the resulting dictionary
+        # 
+
+        result = { 'channels': channels,
+                   'period': period,
+                   'data': 
+
+        
+
+        logging.info("CLAP.sample() done.")
+        return result
 
     # ----------------------- Introspection -----------------------------
 
     def _listMethods(self):
-        logging.info("Keithley._listMethods() called.")
+        logging.info("CLAP._listMethods() called.")
         methods = list_public_methods(self)
-        logging.info("Keithley._listMethods() done.")
+        logging.info("CLAP._listMethods() done.")
         return methods
 
     def _methodHelp(self, method):
@@ -281,30 +354,27 @@ def main(options, args):
     redirect_stream(sys.stderr, None)    
 
     # General Control Functions 
-    server.register_function(keithley.status,       "status")
-    server.register_function(keithley.open,         "open")
-    server.register_function(keithley.close,        "close")
-    server.register_function(keithley.reset,        "reset")
-    server.register_function(keithley.clear,        "clear")
-    server.register_function(keithley.get_serial,   "get_serial")
-    server.register_function(keithley.get_serial,   "checkConnection")
+    server.register_function(clap.status,       "status")
+    server.register_function(clap.open,         "open")
+    server.register_function(clap.close,        "close")
+    server.register_function(clap.reset,        "reset")
+    server.register_function(clap.clear,        "clear")
 
-    # Keithley generic command
-    server.register_function(keithley.send,         "send")
-    # server.register_function(keithley.check_error_status,"check_error_status")
-    server.register_function(keithley.get_error_status,  "get_error_status")
-
-    # misc 
-    server.register_function(keithley.scroll_text,  "scroll_text")
-    server.register_function(server_quit,           "quit")
+    # Clap commands
+    server.register_function(clap.read,         "read")
+    server.register_function(clap.read_at,      "read_at")
+    server.register_function(clap.write,        "write")
+    server.register_function(clap.write_at,     "write_at")
+    server.register_function(clap.sample,       "sample")
+    server.register_function(server_quit,       "quit")
 
     # for remote introspection (tab completion with ipython)
-    server.register_function(keithley._listMethods, "__dir__")
-    server.register_function(keithley._listMethods, "system.listMethods")
-    server.register_function(keithley._listMethods,  "trait_names")
-    server.register_function(keithley._listMethods,  "_getAttributeNames")
+    server.register_function(clap._listMethods, "__dir__")
+    server.register_function(clap._listMethods, "system.listMethods")
+    server.register_function(clap._listMethods, "trait_names")
+    server.register_function(clap._listMethods, "_getAttributeNames")
     # TODO: implement: system.methodSignature
-    server.register_function(keithley._methodHelp,  "system.methodHelp")
+    server.register_function(clap._methodHelp,  "system.methodHelp")
 
     logging.info("Server going up.")
     server.serve_forever()
@@ -317,12 +387,11 @@ if __name__ == '__main__':
 
     # ------------- log file ----------------------
 
-    now = datetime.datetime.now()
-    # logname = ( "keithley-server-%s-%d-%s.log" % 
+    today = datetime.date.now()
+    # logname = ( "clap-server-%s-%d-%s.log" % 
     #             ( SERVER_DEVICE, SERVER_PORT,
     #               now.isoformat().split('T')[0] ) )
-    logname = ( "keithley-server-%s.log" % 
-                now.isoformat().split('T')[0] )
+    logname = ( "clap-server-%s.log" % today.isoformat() )
                 
     # ------------- parsing command line ----------
 
@@ -330,7 +399,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage="""
 %prog [-d] 
 
-Start the Keithley Electrometer remote control server. 
+Start the Clap Electrometer remote control server. 
 """)
     parser.add_option('-d', '--daemon', default=False, action='store_true',
                       help='Run as a background daemon')
@@ -353,15 +422,15 @@ Start the Keithley Electrometer remote control server.
     
     # ------------- Initialize Instrument ---------
 
-    keithley = KeithleyRemote(device = SERVER_DEVICE)
+    clap = CLAPRemote(device = SERVER_DEVICE)
 
-    # server = SimpleXMLRPCServer(("dicehead", 8001))
-    server = KeithleyServer((SERVER_HOSTNAME, SERVER_PORT))
+    server = CLAPServer((SERVER_HOSTNAME, SERVER_PORT))
     server.register_introspection_functions()
 
     # ---------------------------------------------
 
-    print "Keithley: talking to device %s: listening on port %s:%d. Waiting for commands." % (SERVER_DEVICE, SERVER_HOSTNAME, SERVER_PORT)
+    print ( "Clap: listening on port %s:%d. Waiting for commands." % 
+            (SERVER_HOSTNAME, SERVER_PORT) )
     
     if options.daemon:
         daemonize(options, args)
@@ -369,274 +438,5 @@ Start the Keithley Electrometer remote control server.
         main(options, args)
 
 
-# ==================================================================
-#! /usr/bin/env python
-
-import sys
-import os, os.path
-import time
-
-import struct
-from array import array
-
-import dice.control.backend as dcb
-
 # ----------------------------------------------------------------------------
 
-def remaining():
-    return dcb.read_at(0x17, 0x19)
-
-# ----------------------------------------------------------------------------
-
-# syntax: readclap <wordcount> <frequency> <channels> <repeat> <delay> <filename> [<blocksize>]
-
-if len(sys.argv) < 7:
-    print >>sys.stderr, "Usage: ",
-    print >>sys.stderr, "readclap <wordcount> <frequency> <channels> <repeat> <delay> <filename> [<blocksize>]"
-    sys.exit(1)
-
-wordcount = int(sys.argv[1])
-
-if wordcount > 8387583:
-    print >>sys.stderr, "wordcount too large. Should be <= 8387583 (FIFO size)."
-    sys.exit(1)
-
-frequency = float(sys.argv[2])
-
-if (frequency < 1.) or (frequency > 500.):
-    print >>sys.stderr, "frequency should be between 1kHz and 500kHz (specified in kHz)."
-    sys.exit(1)
-
-period_s = 1./(1000.*frequency)
-clock_period = 20.0e-9  # 20 ns
-period = int(period_s / clock_period)
-
-channels  = (sys.argv[3]).lower()
-repeat    = int(sys.argv[4])
-delay     = float(sys.argv[5])
-filename  = sys.argv[6]
-
-blocksize = 32768
-if len(sys.argv) >= 8:
-    blocksize = int(float(sys.argv[7]))
-    if blocksize > 32768:
-        print >>sys.stderr, "max blocksize is 32768 (reset to this value)"
-        blocksize = 32768
-
-end_of_loop = False
-
-if delay < 0.:
-    print >>sys.stderr, \
-        "delay between acquisitions periods should be > 0 (specified in s)."
-    sys.exit(1)
-
-
-channel_mask = 0x00
-if ("b0" in channels) or ("g1" in channels) or ("gain1" in channels):
-    channel_mask |= 0x01
-if ("b1" in channels) or ("g32" in channels) or ("gain32" in channels):
-    channel_mask |= 0x02
-if ("b2" in channels) or ("tclap0" in channels) or ("tempclap0" in channels):
-    channel_mask |= 0x04
-if ("b3" in channels) or ("tclap1" in channels) or ("tempclap1" in channels):
-    channel_mask |= 0x08
-if ("b4" in channels) or ("tbe" in channels) or ("tempbe" in channels):
-    channel_mask |= 0x10
-if ("b5" in channels) or ("lemo" in channels):
-    channel_mask |= 0x20
-if ("b6" in channels) or ("biasout" in channels) or ("bias" in channels):
-    channel_mask |= 0x40
-if ("b7" in channels) or ("groundfe" in channels) or ("gndfe" in channels):
-    channel_mask |= 0x80
-
-if channel_mask == 0x00:
-    print >> sys.stderr, "Warning: no channel specified: defaults to channel 1."
-    channel_mask = 0x01
-
-if ("LOOP" in channels) or ("loop" in channels):
-    end_of_loop = True
-
-
-# Open the USB port
-dcb.open(debug = False)
-
-# Reset HARD
-dcb.write(0x1b, bytearray([1]))
-
-# Choose the channels to be read
-# OLD WAY dcb.write(0x02, bytearray([channel_mask]))
-# new way:
-print("Channels mask: 0x%02X" % channel_mask)
-dcb.write(0x1c, bytearray([channel_mask]))
-
-# end-of-loop mark for interleaved data
-print("End-of-loop: ", end_of_loop)
-eol_byte = 0x00
-if end_of_loop:
-    eol_byte = 0x01
-dcb.write(0x1d, bytearray([eol_byte]))
-
-# OLD WAY # Choose the frequency
-# OLD WAY # dcb.write(0x04, bytearray([frequency]))
-# Now it is a period (expressed in clock cycles)
-# sampling_bytes = dcub.uint_to_n_bytes(period, 2)
-# dcb.write(0x04, bytearray([sampling_bytes[1]]))
-# dcb.write(0x05, bytearray([sampling_bytes[0]]))
-dcb.write_at(0x04, 0x05, period)
-
-# Choose the mode and number of words to be read
-dcb.write(0x06, bytearray([0]))
-
-print ( "Each data acquisition block will take %.2f s" % 
-        (wordcount / (1e3 * frequency) ) )
-
-# bytes = int_to_n_bytes(wordcount, 3)
-# dcb.write(0x16, bytearray([bytes[0]]))
-# dcb.write(0x15, bytearray([bytes[1]]))
-# dcb.write(0x14, bytearray([bytes[2]]))
-dcb.write_at(0x14, 0x16, wordcount)
-
-# Open the output file
-
-f = open(filename, 'w')
-
-print >>f, "## CLAP data acquisition"
-print >>f, "#channels = ", channels
-print >>f, "#wordcount = ", wordcount
-print >>f, "#frequency = ", frequency
-print >>f, "#period (x 20 ns) = ", period
-print >>f, "#repeat = ", repeat
-
-# And now repeat the readout
-
-for i in xrange(repeat):
-
-    # Optional delay between two acquisitions
-
-    if (delay > 0) and (i >= 1): 
-        print "Now waiting for %f seconds..."  % delay        
-        time.sleep(delay)
-        print "done."
-
-    print "----------------------------------------------------"
-    print "Block %d / %d starting..." % (i, repeat)
-
-    # Reset "soft" (TEST)
-
-    dcb.write(0x1a, bytearray([1]))
-
-    # Get a timestamp time.time()
-
-    host_timestamp = time.time()
-
-    # Start writing into the FIFO (from the ADC)
-    dcb.write(0x03, bytearray([0x02]))
-
-    time.sleep(1)
-
-    # Now, we have to wait until (0x0A & 0x01) is off
-
-    print "Starting to write ADC output to FIFO",
-
-    t_start = time.time()
-    while (dcb.read(0x0A)[0] & 0x01):
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        time.sleep(1)
-    t_stop = time.time()
-
-    print "\nEnd of FIFO writing."
-    print "Writing FIFO took %f s" % (t_stop - t_start)
-
-    # Now readout from the FIFO
-
-    print "Now we have to read %d 2-byte words" % remaining()
-
-    data = bytearray()
-    ### data = bytearray(2 * wordcount)
-    ### data_pos = 0
-
-    t_start = time.time()
-
-    print "Starting FIFO readout..."
-
-    while (dcb.read(0x0A)[0] & 0x04):
-        # How many remain to be read ?
-        amount = remaining()
-        print "remains: %d 2-byte words" % amount
-        if amount <= 0:
-            break
-    
-        if amount >= blocksize:
-            size = 2 * blocksize
-        else:
-            size = 2 * amount
-
-        rd = dcb.read(0x08, size)
-        chunk_length = len(rd)
-        print "read %d bytes" % chunk_length
-        data.extend(rd)
-        ### data[data_pos:data_pos+chunk_length] = rd  # Test
-        ### data_pos+=chunk_length                     
-        print "concatenated with already read data."
-        # latency (is it useful ???)
-        time.sleep(0.05)
-        # print "how much remain to be read ?"
-        amount = remaining()
-        print "remains after reading: %d" % amount
-
-
-    t_stop = time.time()
-
-    print "End of FIFO readout."
-    print "%d bytes received in %f s." % (len(data), t_stop - t_start)
-
-    # # Converting into unsigned words:
-    # nn = [ 256*data[2*i+1]+data[2*i] for i in xrange(len(data)/2) ]
-
-    # Converting into signed words:
-    # nn = [ 256*data[2*i+1]+data[2*i] for i in xrange(len(data)/2) ]
-    fmt = "<%dh" % (len(data) / 2)
-    # nn = struct.unpack(fmt, array('B', data))
-    converted_data = struct.unpack(fmt, str(data))
-
-    # Get Board timestamp
-
-    # board_timestamp = n_bytes_to_int([ dcb.read(0x22)[0],
-    #                                    dcb.read(0x21)[0],
-    #                                    dcb.read(0x20)[0],
-    #                                    dcb.read(0x1F)[0],
-    #                                    dcb.read(0x1E)[0] ])
-    board_timestamp = dcb.read_at(0x1E,0x22)
-    
-    # Write data to file
-
-    print >>f, "#" + 70 * "-"
-    print >>f, "#block = ", i
-    print >>f, "#host timestamp  (BIOS clock, time.time())            = %.14f" \
-        % host_timestamp
-    print >>f, "#board timestamp (board internal clock 20ns sampling) = %d" \
-        % board_timestamp
-
-    for idx in xrange(len(converted_data)):
-        print >>f, "%g" % converted_data[idx]
-
-
-    print "Block %d / %d done." % (i, repeat)
-
-
-# pylab.scatter(xrange(len(nn[-10000:])),nn[-10000:], marker='+', color='b')
-# pylab.show()
-
-# print "Press a key to continue."
-# raw_input()
-
-print "----------------------------------------------------"
-
-print >>f, "#" + 70 * "-"
-
-f.close()
-
-dcb.close()
-
-# ----------------------------------------------------------------------------

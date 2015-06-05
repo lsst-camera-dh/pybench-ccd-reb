@@ -33,6 +33,7 @@ def build(bld):
                   'xyz_pollux.py',
                   # 'keithley.py',
                   'keithley_ks.py',
+                  'sensor_clap.py',
                   'thermal_lakeshore.py',
                   'dummy_dummy.py', 
                   'wallace_gromit.py'], 
