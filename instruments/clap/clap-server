@@ -258,9 +258,7 @@ class CLAPRemote(object):
 
         result = { 'channels': channels,
                    'period': period,
-                   'data': 
-
-        
+                   'data': data }
 
         logging.info("CLAP.sample() done.")
         return result

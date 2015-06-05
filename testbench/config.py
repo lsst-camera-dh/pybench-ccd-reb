@@ -64,11 +64,6 @@ config = {
     # =====================================================================
     #
     # ---------------------------------------------------------------------
-    # Agilent power supply
-    # *critical*
-    #
-    #
-    # ---------------------------------------------------------------------
     # Keithley 6487 current+voltage source
     # *Critical*
     # backsubstrate bias power supply
@@ -94,8 +89,23 @@ config = {
         },
     #
     # ---------------------------------------------------------------------
+    # HMP4040 power supply
+    # *critical*
     #
-
+    # 'hmp4040': {
+    #     # 'host'        : 'lpnlsstbench',
+    #     'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
+    #     'devices'     : ['/dev/ttyS11'],
+    #     'driver'      : 'power_backsubstrate_ks',
+    #     'port'        : 8301,
+    #     'commandline' : 'keithley-server --device=/dev/ttyS11 --hostname=134.158.155.98 --port=8301'
+    #     },
+    #
+    # ---------------------------------------------------------------------
+    # Agilent power supply
+    # *critical*
+    #
+    #
 
     # ---------------------------------------------------------------------
 

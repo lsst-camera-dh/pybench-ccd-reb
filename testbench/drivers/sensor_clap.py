@@ -145,11 +145,14 @@ class Instrument(Driver):
             raise ValueError("period should be in range [100:50000].")
 
 
+        # --
+
         return self.xmlrpc.sample(channels = channels,
                                   period = period, # in 20ns ticks
                                   wordcount = wordcount,  
                                   blocksize = blocksize,
                                   label = label)
+        
 
     # ===================================================================
     #  Meta data / state of the instrument 
