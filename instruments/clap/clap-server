@@ -33,6 +33,7 @@ import logging
 
 import inspect
 import xmlrpclib
+xmlrpclib.Marshaller.dispatch[type(0L)] = lambda _, v, w: w("<value><i8>%d</i8></value>" % v)
 from SimpleXMLRPCServer import SimpleXMLRPCServer, list_public_methods
 
 # ==================================================================
@@ -44,7 +45,7 @@ from exceptions import Exception
 # ==================================================================
 
 # DEFAULT_HOSTNAME = "lpnlsstclap"
-DEFAULT_HOSTNAME = "134.158.155.98" ### To change
+DEFAULT_HOSTNAME = "134.158.154.80" ### To change
 DEFAULT_PORT     = 8950
 # DEFAULT_DEVICE   = "/dev/ttyS1"
 
@@ -68,9 +69,121 @@ class CLAPServer(SimpleXMLRPCServer):
 
 # ==================================================================
 
+
+
 import struct
 from array import array
 import dice.control.backend as dcb
+from threading import Thread
+
+# ==================================================================
+
+class CLAPSampler(Thread):
+
+    def __init__(self,                
+                 channels = [1],
+                 period = 1600, # in 20ns ticks
+                 wordcount = 32000,  
+                 blocksize = 32768,
+                 label = None):
+
+        Thread.__init__(self)
+        self.channels = channels
+        self.period = period
+        self.wordcount = wordcount
+        self.blocksize = blocksize
+        self.label = label
+        self.ready = True
+
+        self.result = {}
+
+    def remaining(self):
+        """
+        Return the remaining word number to be read from the FIFO.
+        """
+        return dcb.read_at(0x17, 0x19)
+
+
+    def run(self):
+
+        self.ready = False
+
+        # ------ ADC + FIFO setup
+        # Choose the mode and number of words to be read
+        dcb.write(0x06, bytearray([0]))
+
+        dcb.write_at(0x04, 0x05, self.period)    # choose ADC frequency
+        dcb.write_at(0x14, 0x16, self.wordcount) # choose wordcount
+
+        adc_multiplexer_mask = 0x00
+        for channel in self.channels:
+            adc_multiplexer_mask |= 2**(channel - 1) 
+
+        print "COUCOU"
+        logging.info("ADC mask = %02x" % adc_multiplexer_mask)
+        dcb.write(0x1c, bytearray([adc_multiplexer_mask]))
+
+        # ------ Sampling (and FIFO writing)
+
+        # Start writing into the FIFO (from the ADC)
+        dcb.write(0x03, bytearray([0x02]))
+
+        logging.info("Starting sampling... (and FIFO writing)")
+        t_start = time.time()
+        while (dcb.read(0x0A)[0] & 0x01):
+            logging.info('.')
+            # sys.stderr.flush()
+            time.sleep(1)
+        t_stop = time.time()
+        logging.info("End of sampling and FIFO writing.")
+        logging.info("Writing FIFO took %f s" % (t_stop - t_start))
+        logging.info("Now we have to read %d 2-byte words from the FIFO." 
+                     % self.remaining())
+
+        # Get Board timestamp
+        board_timestamp = dcb.read_at(0x1E, 0x22)
+
+        # ------ Reading the FIFO
+
+        data = bytearray()
+        t_start_read = time.time()
+        logging.info("Starting FIFO readout...")
+
+        while (dcb.read(0x0A)[0] & 0x04):
+            # How many remain to be read ?
+            amount = self.remaining()
+            logging.info("remains: %d" % amount)
+            if amount <= 0:
+                break
+    
+            if amount >= self.blocksize:
+                size = 2 * self.blocksize
+            else:
+                size = 2 * amount
+
+            data.extend(dcb.read(0x08, size))
+            amount = self.remaining()
+            logging.info("remains after reading: %d" % amount)
+
+        t_stop_read = time.time()
+
+        logging.info("End of FIFO readout.")
+        logging.info("%d bytes received in %f s." % 
+                 (len(data), t_stop_read - t_start_read))
+
+        # ------ Building the resulting dictionary
+        # 
+
+        self.result = { 'channels': self.channels,
+                        'period': self.period,
+                        'blocksize': self.blocksize,
+                        'timestamp': t_start,
+                        'board_timestamp': board_timestamp,
+                        # 'data': list(data)
+                        'data': xmlrpclib.Binary(data) }
+
+        self.ready = True
+
 
 # ==================================================================
 
@@ -87,14 +200,19 @@ class CLAPRemote(object):
     
     def __init__(self, debug = False):
         self.debug = debug
+        self.sampler = None
 
     # --------------------------------------------------------------
 
     def status(self):
         """
         Return the status of the system.
+        True = Ready / False = sampling (not ready)
         """
-        return True
+        if self.sampler == None:
+            return True
+
+        return self.sampler.ready 
 
     # --------------------------------------------------------------
 
@@ -150,22 +268,16 @@ class CLAPRemote(object):
     # ----------------------- CLAP commands -----------------------------
 
     def read(self, addr):
-        return dcb.read(addr)
+        return list(dcb.read(addr))
 
     def read_at(self, addr_start, addr_stop):
-        return dcb.read_at(addr_start, addr_stop)
+        return int(dcb.read_at(addr_start, addr_stop))
 
     def write(self, addr, word):
         return dcb.write(addr, word)
 
     def write_at(self, addr_start, addr_stop, value):
         return dcb.write_at(addr_start, addr_stop, value)
-
-    def remaining(self):
-        """
-        Return the remaining word number to be read from the FIFO.
-        """
-        return dcb.read_at(0x17, 0x19)
 
     def sample(self, 
                channels = [1],
@@ -175,7 +287,7 @@ class CLAPRemote(object):
                label = None):
         """
         Request a sampling of the CLAP.
-        Return the result as a dictionary.
+        Asynchronous call. Return nothing.
         """
 
         # ------ First checking arguments
@@ -183,7 +295,7 @@ class CLAPRemote(object):
         if wordcount > 8387583:
             logging.error(
                 "wordcount too large. Should be <= 8387583 (FIFO size).")
-            return
+            return False
             
         # sampling frequency should be in [1 kHz: 500 kHz]
         #   1 kHz -> period =   100 ticks of 20 ns
@@ -191,77 +303,40 @@ class CLAPRemote(object):
         # 
         if not( (100 <= period) and (period <= 50000) ):
             logging.error("period should be in range [100:50000].")
-            return
+            return False
 
-        # ------ ADC + FIFO setup
-        # Choose the mode and number of words to be read
-        dcb.write(0x06, bytearray([0]))
 
-        dcb.write_at(0x04, 0x05, period)    # choose ADC frequency
-        dcb.write_at(0x14, 0x16, wordcount) # choose wordcount
+        # Create the Thread
 
-        adc_multiplexer_mask = 0x00
-        for channel in channels:
-            adc_multiplexer_mask |= 2**(channel - 1) 
+        self.sampler = CLAPSampler(channels,
+                                   period,
+                                   wordcount,
+                                   blocksize,
+                                   label)
 
-        logging.info("ADC mask = %02x" % adc_multiplexer_mask)
-        dcb.write(0x1c, bytearray([adc_multiplexer_mask]))
+        self.sampler.start()
 
-        # ------ Sampling (and FIFO writing)
+        logging.info("CLAP.sample() started.")
 
-        logging.info("Starting sampling... (and FIFO writing)")
-        t_start = time.time()
-        T = t_start
-        while (dcb.read(0x0A)[0] & 0x01):
-            logging.info('.')
-            # sys.stderr.flush()
-            time.sleep(1)
-        t_stop = time.time()
-        logging.info("End of sampling and FIFO writing.")
-        logging.info("Writing FIFO took %f s" % (t_stop - t_start))
-        logging.info("Now we have to read %d 2-byte words from the FIFO." 
-                 % remaining())
+        return True
 
-        # Get Board timestamp
-        board_timestamp = dcb.read_at(0x1E, 0x22)
 
-        # ------ Reading the FIFO
+    def get_data(self):
+        """
+        Request a sampling of the CLAP.
+        Return the result as a dictionary.
+        """
 
-        data = bytearray()
-        t_start_read = time.time()
-        logging.info("Starting FIFO readout...")
+        if self.sampler == None:
+            logging.error("No sampling yet done.")
+            return {}
 
-        while (dcb.read(0x0A)[0] & 0x04):
-            # How many remain to be read ?
-            amount = remaining()
-            logging.info("remains: %d" % amount)
-            if amount <= 0:
-                break
-    
-            if amount >= blocksize:
-                size = 2 * blocksize
-            else:
-                size = 2 * amount
+        if not(self.sampler.ready):
+            logging.error("Sampling not achieved.")
+            return {}
 
-            data.extend(dcb.read(0x08, size))
-            amount = remaining()
-            logging.info("remains after reading: %d" % amount)
-
-        t_stop_read = time.time()
-
-        logging.info("End of FIFO readout.")
-        logging.info("%d bytes received in %f s." % 
-                 (len(data), t_stop_read - t_start_read))
-
-        # ------ Building the resulting dictionary
-        # 
-
-        result = { 'channels': channels,
-                   'period': period,
-                   'data': data }
-
-        logging.info("CLAP.sample() done.")
-        return result
+        return self.sampler.result
+            
 
     # ----------------------- Introspection -----------------------------
 
@@ -364,6 +439,7 @@ def main(options, args):
     server.register_function(clap.write,        "write")
     server.register_function(clap.write_at,     "write_at")
     server.register_function(clap.sample,       "sample")
+    server.register_function(clap.get_data,     "get_data")
     server.register_function(server_quit,       "quit")
 
     # for remote introspection (tab completion with ipython)
@@ -385,11 +461,11 @@ if __name__ == '__main__':
 
     # ------------- log file ----------------------
 
-    today = datetime.date.now()
-    # logname = ( "clap-server-%s-%d-%s.log" % 
-    #             ( SERVER_DEVICE, SERVER_PORT,
-    #               now.isoformat().split('T')[0] ) )
-    logname = ( "clap-server-%s.log" % today.isoformat() )
+    now = datetime.datetime.utcnow()
+    logname = ( "clap-server-%d-%s.log" % 
+                ( SERVER_PORT,
+                  now.isoformat().split('T')[0] ) )
+    # logname = ( "clap-server-%s.log" % today.isoformat() )
                 
     # ------------- parsing command line ----------
 
@@ -405,8 +481,8 @@ Start the Clap Electrometer remote control server.
                       help='Listen adress')
     parser.add_option('-p', '--port', default=SERVER_PORT, action='store', type='int',
                       help='Listen on port')
-    parser.add_option('-D', '--device', default=SERVER_DEVICE, action='store',
-                      help='Serial port device')
+    # parser.add_option('-D', '--device', default=SERVER_DEVICE, action='store',
+    #                   help='Serial port device')
     parser.add_option('-l', '--log-file', default=logname, action='store',
                       help='Specify a file for daemon logs.')
 
@@ -416,11 +492,11 @@ Start the Clap Electrometer remote control server.
 
     SERVER_HOSTNAME = options.hostname
     SERVER_PORT = int(options.port)
-    SERVER_DEVICE = options.device
+    # SERVER_DEVICE = options.device
     
     # ------------- Initialize Instrument ---------
 
-    clap = CLAPRemote(device = SERVER_DEVICE)
+    clap = CLAPRemote()
 
     server = CLAPServer((SERVER_HOSTNAME, SERVER_PORT))
     server.register_introspection_functions()
