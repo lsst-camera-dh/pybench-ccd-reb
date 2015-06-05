@@ -719,8 +719,8 @@
     </sequencer-config>
     <sequencer-routines>
         <subroutines>
-            <subroutine id="ReadFrame">
-                <fullname>Readout of a CCD frame</fullname>
+            <subroutine id="BaseFrame">
+                <fullname>Basic operations for readout of a CCD frame</fullname>
                 <call>
                     <repeat>ReadLines</repeat>
                     <call ref="TransferLine"/>
@@ -728,6 +728,22 @@
                         <repeat>ReadColumns</repeat>
                     </call>
                 </call>
+            </subroutine>
+            <subroutine id="CloseShutter">
+                <fullname>Gives time for shutter to close and warms up ADCs</fullname>
+                <call ref="FlushSerial">
+                    <repeat>50000</repeat>
+                </call>
+                <call ref="ReadPixel">
+                    <repeat>5000</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="ReadFrame">
+                <fullname>Readout and acquisition of a CCD frame</fullname>
+                <call ref="CloseShutter"/>
+                <call ref="StartOfImage"/>
+                <call ref="BaseFrame"/>
+                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="PulseFrame">
                 <fullname>Readout with pulser equivalent to CCD frame</fullname>
@@ -802,27 +818,27 @@
                     <repeat>FastColumns</repeat>
                 </call>
             </subroutine>
-            <subroutine id="Exposure20ms">
-                <fullname>Repeat exposure function for 20 ms</fullname>
+            <subroutine id="Exposure26ms">
+                <fullname>Repeat exposure function for 26 ms</fullname>
                 <call ref="ExposureFlush">
-                    <repeat>10000</repeat>
+                    <repeat>20000</repeat>
                 </call>
             </subroutine>
-            <subroutine id="Dark20ms">
-                <fullname>Repeat dark flushing function for 20 ms</fullname>
+            <subroutine id="Dark26ms">
+                <fullname>Repeat dark flushing function for 26 ms</fullname>
                 <call ref="FlushSerial">
-                    <repeat>10000</repeat>
+                    <repeat>20000</repeat>
                 </call>
             </subroutine>
             <subroutine id="Exposure">
                 <fullname>Full exposure time</fullname>
-                <call ref="Exposure20ms">
+                <call ref="Exposure26ms">
                     <repeat>ExposureTime</repeat>
                 </call>
             </subroutine>
             <subroutine id="DarkExposure">
                 <fullname>Full dark time</fullname>
-                <call ref="Dark20ms">
+                <call ref="Dark26ms">
                     <repeat>ExposureTime</repeat>
                 </call>
             </subroutine>
@@ -831,22 +847,13 @@
                 <call ref="ReverseTransferLine"/>
                 <call ref="TransferLine"/>
             </subroutine>
-            <subroutine id="CloseShutter">
-                <fullname>Gives time for shutter to close</fullname>
-                <call ref="FlushSerial">
-                    <repeat>50000</repeat>
-                </call>
-            </subroutine>
             <subroutine id="FullAcquisition">
                 <fullname>One acquisition with flushing during exposure</fullname>
                 <call ref="ClearCCD">
                     <repeat>2</repeat>
                 </call>
                 <call ref="Exposure"/>
-                <call ref="StartOfImage"/>
-                <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
-                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="FullDark">
                 <fullname>One acquisition-like without opening shutter</fullname>
@@ -854,10 +861,7 @@
                     <repeat>2</repeat>
                 </call>
                 <call ref="DarkExposure"/>
-                <call ref="StartOfImage"/>
-                <call ref="CloseShutter"/>
                 <call ref="ReadFrame"/>
-                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="FullPseudoAcquisition">
                 <fullname>Replicates FullAcquisition without acquiring</fullname>
@@ -866,12 +870,12 @@
                 </call>
                 <call ref="Exposure"/>
                 <call ref="CloseShutter"/>
-                <call ref="ReadFrame"/>
+                <call ref="BaseFrame"/>
             </subroutine>
             <subroutine id="AcquireBias">
-                <fullname>One acquisition without exposition</fullname>
+                <fullname>One acquisition without exposition or warm-up</fullname>
                 <call ref="StartOfImage"/>
-                <call ref="ReadFrame"/>
+                <call ref="BaseFrame"/>
                 <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="WindowAcquisition">
@@ -880,8 +884,8 @@
                     <repeat>2</repeat>
                 </call>
                 <call ref="Exposure"/>
-                <call ref="StartOfImage"/>
                 <call ref="CloseShutter"/>
+                <call ref="StartOfImage"/>
                 <call ref="ReadWindow"/>
                 <call ref="EndOfImage"/>
             </subroutine>
@@ -891,22 +895,21 @@
                     <repeat>2</repeat>
                 </call>
                 <call ref="Exposure"/>
-                <call ref="CloseShutter"/>
                 <call ref="PumpLine">
                     <repeat>1000</repeat>
                 </call>
-                <call ref="StartOfImage"/>
                 <call ref="ReadFrame"/>
-                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="PulseAcquisition">
                 <fullname>One acquisition with pulser signal</fullname>
+                <call ref="CloseShutter"/>
                 <call ref="StartOfImage"/>
                 <call ref="PulseFrame"/>
                 <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="PulseClockAcquisition">
                 <fullname>One acquisition with pulser signal and serial clocks running</fullname>
+                <call ref="CloseShutter"/>
                 <call ref="StartOfImage"/>
                 <call ref="PulseClockFrame"/>
                 <call ref="EndOfImage"/>
@@ -928,10 +931,6 @@
                 </call>
             </main>
             <main id="Bias">
-                <fullname>Bias without clearing first</fullname>
-                <call ref="AcquireBias"/>
-            </main>
-            <main id="ClearBias">
                 <fullname>Bias after clearing</fullname>
                 <call ref="ClearCCD">
                     <repeat>10</repeat>
@@ -962,10 +961,8 @@
                 <call ref="PulseClockAcquisition"/>
             </main>
             <main id="Test">
-                <fullname>Test of sequencer</fullname>
-                <call ref="StartOfImage"/>
+                <fullname>Test of sequencer (to be replaced as needed)</fullname>
                 <call ref="ReadFrame"/>
-                <call ref="EndOfImage"/>
             </main>
        </mains>
     </sequencer-routines>
