@@ -8,6 +8,7 @@ build = 'build'
 submodules = ['pollux', 
               'keithley',
               'rpc',
+              'clap',
               # 'digisense',
               'laser',
               'powersupply', 

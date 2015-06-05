@@ -281,8 +281,8 @@ config = {
         'devices'     : ['USB'],
         'driver'      : 'sensor_clap',
         'port'        : 8950,
-        'commandline' : 'keithley-server -d'
-        },
+        'commandline' : 'clap-server -d'
+        }
 
 
     # =====================================================================

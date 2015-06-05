@@ -1,11 +1,9 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-instruments-powersupply'
+APPNAME = 'lsst-instruments-clap'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
-
-submodules = ['TTiQL355TP','HMP40X0']
 
 def options(ctx):
     ctx.load('python')        
@@ -18,11 +16,15 @@ def configure(ctx):
     
 def build(ctx):
     ctx(features = 'py', 
-        # source = bld.path.ant_glob('*.py'), 
+        # source = ctx.path.ant_glob('*.py'), 
         source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/instruments/powersupply')
+        install_path = '${PYTHONDIR}/lsst/instruments/clap')
 
-    ctx.recurse(submodules)
+    ctx.install_as('${PREFIX}/bin/clap-server', 
+                   'clap-server', 
+                   chmod=0755)
+
+    # ctx.recurse(submodules)
 
 
     
