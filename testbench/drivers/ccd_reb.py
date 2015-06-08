@@ -173,59 +173,8 @@ class Instrument(Driver):
 
     # --------------------------------------------------------------------
 
-    def send_function(self, function_id, function):
-        """
-        Send the function <function> into the FPGA memory 
-        at the #function_id slot.
-        """
-        self.reb.fpga.send_function(function_id, function)
-
-    def send_functions(self, functions):
-        """
-        Load all functions from dict <functions> into the FPGA memory.
-        """
-        self.reb.fpga.send_functions(functions)
-
-    def dump_function(self, function_id):
-        """
-        Dump the function #function_id from the FPGA memory.
-        """
-        return self.reb.fpga.dump_function(function_id)
-
-    def dump_functions(self):
-        """
-        Dump all functions from the FPGA memory.
-        NOTE: Stop doing that.
-        """
-        return self.reb.fpga.dump_functions()
-
-    # --------------------------------------------------------------------
-
-    def send_program_instruction(self, addr, instr):
-        """
-        Load the program instruction <instr> at relative address <addr> 
-        into the FPGA program memory.
-        """
-        self.reb.fpga.send_program_instruction(addr, instr)
-
-    def send_program(self, program, clear=True):
-        """
-        Load the compiled program <program> into the FPGA program memory.
-        """
-        self.reb.fpga.send_program(program, clear=clear)
-
-    def dump_program(self):
-        """
-        Dump the FPGA sequencer program. Return the program.
-        """
-        return self.reb.fpga.dump_program()
-
-    def clear_program(self):
-        """
-        Clear the FPGA sequencer program memory.
-        """
-        self.reb.fpga.clear_program()
-        logging.info("Cleared sequencer program.")
+    # For send/dump functions/program : if you want them, go get them in self.reb.fpga
+    # Just remember to call self.wait_end_sequencer() first.
 
     # --------------------------------------------------------------------
     # Running the sequencer

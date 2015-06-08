@@ -173,6 +173,7 @@ class REB(object):
 
         self.seq = rebxml.fromxmlfile(os.path.join(self.xmldir, self.xmlfile))
         # we will use self.seq.program to track addresses
+        self.wait_end_sequencer()
         self.fpga.send_sequencer(self.seq)
         try:
             self.exptime = self.get_exposure_time()
@@ -194,6 +195,7 @@ class REB(object):
                                        repeat=repeat)
 
         # load it at the very beginning of the program (rel addr 0x0)
+        self.wait_end_sequencer()
         self.fpga.send_program_instruction(0x0, first_instr)
         self.seq.program.instructions[0x0] = first_instr  # to keep it in sync
         self.seqname = subname
@@ -230,6 +232,7 @@ class REB(object):
         exposureadd = self.seq.program.subroutines[self.exposuresub]
         newinstruction = self.seq.program.instructions[exposureadd]
         newinstruction.repeat = int(max(newiter, self.min_exposure))  # This does rewrite the seq.program too
+        self.wait_end_sequencer()
         self.fpga.send_program_instruction(exposureadd, newinstruction)
 
         # self.exptime = newiter * self.exposure_unit  # better re-read due to light/dark difference
@@ -246,6 +249,7 @@ class REB(object):
         darkadd = self.seq.program.subroutines[self.darksub]
         newinstruction = self.seq.program.instructions[darkadd]
         newinstruction.repeat = int(max(newiter, 1))  # must not be 0 or sequencer gets stuck
+        self.wait_end_sequencer()
         self.fpga.send_program_instruction(darkadd, newinstruction)
 
     # --------------------------------------------------------------------
@@ -266,7 +270,7 @@ class REB(object):
         """
         Configure the programmed sequence. Used also to record parameters.
         """
-        self.wait_end_sequencer()
+        # wait_end_sequencer is now included in select_subroutine
         self.select_subroutine(name)
 
         if name in ["Bias", "Test", "Wait", "ClearBias"]:
@@ -298,7 +302,7 @@ class REB(object):
         Lets CCD wait by clearing periodically until keyboard interrupt is sent.
 
         """
-        self.config_sequence(name, 0)
+        self.select_subroutine(name)
         keepwaiting = True
         while keepwaiting:
             try:
