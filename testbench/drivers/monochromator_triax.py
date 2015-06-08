@@ -256,6 +256,8 @@ class Instrument(Driver):
             'GRATING': self.getGrating()
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================

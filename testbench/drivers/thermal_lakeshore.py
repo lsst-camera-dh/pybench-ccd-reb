@@ -187,7 +187,9 @@ class Instrument(Driver):
             'POWER'  : float(result[2])
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
 # TODO: add programmed temperature as 'TEMP_SET'
 
