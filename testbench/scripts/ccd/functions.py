@@ -100,7 +100,8 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4
         meta['reb_ope'] = {'extname': 'CCD_COND',
                            'keys': keys,
                            'values': values,
-                           'comments': comments}
+                           'comments': comments,
+                           'data': []}  # added data for compatibility with the rest of the meta
     return meta
 
 bench.Bench.execute_reb_sequence = execute_reb_sequence
@@ -159,7 +160,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
         if extname == 'REB':
             append_kvc(primaryhdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
         else:
-            exthdu = pyfits.ImageHDU(name=extname)
+            exthdu = pyfits.ImageHDU(data=instrumentmeta['data'], name=extname)
             append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
             hdulist.append(exthdu)
 
@@ -254,7 +255,7 @@ def basic_stats(self, hdulist, logtofile=False):
         print(out)
         if logtofile:
             logger.write(out+'\n')
-        return out
+    #return out
 
 bench.Bench.basic_stats = basic_stats
 
