@@ -286,8 +286,8 @@ config = {
     #
 
     'CLAP' : {
-        # 'host'        : 'lpnlsstbench',
-        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
+        # 'host'        : 'lpnlsstclap',
+        'host'        : '134.158.154.80', ### CRITICAL: put the IP here!
         'devices'     : ['USB'],
         'driver'      : 'sensor_clap',
         'port'        : 8950,

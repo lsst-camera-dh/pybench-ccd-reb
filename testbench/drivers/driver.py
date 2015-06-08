@@ -47,4 +47,10 @@ class Driver(object):
         self.bench = bench
         return True
 
-    
+    def get_meta(self):
+        """
+        Return meta data describing the current state of the instrument. 
+        Useful to fill the FITS headers.
+        """
+        return [], {}, {}, []
+

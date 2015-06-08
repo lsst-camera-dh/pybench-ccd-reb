@@ -179,8 +179,7 @@ class CLAPSampler(Thread):
                         'blocksize': self.blocksize,
                         'timestamp': t_start,
                         'board_timestamp': board_timestamp,
-                        # 'data': list(data)
-                        'data': xmlrpclib.Binary(data) }
+                        'binarydata': xmlrpclib.Binary(data) }
 
         self.ready = True
 
@@ -321,7 +320,7 @@ class CLAPRemote(object):
         return True
 
 
-    def get_data(self):
+    def get_sampling_data(self):
         """
         Request a sampling of the CLAP.
         Return the result as a dictionary.
