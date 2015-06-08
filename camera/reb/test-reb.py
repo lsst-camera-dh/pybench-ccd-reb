@@ -489,7 +489,7 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
         #hdulist.append(exthdu)
 
         hdulist.writeto(fitsname, clobber=True)
-       print("Wrote FITS file "+fitsname)
+        print("Wrote FITS file "+fitsname)
     else:
         print("Did not find the expected raw file: %s " % imgname)
 

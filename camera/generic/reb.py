@@ -90,6 +90,7 @@ class REB(object):
     fitstopdir = "/data/frames/"
     xmldir = "/home/lsst/lsst/py/camera/generic/"
     full18bits = True  # TODO: check from version of the firmware
+    compression = True
     # to be loaded from XML later
     imglines = 2020
     imgcols = 550
@@ -356,8 +357,10 @@ class REB(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(N.int32)
             # create extension to fits file for each channel
-            exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            # exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            if self.compression:
+                exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            else:
+                exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             self.get_extension_header(num, exthdu, displayborders)
             avchan = N.mean(y[11:self.imgcols-50, 2:self.imglines-20])
             exthdu.header["AVERAGE"] = avchan
