@@ -124,6 +124,8 @@ class Instrument(Driver):
             'DRIVER' : 'wallace_gromit / pyBench' 
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================

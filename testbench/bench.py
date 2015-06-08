@@ -184,11 +184,12 @@ class Bench(Borg):
         for identifier, element in self.registry.iteritems():
             instance = element['instance']
             extname = identifier.upper()
-            keys, values, comments = instance.get_meta()
+            keys, values, comments, data = instance.get_meta()
             meta[identifier] = { 'extname' : extname,
                                  'keys' : keys,
                                  'values' : values,
-                                 'comments' : comments }
+                                 'comments' : comments,
+                                 'data': data }
             
         return meta
 

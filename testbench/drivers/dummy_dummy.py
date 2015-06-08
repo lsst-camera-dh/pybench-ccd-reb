@@ -122,6 +122,8 @@ class Instrument(Driver):
             'DRIVER' : 'laserthorlabs / pyBench' 
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================

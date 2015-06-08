@@ -281,6 +281,8 @@ class Instrument(Driver):
             'TIME'   : self.getHours()
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================
