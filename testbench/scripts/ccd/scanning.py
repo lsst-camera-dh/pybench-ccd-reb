@@ -15,14 +15,14 @@ B.register('lakeshore1')
 #B.register('bss')  # connect (remotely) to the BackSubstrate Power
 
 import lsst.testbench.scripts.ccd.functions
-self.PhD.setup_current_measurements(2e-8)
+B.PhD.setup_current_measurements(2e-8)
 
 
 print """
-CCD output scanning for any acquisition sequence.
+CCD output scanning for an acquisition sequence.
 --------------------
      
-B.scanning_acquisition(name, waittime=4, exptime=0.2, laserchannel = 2, lasercurrent=45.0)
+B.scanning_acquisition(waittime=4, exptime=0.2, laserchannel = 2, lasercurrent=45.0)
 
 CCD must be powered up BEFORE running the script
 
@@ -38,7 +38,7 @@ if not os.path.isdir(eodir):
 
 # ==============================================================================
 
-def scanning_acquisition(self, name, waittime=4 , exptime=0.2, laserchannel = 2, lasercurrent=45.0):
+def scanning_acquisition(self, waittime=4 , exptime=0.2, laserchannel = 2, lasercurrent=45.0):
     """
      Will take two pairs of exposures as defined, one pair in scanning mode and one pair in normal mode.
     """
@@ -55,18 +55,18 @@ def scanning_acquisition(self, name, waittime=4 , exptime=0.2, laserchannel = 2,
     # First take normal frames
     for numpair in [1, 2]:
         self.log("Taking reference frame %d for scanning" % numpair)
-        m = self.execute_reb_sequence(True, name, exptime, waittime)
-        fname = "%s_frame%d_%s.fits" % (name, numpair, self.reb.reb.imgtag)
+        m = self.execute_reb_sequence(True, 'Acquisition', exptime, waittime)
+        fname = "acq_frame%d_%s.fits" % (numpair, self.reb.reb.imgtag)
         i = self.conv_to_fits(channels=validamps)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
     # Then put into scanning mode and change image size
     self.reb.start_adc_increment()
-    self.reb.set_amplifier_size(self, cols=256, lines=1000)
+    self.reb.set_amplifier_size(self, cols=256, lines=2020)
     for numpair in [1, 2]:
         self.log("Taking scanning frame %d" % numpair)
-        m = self.execute_reb_sequence(True, name, exptime, waittime)
-        fname = "%s_scan%d_%s.fits" % (name, numpair, self.reb.reb.imgtag)
+        m = self.execute_reb_sequence(True, 'Window', exptime, waittime)
+        fname = "acq_scan%d_%s.fits" % (numpair, self.reb.reb.imgtag)
         i = self.conv_to_fits(channels=validamps, borders=True)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
     self.reb.stop_adc_increment()
@@ -77,3 +77,4 @@ def scanning_acquisition(self, name, waittime=4 , exptime=0.2, laserchannel = 2,
 # Attach this method to the Bench class / instance
 lsst.testbench.Bench.scanning_acquisition = scanning_acquisition
 
+# TODO: use new sequencer to be able to do the scanning on any type of acquisition by changing the window size
