@@ -84,15 +84,13 @@ class CLAPSampler(Thread):
                  channels = [1],
                  period = 1600, # in 20ns ticks
                  wordcount = 32000,  
-                 blocksize = 32768,
-                 label = None):
+                 blocksize = 32768):
 
         Thread.__init__(self)
         self.channels = channels
         self.period = period
         self.wordcount = wordcount
         self.blocksize = blocksize
-        self.label = label
         self.ready = True
 
         self.result = {}
@@ -267,10 +265,18 @@ class CLAPRemote(object):
     # ----------------------- CLAP commands -----------------------------
 
     def read(self, addr):
-        return list(dcb.read(addr))
+        logging.info("CLAP.read(%04x) called." % addr)
+        result = list(dcb.read(addr))[0]
+        logging.info(("CLAP.read(%04x) returns " % addr) + str(result))
+        return result
 
     def read_at(self, addr_start, addr_stop):
-        return int(dcb.read_at(addr_start, addr_stop))
+        logging.info("CLAP.read_at(%04x, %04x) called." % 
+                     (addr_start, addr_stop))
+        result = int(dcb.read_at(addr_start, addr_stop))
+        logging.info(("CLAP.read_at(%04x, %04x) returns " % 
+                      (addr_start, addr_stop)) + result)
+        return result
 
     def write(self, addr, word):
         return dcb.write(addr, word)
@@ -282,12 +288,16 @@ class CLAPRemote(object):
                channels = [1],
                period = 1600, # in 20ns ticks
                wordcount = 32000,  
-               blocksize = 32768,
-               label = None):
+               blocksize = 32768):
         """
         Request a sampling of the CLAP.
         Asynchronous call. Return nothing.
         """
+
+        if not(self.status()):
+            logging.error("CLAP Sampler is not ready (ongoing sampling?)")
+            return False
+            
 
         # ------ First checking arguments
 
@@ -310,8 +320,7 @@ class CLAPRemote(object):
         self.sampler = CLAPSampler(channels,
                                    period,
                                    wordcount,
-                                   blocksize,
-                                   label)
+                                   blocksize)
 
         self.sampler.start()
 
@@ -438,7 +447,7 @@ def main(options, args):
     server.register_function(clap.write,        "write")
     server.register_function(clap.write_at,     "write_at")
     server.register_function(clap.sample,       "sample")
-    server.register_function(clap.get_data,     "get_data")
+    server.register_function(clap.get_sampling_data,     "get_sampling_data")
     server.register_function(server_quit,       "quit")
 
     # for remote introspection (tab completion with ipython)
