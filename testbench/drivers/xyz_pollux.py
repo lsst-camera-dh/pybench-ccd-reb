@@ -212,6 +212,8 @@ class Instrument(Driver):
             values[key] = value
             comments[key] = comment
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================

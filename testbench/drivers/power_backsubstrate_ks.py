@@ -445,7 +445,9 @@ class Instrument(Driver):
             'CURRENT'  : self.read_current_measure() 
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================
 

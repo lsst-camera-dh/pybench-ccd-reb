@@ -464,7 +464,9 @@ class Instrument(Driver):
             'SYSGAIN': 0.35
         }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     def get_meta_operating(self):
         """

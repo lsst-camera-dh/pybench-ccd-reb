@@ -268,6 +268,8 @@ class Instrument(Driver):
             'CURRENT': self.lastmeasure
             }
 
-        return keys, values, comments
+        data = []
+        
+        return keys, values, comments, data
 
     # ===================================================================

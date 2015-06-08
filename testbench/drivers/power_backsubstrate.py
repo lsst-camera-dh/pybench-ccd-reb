@@ -375,7 +375,9 @@ class Instrument(Driver):
             'VOLTSRC'  : self.voltageStatus() 
             }
 
-        return keys, values, comments
+        data = []
+        
+        return keys, values, comments, data
 
     # ===================================================================
 

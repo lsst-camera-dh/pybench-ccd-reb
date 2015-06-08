@@ -223,6 +223,8 @@ class Instrument(Driver):
             'DRIVER' : 'keithley-server / keithley' 
             }
 
-        return keys, values, comments
+        data = []
+
+        return keys, values, comments, data
 
     # ===================================================================
