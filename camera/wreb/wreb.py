@@ -17,6 +17,8 @@ import astropy.io.fits as pyfits
 class WREB(reb.REB):
     useCABACbias = True
     xmldir = "/home/lsst/lsst/py/camera/wreb/"
+    exposure_unit = 0.026  # duration of the elementary exposure subroutine in s
+    min_exposure = int(0.1 / exposure_unit)  # minimal shutter opening time (not used for darks)
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
