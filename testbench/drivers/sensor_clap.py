@@ -118,6 +118,41 @@ class Instrument(Driver):
     def write_at(self, addr_start, addr_stop, value):
         return self.xmlrpc.write_at(addr_start, addr_stop, value)
 
+
+
+
+
+1 : import xmlrpclib
+2 : clap = xmlrpclib.ServerProxy("http://134.158.154.80:8950/")
+3 : clap.open()
+4 : clap.status()
+5 : clap.sample([1], 160, 3000000, 32768)
+6 : clap.status()
+7 : _ip.magic("time a = clap.get_data()")
+8 : a = clap.get_data()
+9 : import struct
+10: _ip.magic("history ")
+11: fmt = "<%dh" % (len(dd) / 2)
+12: fmt = "<%dh" % (len(a['data']) / 2)
+13: fmt = "<%dh" % (len(a['data'].data) / 2)
+14: import struct
+15: b = struct.struct.unpack(fmt, a['data'].data)
+16: b = struct.unpack(fmt, a['data'].data)
+17: b[35634]
+18: b.mean()
+19: import numpy as np
+20: bb = np.array(b)
+21: bb.mean()
+22: bb.std()
+23: _ip.magic("history ")
+
+
+
+
+
+
+
+
     def sample(self, 
                channels = [1],
                period = 1600, # in 20ns ticks
@@ -145,11 +180,14 @@ class Instrument(Driver):
             raise ValueError("period should be in range [100:50000].")
 
 
+        # --
+
         return self.xmlrpc.sample(channels = channels,
                                   period = period, # in 20ns ticks
                                   wordcount = wordcount,  
                                   blocksize = blocksize,
                                   label = label)
+        
 
     # ===================================================================
     #  Meta data / state of the instrument 
