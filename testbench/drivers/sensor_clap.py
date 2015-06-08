@@ -30,6 +30,8 @@ import time
 import xmlrpclib
 import logging
 import struct
+import numpy as np
+
 # =======================================================================
 
 class Instrument(Driver):
@@ -71,7 +73,8 @@ class Instrument(Driver):
         Returns True if the hardware answers, False otherwise.
         """
         answer = self.checkConnection()
-        # print answer
+        print answer
+        print type(answer)
 
         if answer == 0x80:
             return True
@@ -87,13 +90,20 @@ class Instrument(Driver):
 
 
     def register(self, bench):
+        print "[1]"
         self.open()
+        print "[2]"
         time.sleep(1)
+        print "[3]"
         connected = self.is_connected()
+        print "[3.5]"
         if not(connected):
+            print "[3.5 ARRGHHH]"
             raise IOError("DICE CLAP not connected.")
 
+        print "[4]"
         Driver.register(self, bench)
+        print "[5]"
 
 
     def close(self):
@@ -155,11 +165,10 @@ class Instrument(Driver):
 
         # --
 
-        return self.xmlrpc.sample(channels = channels,
-                                  period = period, # in 20ns ticks
-                                  wordcount = wordcount,  
-                                  blocksize = blocksize)
-        
+        return self.xmlrpc.sample(channels,
+                                  period, # in 20ns ticks
+                                  wordcount,  
+                                  blocksize)
 
 
     def get_sampling_data(self):
@@ -174,7 +183,7 @@ class Instrument(Driver):
         if result.has_key('binarydata'):
             blurb = result['binarydata'].data
             fmt = "<%dh" % (len(blurb) / 2)
-            data = np.array(struct.unpack(fmt, a['data'].data))
+            data = np.array(struct.unpack(fmt, blurb))
             result['data'] = data
 
         return result
@@ -211,19 +220,19 @@ class Instrument(Driver):
         values['CHANNELS'] = str(dataset['channels'])
         comments['CHANNELS'] = "CLAP channels"
         
-        key.append('PERIOD')
+        keys.append('PERIOD')
         values['PERIOD'] = dataset['period']
         comments['PERIOD'] = "[x 20ns] CLAP sampling period"
         
-        key.append('BLOCKSZ')
+        keys.append('BLOCKSZ')
         values['BLOCKSZ'] = dataset['blocksize']
         comments['BLOCKSZ'] = "CLAP transfer block size"
 
-        key.append('TIMESTMP')
+        keys.append('TIMESTMP')
         values['TIMESTMP'] = dataset['timestamp']
         comments['TIMESTMP'] = "Unix timestamp of the PC"
 
-        key.append('CLAPTIME')
+        keys.append('CLAPTIME')
         values['CLAPTIME'] = dataset['board_timestamp']
         comments['CLAPTIME'] = "[x 20 ns] CLAP internal clock"
         
@@ -232,3 +241,4 @@ class Instrument(Driver):
     # ===================================================================
 
 
+4
