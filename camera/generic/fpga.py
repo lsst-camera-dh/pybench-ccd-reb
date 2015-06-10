@@ -11,7 +11,7 @@ This is for generic FPGA commands that are common to all versions.
 import sys
 import re
 import subprocess
-
+import time
 import bidi
 
 ## -----------------------------------------------------------------------
@@ -726,6 +726,7 @@ class FPGA(object):
     slices_base_addr = 0x200000
     program_base_addr = 0x300000
     program_mem_size = 0x3ff
+    n_sensors_boardtemp = 10
 
     # --------------------------------------------------------------------
 
@@ -1105,12 +1106,17 @@ class FPGA(object):
     def get_board_temperatures(self):
         st = self.get_state()
         self.set_trigger(st | 0x10)
-        n_sensors = 10
-        raw = self.read(0x600010, n_sensors)
+        time.sleep(0.1)
+        raw = self.read(0x600010, self.n_sensors_boardtemp)
         temperatures = {}
-        for i in xrange(n_sensors):
-            temperatures[i] = raw[0x600010 + i] * 0.0078
-        return raw, temperatures
+        for i in xrange(self.n_sensors_boardtemp):
+            answer = raw[0x600010 + i]
+            temperatures[i] = (answer & 0xffff) * 0.0078
+            if answer & 0x10000:
+                print("Warning: error on board temperature measurement %d" % i)
+        self.set_trigger(st)
+
+        return temperatures
 
     # ----------------------------------------------------------
 

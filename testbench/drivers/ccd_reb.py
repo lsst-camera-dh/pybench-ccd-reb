@@ -480,6 +480,7 @@ class Instrument(Driver):
         header.update(self.get_cabac_config())
         # clock rail voltages and current source
         header.update(self.reb.fpga.get_dacs())
+        # TODO: add board temperature
 
         return header.keys, header.values, header.comments
 

@@ -23,9 +23,10 @@ class WREB(reb.REB):
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.fpga = fpga.FPGA1(ctrl_host, rriaddress)
+        self.fpga.n_sensors_boardtemp = 6  # fewer board temperature sensors than on a full REB
         self.fpga.stop_clock()  # stops the clocks to use as image tag
         self.fpga.write(0x400006, 0)  # pattern generator off
-        self.config = {}
+        self.config = {"VSUB": 0}  # depends on power supply values and board configuration
         self.xmlfile = "sequencer-wreb.xml"
         # load 0 on default state to prep for REB start-up
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
@@ -200,8 +201,8 @@ class WREB(reb.REB):
         To be executed at power-up to safeguard CABAC2.
         :return:
         """
-        # power-up the CABAC low voltages
-        self.fpga.cabac_power(True)
+        # power-up the CABAC low voltages, Vsub and VddOD if using CABAC biases
+        self.fpga.cabac_power(True, useCABACbias=self.useCABACbias)
         # power-up the clock rails (in V)
         rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
         self.fpga.set_clock_voltages(rails)
@@ -210,7 +211,7 @@ class WREB(reb.REB):
         # put all CABAC biases at board GND (must know Vsub), including spare
         Vsuboffset = - self.config["VSUB"]
         self.send_cabac_config({"OD": Vsuboffset, "GD": Vsuboffset, "RD": Vsuboffset})
-        # staged for CCD safety (although the diodes are supposed to do it)
+        # staged for CCD safety
         self.send_cabac_config({"OG": Vsuboffset, "SPA": Vsuboffset})
 
     def CCDpowerup(self):
@@ -247,6 +248,7 @@ class WREB(reb.REB):
         else:
             self.load_sequencer()
 
+        self.fpga.enable_bss(True)
         logging.info('BSS can be powered on now.')
 
     def CCDshutdown(self):
@@ -255,6 +257,7 @@ class WREB(reb.REB):
         """
         logging.info('BSS must be shutdown at this time.')
         time.sleep(5)
+        self.fpga.enable_bss(False)
 
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
@@ -294,8 +297,8 @@ class WREB(reb.REB):
         self.fpga.set_clock_voltages(rails)
         self.config.update(rails)
         # shutdown the CABAC low voltages
-        self.fpga.cabac_power(False)
-        # need to shutdown VddOD right here
+        self.fpga.cabac_power(False, useCABACbias=self.useCABACbias)
+        # need to shutdown VddOD right here on power supply if not using CABAC biases (else it's done above)
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
@@ -355,7 +358,7 @@ if __name__ == "__main__":
 
     R = WREB(rriaddress=0xFF, stripe_id=[0])
 
-    # here power on other voltages
+    # here power on power supplies
     R.REBpowerup()
     time.sleep(0.1)
     R.CCDpowerup()
