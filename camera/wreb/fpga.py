@@ -36,6 +36,28 @@ class FPGA1(FPGA):
 
     # --------------------------------------------------------------------
 
+    def sigmadelta_spi(self, rw, address, data):
+        """
+        Communication to the sigma-delta ADC for CCD temperature sensors.
+        :param rw: bool
+        :param address: int
+        :param data: int
+        :return: int
+        """
+        # To be checked: there are several bugs in the documentation
+        code = 0
+        if rw:
+            code += (1 << 19)
+        code += ((address & 7) << 16)
+        code += (data & 0xffff)
+        self.write(0x700000, code)
+        time.sleep(0.05)
+
+        answer = self.read(0x700001, 1)[0x700001]
+        return answer
+
+    # --------------------------------------------------------------------
+
     def increment(self, offset=0):
         """
         Send the command to increment the ADC sampling time by 1 cycle after
@@ -127,6 +149,17 @@ class FPGA1(FPGA):
 
         return {key: self.dacs[key]}
 
+    def enable_bss(self, connect):
+        """
+        Switches the Back Substrate Bias connection to the CCD.
+        :param connect: bool
+        :return:
+        """
+        if connect:
+            self.write(0xD00000, 1)
+        else:
+            self.write(0xD00000, 0)
+
     # ----------------------------------------------------------
 
     def set_bias_voltages(self, biases):
@@ -164,16 +197,31 @@ class FPGA1(FPGA):
         self.write(0x400011, 1)
         self.write(0x400101, 1)
 
-    # ----------------------------------------------------------
-    def cabac_power(self, enable):
+    def set_OD_voltage(self, value):
         """
-        Enables/disables power to CABAC low voltage power supplies and VEE (specific to WREB).
+        Sets OD voltage alone. Useful when using it as CABAC high voltage power supply.
+        :param value: float
+        :return:
+        """
+        self.dacs["OD_CTRL"] = int(value / self.od_conv) & 0xfff
+        self.write(0x400010, self.dacs["OD_CTRL"] + (6 << 12))
+        # activates DAC outputs
+        self.write(0x400011, 1)
+
+    # ----------------------------------------------------------
+    def cabac_power(self, enable, useCABACbias):
+        """
+        Enables/disables power to CABAC low voltage power supplies, VEE, and V_OD (if using CABAC biases).
+        Not in that order, for CABAC safety.
         :param enable: bool
         :return:
         """
         if enable:
-            # staged
-            self.write(0xD00001, 0x4)  # VEE (CABAC substrate) alone first
+            # staged:
+            if useCABACbias:
+                self.set_OD_voltage(30)  # need to power VddOD first
+            # then enables VEE and then all low voltages
+            self.write(0xD00001, 0x4)  # VEE (CABAC substrate) set to V_CLK_L (low clock power supply) if connected
             time.sleep(0.2)
             self.write(0xD00001, 0x1F)
         else:
@@ -181,6 +229,9 @@ class FPGA1(FPGA):
             self.write(0xD00001, 0x4)
             time.sleep(0.2)
             self.write(0xD00001, 0)
+            if useCABACbias:
+                self.set_OD_voltage(0)
+        # need to do clock rails after power-on/ before power-down, done in the higher level function
 
     def check_location(self, s, loc=3):
         if s not in [0, 1, 2]:
@@ -340,5 +391,5 @@ class FPGA1(FPGA):
 
         self.write(0xB00001, s)
 
-
+# TODO: ASIC temperature readouts
 
