@@ -94,13 +94,16 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4
     # delay for clear before exposure
     time.sleep(delaytime)
 
+    # delay for exposure
+    time.sleep(self.reb.reb.exptime+1.0)
+
     # Here execute, for all instruments, the post_exposure functions
     self.post_exposure()
 
-    self.PhD.read_measurement()
+    # self.PhD.read_measurement() -> transfered in post exposure hook
 
-    # delay for exposure plus readout
-    time.sleep(self.reb.reb.exptime+4)
+    # delay for readout
+    time.sleep(3.0)
     
     meta = {}
     if withmeta:
