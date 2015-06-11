@@ -73,8 +73,8 @@ class Instrument(Driver):
         Returns True if the hardware answers, False otherwise.
         """
         answer = self.checkConnection()
-        print answer
-        print type(answer)
+        # print answer
+        # print type(answer)
 
         if answer == 0x80:
             return True
@@ -90,20 +90,20 @@ class Instrument(Driver):
 
 
     def register(self, bench):
-        print "[1]"
+        # print "[1]"
         self.open()
-        print "[2]"
+        # print "[2]"
         time.sleep(1)
-        print "[3]"
+        # print "[3]"
         connected = self.is_connected()
-        print "[3.5]"
+        # print "[3.5]"
         if not(connected):
-            print "[3.5 ARRGHHH]"
+            # print "[3.5 ARRGHHH]"
             raise IOError("DICE CLAP not connected.")
 
-        print "[4]"
+        # print "[4]"
         Driver.register(self, bench)
-        print "[5]"
+        # print "[5]"
 
 
     def close(self):
@@ -216,25 +216,30 @@ class Instrument(Driver):
 
         dataset = self.get_sampling_data()
 
-        keys.append('CHANNELS')
-        values['CHANNELS'] = str(dataset['channels'])
-        comments['CHANNELS'] = "CLAP channels"
+        if dataset.has_key('channels'):
+            keys.append('CHANNELS')
+            values['CHANNELS'] = str(dataset['channels'])
+            comments['CHANNELS'] = "CLAP channels"
         
-        keys.append('PERIOD')
-        values['PERIOD'] = dataset['period']
-        comments['PERIOD'] = "[x 20ns] CLAP sampling period"
+        if dataset.has_key('period'):
+            keys.append('PERIOD')
+            values['PERIOD'] = dataset['period']
+            comments['PERIOD'] = "[x 20ns] CLAP sampling period"
         
-        keys.append('BLOCKSZ')
-        values['BLOCKSZ'] = dataset['blocksize']
-        comments['BLOCKSZ'] = "CLAP transfer block size"
+        if dataset.has_key('blocksize'):
+            keys.append('BLOCKSZ')
+            values['BLOCKSZ'] = dataset['blocksize']
+            comments['BLOCKSZ'] = "CLAP transfer block size"
 
-        keys.append('TIMESTMP')
-        values['TIMESTMP'] = dataset['timestamp']
-        comments['TIMESTMP'] = "Unix timestamp of the PC"
+        if dataset.has_key('timestamp'):
+            keys.append('TIMESTMP')
+            values['TIMESTMP'] = dataset['timestamp']
+            comments['TIMESTMP'] = "Unix timestamp of the PC"
 
-        keys.append('CLAPTIME')
-        values['CLAPTIME'] = dataset['board_timestamp']
-        comments['CLAPTIME'] = "[x 20 ns] CLAP internal clock"
+        if dataset.has_key('board_timestamp'):
+            keys.append('CLAPTIME')
+            values['CLAPTIME'] = dataset['board_timestamp']
+            comments['CLAPTIME'] = "[x 20 ns] CLAP internal clock"
         
         return keys, values, comments, dataset.get('data', [])
 

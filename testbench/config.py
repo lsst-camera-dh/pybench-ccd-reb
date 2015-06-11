@@ -260,7 +260,7 @@ config = {
     'DKD' : {
         # 'host'        : 'lpnlsstbench',
         'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
-        'devices'     : ['/dev/ttyS1'],
+        'devices'     : ['/dev/ttyS13'],
         'driver'      : 'keithley_ks',
         'port'        : 8211,
         'commandline' : 'keithley-server -d'
@@ -274,7 +274,7 @@ config = {
     'PhD' : {
         # 'host'        : 'lpnlsstbench',
         'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
-        'devices'     : ['/dev/ttyS13'],
+        'devices'     : ['/dev/ttyS1'],
         'driver'      : 'keithley_ks',
         'port'        : 8900,
         'commandline' : 'keithley-server -d'
