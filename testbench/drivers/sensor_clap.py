@@ -21,7 +21,7 @@ Testbench driver for the DICE CLAP
 # server.register_function(clap.write,        "write")
 # server.register_function(clap.write_at,     "write_at")
 # server.register_function(clap.sample,       "sample")
-# server.register_function(clap.sample,       "get_sampling_data")
+# server.register_function(clap.get_sampling_data,    "get_sampling_data")
 
 
 from driver import Driver
@@ -157,15 +157,28 @@ class Instrument(Driver):
         return self.xmlrpc.write_at(addr_start, addr_stop, value)
 
     def sample(self, 
-               channels  = self.channels,
-               period    = self.period, # in 20ns ticks
-               wordcount = self.wordcount,  
-               blocksize = self.blocksize):
+               channels  = None,
+               period    = None, # in 20ns ticks
+               wordcount = None,  
+               blocksize = None):
         """
         Request a sampling of the CLAP.
         To check if the sampling is achieved,
         call the status() method.
         """
+
+        if channels == None:
+            channels = self.channels
+
+        if period == None:
+            period = self.period
+
+        if wordcount == None:
+            wordcount = self.wordcount
+
+        if blocksize == None:
+            blocksize = self.blocksize
+
         # ------ First checking arguments
 
         if wordcount > 8387583:
