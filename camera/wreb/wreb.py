@@ -44,8 +44,11 @@ class WREB(reb.REB):
         """
         for s in self.stripes:
             for param in iter(params):
+                print("Setting %s to %r" % (param, params[param]))
                 self.fpga.set_cabac_value(param, params[param], s)
-            time.sleep(0.1)
+        time.sleep(0.1)
+
+        for s in self.stripes:
             self.config.update(self.fpga.get_cabac_config(s), check=True)
 
     def get_cabac_config(self):
@@ -131,42 +134,58 @@ class WREB(reb.REB):
         else:
             return True
 
+    def validate_biases(self, params):
+        """
+        Intermediate step to manage safe changes in bias values, from CABAC or alternative biases.
+        :param params: dict
+        :return:
+        """
+        valid = {}
+
+        if self.useCABACbias:
+            # by steps
+            for param in params:
+                if self.check_bias_safety(param, params[param]):
+                    valid[param] = params[param]
+                else:
+                    # try half-way
+                    half = params[param]/2
+                    if self.check_bias_safety(param, half):
+                        valid[param] = half
+            self.send_cabac_config(valid)
+
+        else:
+            # simultaneous activation works fine if all new values are valid
+            configsave = self.config
+            self.config.update(params)
+            valid = params.copy()
+            for param in params:
+                if not self.check_bias_safety(param, params[param]):
+                    # cancels change
+                    valid = {}
+                    self.config.update(configsave)
+                    break
+            self.fpga.set_bias_voltages(valid)
+        return valid
+
     def set_biases(self, params):
         """
         Manages safe changes in bias values, from CABAC or alternative biases.
         :param params: dict
         :return:
         """
-        if "OG" in params:
-            if not self.check_bias_safety("OG", params["OG"]):
-                params.pop("OG")
-
-        if self.useCABACbias:
-            # by steps
-            for i in range(len(params)):
-                for param in params:
-                    if self.check_bias_safety(param, params[param]):
-                        self.send_cabac_config({param: params[param]})
-                        params.pop(param)
-                    else:
-                        # try half-way
-                        half = params[param]/2
-                        if self.check_bias_safety(param, half):
-                            self.send_cabac_config({param: half})
-
-        else:
-            # simultaneous activation works fine if all new values are valid
-            configsave = self.config
-            self.config.update(params)
-            valid = True
-            for param in params:
-                if not self.check_bias_safety(param, params[param]):
-                    # cancels change
-                    valid = False
-                    self.config.update(configsave)
-                    break
-            if valid:
-                self.fpga.set_bias_voltages(params)
+        target = params.copy()
+        for i in range(len(params)):
+            valid = self.validate_biases(target)
+            if valid == target:
+                break  # all done
+            elif not valid:
+                print("No valid biases to be set")
+                break
+            else:
+                # repeat loop for the rest
+                for param in valid:
+                    target.pop(param)
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """

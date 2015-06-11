@@ -294,21 +294,6 @@ class FPGA1(FPGA):
 
     # ----------------------------------------------------------
 
-    def cabac_safety(self, s=0):
-        """
-        Removes CABAC1 safety at the given stripe (required at CABAC1 start-up).
-        """
-        self.check_location(s)
-
-        regs = self.cabac_bottom[s].safety_off()
-        for reg in regs:
-            self.write_spi(0x500000, s, 1, reg, True)
-        regs = self.cabac_top[s].safety_off()
-        for reg in regs:
-            self.write_spi(0x500000, s, 2, reg, True)
-
-            # ----------------------------------------------------------
-
     def reset_cabac(self, s=0):  # stripe 's'
         """
         Use CABAC reset for stripe s
