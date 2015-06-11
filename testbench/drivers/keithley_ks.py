@@ -66,7 +66,8 @@ class Instrument(Driver):
 
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
-        self.lastmeasure = 0
+
+        self.lastmeasure = 0.0 # None should be better ?
 
 
     def open(self):
@@ -234,9 +235,21 @@ class Instrument(Driver):
         measure = float(elts[0].replace('A', '')) # sometime the unit is there
         logging.info("   measure = %g" % measure)
         logging.info("Keithley.read_measurements() done.")
+
+        # keep memory of the last measure
         self.lastmeasure = measure
         
         return measure
+
+    # ===================================================================
+    # PRE/POST exposure hooks
+    # ===================================================================
+
+    def pre_exposure(self, exptime):
+        pass
+
+    def post_exposure(self):
+        self.read_measurements()
 
     # ===================================================================
     #  Meta data / state of the instrument 
