@@ -72,7 +72,7 @@ def shutdown_CCD(self):
 bench.Bench.shutdown_CCD = shutdown_CCD
 
 
-def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4):
+def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4, withclap=True):
     """
     Configure new REB sequence if name and/or exptime are given.
     Executes the sequence.
@@ -83,11 +83,22 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4
     elif name:
         self.reb.config_sequence(name)
        
-    # this waits until the sequencer stops then send the execute sequence command 
+    # this waits until the sequencer stops...
+    self.reb.wait_end_sequencer()
+
+    # Here execute, for all instruments, the pre_exposure functions
+    self.pre_exposure(exptime)
+    
+    # ... then send the execute sequence command 
     self.reb.execute_sequence()
     # delay for clear before exposure
     time.sleep(delaytime)
+
+    # Here execute, for all instruments, the post_exposure functions
+    self.post_exposure()
+
     self.PhD.read_measurement()
+
     # delay for exposure plus readout
     time.sleep(self.reb.reb.exptime+4)
     
