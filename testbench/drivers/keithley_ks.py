@@ -249,7 +249,7 @@ class Instrument(Driver):
         pass
 
     def post_exposure(self):
-        self.read_measurements()
+        self.read_measurement()
 
     # ===================================================================
     #  Meta data / state of the instrument 

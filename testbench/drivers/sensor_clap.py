@@ -238,7 +238,7 @@ class Instrument(Driver):
         else:
             duration = 2.0 * exptime
 
-        self.wordcount = duration / ( self.period * 20.0e-9)
+        self.wordcount = int(duration / ( self.period * 20.0e-9))
         
         self.sample(channels = self.channels,
                     period = self.period, # in 20ns ticks

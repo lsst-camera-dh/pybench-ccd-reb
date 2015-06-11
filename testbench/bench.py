@@ -173,10 +173,10 @@ class Bench(Borg):
     # pre_exposure hook: for all registered instruments, execute their 
     # pre_exposure() method
 
-    def pre_exposure(self):
+    def pre_exposure(self, exptime):
         for identifier, element in self.registry.iteritems():
             instance = element['instance']
-            instance.pre_exposure()
+            instance.pre_exposure(exptime)
 
     # ===================================================================
     # post_exposure hook: for all registered instruments, execute their 
