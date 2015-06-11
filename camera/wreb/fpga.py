@@ -4,7 +4,7 @@
 # Python minimal interface for the REB FPGA new version (REB2/WREB)
 #
 #
-from py.camera.generic.fpga import *
+from lsst.camera.generic.fpga import *
 import time
 
 import cabac

@@ -5,7 +5,7 @@
 #
 # Laurent Le Guillou - Claire Juramy
 
-from py.camera.generic import bidi
+from lsst.camera.generic import bidi
 
 ## -----------------------------------------------------------------------
 
