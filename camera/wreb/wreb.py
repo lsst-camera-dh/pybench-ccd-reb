@@ -24,6 +24,9 @@ class WREB(reb.REB):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.fpga = fpga.FPGA1(ctrl_host, rriaddress)
         self.fpga.n_sensors_boardtemp = 6  # fewer board temperature sensors than on a full REB
+        # self.fpga.supplies = ['DREB', 'CLK_H', 'DPHI', 'HTR', 'ANA', 'OD']
+        # currently power supplies readback has been removed from the board
+        self.fpga.supplies = []
         self.fpga.stop_clock()  # stops the clocks to use as image tag
         self.fpga.write(0x400006, 0)  # pattern generator off
         self.config = {"VSUB": 0}  # depends on power supply values and board configuration

@@ -727,6 +727,7 @@ class FPGA(object):
     program_base_addr = 0x300000
     program_mem_size = 0x3ff
     n_sensors_boardtemp = 10
+    supplies = ['6V', '9V', '24V', '40V']
 
     # --------------------------------------------------------------------
 
@@ -1106,7 +1107,9 @@ class FPGA(object):
     def get_board_temperatures(self):
         st = self.get_state()
         self.set_trigger(st | 0x10)
-        time.sleep(0.1)
+        # trigger will stop autonomously when done
+        while self.get_state() & 0x10:
+            time.sleep(0.05)
         raw = self.read(0x600010, self.n_sensors_boardtemp)
         temperatures = {}
         for i in xrange(self.n_sensors_boardtemp):
@@ -1114,7 +1117,6 @@ class FPGA(object):
             temperatures[i] = (answer & 0xffff) * 0.0078
             if answer & 0x10000:
                 print("Warning: error on board temperature measurement %d" % i)
-        self.set_trigger(st)
 
         return temperatures
 
@@ -1123,50 +1125,33 @@ class FPGA(object):
     def get_input_voltages_currents(self):
         st = self.get_state()
         self.set_trigger(st | 0x08)
-        raw = self.read(0x600000, 8)
+        # trigger will stop when done
+        while self.get_state() & 8:
+            time.sleep(0.05)
+        raw = self.read(0x600000, len(self.supplies) * 2)
+
         voltages = {}
         currents = {}
+        orderkeys = []
+        dictvalues = {}
+        dictcomments = {}
 
-        # 0x600000 6V voltage
-        voltages["6V"] = ((raw[0x600000] & 0xfff0) >> 4) * 0.025  # 25 mV
-        # 0x600001 6V current
-        currents["6V"] = ((raw[0x600001] & 0xfff0) >> 4) * 250e-6  # 25 uA (250 uA in reality ?)
+        for i,v in enumerate(self.supplies):
+            if v in ['24V', '40V']:  # TODO: add for WREB
+                conv_i = 80e-6  # 8 uA (80 uA in reality ?)
+            else:
+                conv_i = 250e-6  # 25 uA (250 uA in reality ?)
+            voltages[v] = ((raw[0x600000 + i * 2] & 0xfff0) >> 4) * 0.025  # 25 mV
+            currents[v] = ((raw[0x600001 + i * 2] & 0xfff0) >> 4) * conv_i
+            vstr = 'V_%s' % v
+            istr = 'I_%s' % v
+            orderkeys.append(vstr)
+            orderkeys.append(istr)
 
-        # 0x600002 9V voltage
-        voltages["9V"] = ((raw[0x600002] & 0xfff0) >> 4) * 0.025  # 25 mV
-        # 0x600003 9V current
-        currents["9V"] = ((raw[0x600003] & 0xfff0) >> 4) * 250e-6  # 25 uA (250 uA in reality ?)
+            dictvalues[vstr] = voltages[v]
+            dictvalues[istr] = currents[v]
 
-        # 0x600004 24V voltage
-        voltages["24V"] = ((raw[0x600004] & 0xfff0) >> 4) * 0.025  # 25 mV
-        # 0x600005 24V current
-        currents["24V"] = ((raw[0x600005] & 0xfff0) >> 4) * 80e-6  # 8 uA (80 uA in reality ?)
-
-        # 0x600006 40V voltage
-        voltages["40V"] = ((raw[0x600006] & 0xfff0) >> 4) * 0.025  # 25 mV
-        # 0x600007 40V current
-        currents["40V"] = ((raw[0x600007] & 0xfff0) >> 4) * 80e-6  # 8 uA (80 uA in reality ?)
-
-        orderkeys = ['V_6V', 'I_6V', 'V_9V', 'I_9V', 'V_24V', 'I_24V', 'V_40V', 'I_40V']
-        dictvalues = {
-            'V_6V': voltages["6V"],
-            'I_6V': currents["6V"],
-            'V_9V': voltages["9V"],
-            'I_9V': currents["9V"],
-            'V_24V': voltages["24V"],
-            'I_24V': currents["24V"],
-            'V_40V': voltages["40V"],
-            'I_40V': currents["40V"]
-        }
-        dictcomments = {
-            'V_6V': '6V power supply voltage',
-            'I_6V': '6V power supply current',
-            'V_9V': '9V power supply voltage',
-            'I_9V': '9V power supply current',
-            'V_24V': '24V power supply voltage',
-            'I_24V': '24V power supply current',
-            'V_40V': '40V power supply voltage',
-            'I_40V': '40V power supply current',
-        }
+            dictcomments[vstr] = '%s power supply voltage' % v
+            dictcomments[istr] = '%s power supply current' % v
 
         return MetaData(orderkeys, dictvalues, dictcomments)
