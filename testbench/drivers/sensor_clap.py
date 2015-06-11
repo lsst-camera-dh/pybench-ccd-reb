@@ -230,7 +230,7 @@ class Instrument(Driver):
         self.sample(channels = self.channels,
                     period = self.period, # in 20ns ticks
                     wordcount = self.wordcount,  
-                    blocksize = self.blocksize):
+                    blocksize = self.blocksize)
 
 
     def post_exposure(self):
