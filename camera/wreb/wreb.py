@@ -48,6 +48,7 @@ class WREB(reb.REB):
                 self.fpga.set_cabac_value(param, params[param], s)
         time.sleep(0.1)
 
+        self.config.update(params)  # for higher level parameters not in cabac
         for s in self.stripes:
             self.config.update(self.fpga.get_cabac_config(s), check=True)
 
@@ -330,15 +331,14 @@ class WREB(reb.REB):
 def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of REB class, will call other instruments
     """
     Managing FITS creation from img file and adding other header information.
-    :param R: TestREB
+    :param R: WREB
     :param channels: list of channels
     :param fitsname: name if not using default structure.
     :return:
     """
     imgname = R.make_img_name()
     if os.path.isfile(imgname):
-        R.update_filetag(R.imgtag + 1)
-        hdulist = R.conv_to_fits(imgname, channels)
+        hdulist = R.conv_to_fits(imgname, channels, displayborders=False)
         primaryhdu = hdulist[0]
         imgstr = os.path.splitext(os.path.basename(imgname))[0]
         primaryhdu.header["IMAGETAG"] = imgstr
@@ -346,20 +346,12 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
             fitsname = R.make_fits_name(imgstr)
         # else: using LSST scheme for directory and image name, already built in fitsname
         primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
-        primaryhdu.header["DATE"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())  # FITS file creation date
-        primaryhdu.header["TESTTYPE"] = 'REB test'
-        primaryhdu.header["IMGTYPE"] = 'Bias'  # TODO: update with actual test running
-        # TODO: add keyword comments
-        # information from REB itself
-        # todo: test, does not work as is
-        #primaryhdu.header.update(R.get_meta())
-        # also need info from 'localheader.txt'
+        primaryhdu.header["DATE-OBS"] = R.tstamp
+        primaryhdu.header["TESTTYPE"] = 'WREB test'
+        primaryhdu.header["IMGTYPE"] = R.seqname
         localheader = pyfits.Header.fromtextfile("localheader.txt")
         primaryhdu.header.update(localheader)
-        # add other instruments here
-        #exthdu = pyfits.ImageHDU(name="TEST_COND")
-        #... append keys to extension header
-        #hdulist.append(exthdu)
+        # for more meta, use the driver
         # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
         exthdu = pyfits.ImageHDU(name="CCD_COND")
         for keyword in R.config:
@@ -367,8 +359,11 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
         hdulist.append(exthdu)
 
         # Sequencer content (no actual readback, get it from the seq object)
-        exthdu = reb.get_sequencer_hdu(R.seq)
-        hdulist.append(exthdu)
+        seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
+                                                         array=R.get_meta_sequencer(),
+                                                         ascii=True)])
+        seqhdu.header['EXTNAME'] = 'SEQUENCER'
+        hdulist.append(seqhdu)
 
         hdulist.writeto(fitsname, clobber=True)
 
@@ -378,6 +373,10 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
 
 if __name__ == "__main__":
 
+    logfile = os.path.join('/home/lsst/logs', time.strftime('wreb-log-%Y%m%d.txt'), time.gmtime())
+    logging.basicConfig(filename = logfile,
+                        level = logging.DEBUG,
+                        format = '%(asctime)s: %(message)s')
     R = WREB(rriaddress=0xFF, stripe_id=[0])
 
     # here power on power supplies

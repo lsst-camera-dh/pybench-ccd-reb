@@ -21,6 +21,7 @@ class FPGA1(FPGA):
     bias_conv = 0.00725  # conversion for alternative biases
     od_conv = 0.0195  # placeholder for alternative OD
     og_conv = 0.00122  # placeholder for alternative OG
+    VddOD = 14  # high voltage power supply to CABAC if used for biases
 
     # --------------------------------------------------------------------
 
@@ -219,7 +220,7 @@ class FPGA1(FPGA):
         if enable:
             # staged:
             if useCABACbias:
-                self.set_OD_voltage(30)  # need to power VddOD first
+                self.set_OD_voltage(self.VddOD)  # need to power VddOD first
             # then enables VEE and then all low voltages
             self.write(0xD00001, 0x4)  # VEE (CABAC substrate) set to V_CLK_L (low clock power supply) if connected
             time.sleep(0.2)
