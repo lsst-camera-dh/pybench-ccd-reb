@@ -100,12 +100,12 @@ class WREB(reb.REB):
         if param == "OG":
             if "OD" in self.config:
                 if self.config["OD"] < value:
-                    logging.info("Warning: trying to program OG at %f, higher than OD" % value)
+                    print("Warning: trying to program OG at %f, higher than OD" % value)
                     return False
                 else:
                     return True
             else:
-                logging.info("No saved value of OD to compare to OG")
+                print("No saved value of OD to compare to OG")
                 return False
         # safety: OD-RD < 20 V, but preferably also OD>RD
         elif param in ['OD', 'RD']:
@@ -114,20 +114,20 @@ class WREB(reb.REB):
                 if "RD" in self.config:
                     rd = self.config["RD"]
                 else:
-                    logging.info("No saved value of RD to compare to OD")
+                    print("No saved value of RD to compare to OD")
                     return False
-            if param == "RD":
+            elif param == "RD":
                 rd = value
                 if "OD" in self.config:
                     od = self.config["OD"]
                 else:
-                    logging.info("No saved value of OD to compare to RD")
+                    print("No saved value of OD to compare to RD")
                     return False
             if od < rd:
-                logging.info("Warning: trying to program OD lower than RD")
+                print("Warning: trying to program OD lower than RD")
                 return False
             elif od > rd+20:
-                logging.info("Warning: trying to program OD higher than RD + 20 V")
+                print("Warning: trying to program OD higher than RD + 20 V")
                 return False
             else:
                 return True
@@ -214,7 +214,7 @@ class WREB(reb.REB):
             self.config.update({param: value})
 
         else:
-            logging.info("Warning: unidentified parameter for the REB: %s" % param)
+            print("Warning: unidentified parameter for the REB: %s" % param)
 
     # --------------------------------------------------------------------
 
@@ -242,7 +242,7 @@ class WREB(reb.REB):
         """
 
         #starting drain voltages
-        drains = {"RD": 18, "OD": 30, "GD": 24}
+        drains = {"RD": 8, "OD": 12, "GD": 10}
         self.set_biases(drains)
 
         time.sleep(0.5)
@@ -271,13 +271,13 @@ class WREB(reb.REB):
             self.load_sequencer()
 
         self.fpga.enable_bss(True)
-        logging.info('BSS can be powered on now.')
+        print('BSS can be powered on now.')
 
     def CCDshutdown(self):
         """
         Sequence to shutdown power to the CCD.
         """
-        logging.info('BSS must be shutdown at this time.')
+        print('BSS must be shutdown at this time.')
         time.sleep(5)
         self.fpga.enable_bss(False)
 
@@ -307,7 +307,7 @@ class WREB(reb.REB):
         self.set_biases(drains)
 
         time.sleep(0.5)
-        logging.info('CCD shutdown complete on WREB.')
+        print('CCD shutdown complete on WREB.')
 
     def REBshutdown(self):
         """
@@ -372,9 +372,9 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
 
         hdulist.writeto(fitsname, clobber=True)
 
-        logging.info("Wrote FITS file "+fitsname)
+        print("Wrote FITS file "+fitsname)
     else:
-        logging.info("Did not find the expected raw file: %s " % imgname)
+        print("Did not find the expected raw file: %s " % imgname)
 
 if __name__ == "__main__":
 
