@@ -54,7 +54,8 @@ def powerup_CCD(self):
     self.bss.enable(delay=20.0)
     # TODO: wait until complete
     logging.info("CCD start-up sequence is complete")
-    self.reb.waiting_sequence()
+    #do that after
+    #proc = self.reb.start_waiting_sequence()
 
 bench.Bench.powerup_CCD = powerup_CCD
 
@@ -89,7 +90,7 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4
     time.sleep(delaytime)
     self.PhD.read_measurement()
     # delay for exposure plus readout
-    time.sleep(self.reb.reb.exptime+4)
+    time.sleep(self.reb.reb.exptime + 4)
     
     meta = {}
     if withmeta:

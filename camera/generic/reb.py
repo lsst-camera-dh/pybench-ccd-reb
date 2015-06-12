@@ -90,7 +90,7 @@ class REB(object):
     fitstopdir = "/data/frames/"
     xmldir = "/home/lsst/lsst/py/camera/generic/"
     full18bits = True  # TODO: check from version of the firmware
-    compression = True
+    # compression = True
     # to be loaded from XML later
     imglines = 2020
     imgcols = 550
@@ -164,16 +164,24 @@ class REB(object):
 
    # --------------------------------------------------------------------
 
+    def read_sequencer_file(self, xmlfile):
+        """
+        Reads sequencer file to internal variable self.seq.
+        :return:
+        """
+        self.xmlfile = xmlfile
+        
+        self.seq = rebxml.fromxmlfile(os.path.join(self.xmldir, self.xmlfile))
+
     def load_sequencer(self, xmlfile=None):
         """
         Loads all sequencer content.
         :return:
         """
         if xmlfile:
-            self.xmlfile = xmlfile
+            self.read_sequencer_file(xmlfile)
+        # otherwise use self.seq already loaded
 
-        self.seq = rebxml.fromxmlfile(os.path.join(self.xmldir, self.xmlfile))
-        # we will use self.seq.program to track addresses
         self.wait_end_sequencer()
         self.fpga.send_sequencer(self.seq)
         try:
@@ -267,7 +275,7 @@ class REB(object):
         while self.fpga.get_state() & 4:  # sequencer status bit in the register
             time.sleep(1)
 
-    def config_sequence(self, name, exptime, shutdelay=100):
+    def config_sequence(self, name, exptime=0.1, shutdelay=100):
         """
         Configure the programmed sequence. Used also to record parameters.
         """
@@ -357,10 +365,10 @@ class REB(object):
             chan = chan.reshape(self.imglines, self.imgcols)
             y = chan.astype(N.int32)
             # create extension to fits file for each channel
-            if self.compression:
-                exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
-            else:
-                exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+            #if self.compression:
+            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+            #else:
+                #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
             self.get_extension_header(num, exthdu, displayborders)
             avchan = N.mean(y[11:self.imgcols-50, 2:self.imglines-20])
             exthdu.header["AVERAGE"] = avchan

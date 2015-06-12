@@ -20,7 +20,7 @@ print """
 CCD output scanning with and without light source.
 --------------------
 
-B.ptc_acquisition(explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2, lasercurrent=55.0)
+B.ptc_acquisition(explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2, lasercurrent=45.0)
 
      Will take a pair of flats with each of the given
      exposure times (plus biases).
@@ -39,7 +39,7 @@ if not os.path.isdir(eodir):
 
 # ==============================================================================
 
-def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2, lasercurrent=55.0):
+def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2, lasercurrent=45.0):
     """
      Will take a pair of flats with each of the given
      exposure times (plus biases).

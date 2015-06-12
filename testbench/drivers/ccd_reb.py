@@ -56,6 +56,8 @@ class Instrument(Driver):
         else:
             self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
         self.reb.xmlfile = self.xmlfile
+        self.read_sequencer_file(self.xmlfile)
+        self.reb.exptime = self.reb.get_exposure_time()
         self.version = self.reb.fpga.get_version()
         self.testtype = 'TEST'
 
@@ -149,12 +151,20 @@ class Instrument(Driver):
     # Sequencer configuration
     # --------------------------------------------------------------------
 
+    def read_sequencer_file(self, xmlfile):
+        """
+        Reads file to internal REB variable, but does not load it.
+        :param xmlfile:
+        :return:
+        """
+        self.reb.read_sequencer_file(xmlfile)
+
     def load_sequencer(self, xmlfile=None):
         """
         Load the functions and the program from a file (by default if none given).
         """
         self.reb.load_sequencer(xmlfile)
-        logging.info("Loaded XML sequencer file %s" % os.path.join(self.reb.xmldir, self.reb.xmlfile))
+        logging.info("Loaded XML sequencer file %s to REB" % os.path.join(self.reb.xmldir, self.reb.xmlfile))
 
     def select_subroutine(self, subname, repeat=1):
         """
@@ -163,7 +173,7 @@ class Instrument(Driver):
         self.reb.select_subroutine(subname, repeat)
         logging.info("Selected subroutine %s with repeat %d" % (self.reb.seqname, repeat))
 
-    def config_sequence(self, subname, exptime=1, shutdelay=100):
+    def config_sequence(self, subname, exptime=0.1, shutdelay=100):
         """
         Configure the programmed sequence, including selection, exposure time, and shutter delay.
         """
