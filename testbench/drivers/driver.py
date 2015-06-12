@@ -47,6 +47,18 @@ class Driver(object):
         self.bench = bench
         return True
 
+    def pre_exposure(self, exptime):
+        """
+        To be run before an exposure (hook).
+        """
+        pass
+
+    def post_exposure(self):
+        """
+        To be run after an exposure (hook).
+        """
+        pass
+
     def get_meta(self):
         """
         Return meta data describing the current state of the instrument. 

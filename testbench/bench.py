@@ -168,6 +168,24 @@ class Bench(Borg):
             "lsst.testbench.scripts.%s" % script)
 
         return True
+
+    # ===================================================================
+    # pre_exposure hook: for all registered instruments, execute their 
+    # pre_exposure() method
+
+    def pre_exposure(self, exptime):
+        for identifier, element in self.registry.iteritems():
+            instance = element['instance']
+            instance.pre_exposure(exptime)
+
+    # ===================================================================
+    # post_exposure hook: for all registered instruments, execute their 
+    # post_exposure() method
+
+    def post_exposure(self):
+        for identifier, element in self.registry.iteritems():
+            instance = element['instance']
+            instance.post_exposure()
           
     # ===================================================================
     #  Meta data / state of the instrument 

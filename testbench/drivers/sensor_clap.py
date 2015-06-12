@@ -21,7 +21,7 @@ Testbench driver for the DICE CLAP
 # server.register_function(clap.write,        "write")
 # server.register_function(clap.write_at,     "write_at")
 # server.register_function(clap.sample,       "sample")
-# server.register_function(clap.sample,       "get_sampling_data")
+# server.register_function(clap.get_sampling_data,    "get_sampling_data")
 
 
 from driver import Driver
@@ -35,6 +35,11 @@ import numpy as np
 # =======================================================================
 
 class Instrument(Driver):
+
+    default_channels  = [1]
+    default_period    = 1600 # in 20ns ticks
+    default_wordcount = 32000
+    default_blocksize = 32768
 
     # ===================================================================
     #  Generic methods (init, open, etc)
@@ -57,6 +62,20 @@ class Instrument(Driver):
         if 'port' not in kargs.keys():
             raise ValueError("port is requested")
 
+        # sampling parameters
+
+        if 'channels' not in kargs.keys():
+            self.channels = self.default_channels 
+
+        if 'period' not in kargs.keys():
+            self.period = self.default_period
+
+        if 'wordcount' not in kargs.keys():
+            self.wordcount = self.default_wordcount
+
+        if 'blocksize' not in kargs.keys():
+            self.blocksize = self.default_blocksize
+
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
 
@@ -73,8 +92,8 @@ class Instrument(Driver):
         Returns True if the hardware answers, False otherwise.
         """
         answer = self.checkConnection()
-        print answer
-        print type(answer)
+        # print answer
+        # print type(answer)
 
         if answer == 0x80:
             return True
@@ -90,20 +109,20 @@ class Instrument(Driver):
 
 
     def register(self, bench):
-        print "[1]"
+        # print "[1]"
         self.open()
-        print "[2]"
+        # print "[2]"
         time.sleep(1)
-        print "[3]"
+        # print "[3]"
         connected = self.is_connected()
-        print "[3.5]"
+        # print "[3.5]"
         if not(connected):
-            print "[3.5 ARRGHHH]"
+            # print "[3.5 ARRGHHH]"
             raise IOError("DICE CLAP not connected.")
 
-        print "[4]"
+        # print "[4]"
         Driver.register(self, bench)
-        print "[5]"
+        # print "[5]"
 
 
     def close(self):
@@ -138,15 +157,28 @@ class Instrument(Driver):
         return self.xmlrpc.write_at(addr_start, addr_stop, value)
 
     def sample(self, 
-               channels = [1],
-               period = 1600, # in 20ns ticks
-               wordcount = 32000,  
-               blocksize = 32768):
+               channels  = None,
+               period    = None, # in 20ns ticks
+               wordcount = None,  
+               blocksize = None):
         """
         Request a sampling of the CLAP.
         To check if the sampling is achieved,
         call the status() method.
         """
+
+        if channels == None:
+            channels = self.channels
+
+        if period == None:
+            period = self.period
+
+        if wordcount == None:
+            wordcount = self.wordcount
+
+        if blocksize == None:
+            blocksize = self.blocksize
+
         # ------ First checking arguments
 
         if wordcount > 8387583:
@@ -189,6 +221,37 @@ class Instrument(Driver):
         return result
 
     # ===================================================================
+    # PRE/POST exposure hooks
+    # ===================================================================
+
+    def pre_exposure(self, exptime):
+
+        if not(self.status()):  # not ready (???)
+            return
+
+        if exptime == None:
+            return
+
+        # start a sampling
+        if exptime < 2.0:
+            duration = 4.0
+        else:
+            duration = 2.0 * exptime
+
+        self.wordcount = int(duration / ( self.period * 20.0e-9))
+        
+        self.sample(channels = self.channels,
+                    period = self.period, # in 20ns ticks
+                    wordcount = self.wordcount,  
+                    blocksize = self.blocksize)
+
+
+    def post_exposure(self):
+        # If a sampling is still running, wait until it ends
+        while not(self.status()):
+            time.sleep(0.5)
+
+    # ===================================================================
     #  Meta data / state of the instrument 
     # ===================================================================
 
@@ -216,29 +279,32 @@ class Instrument(Driver):
 
         dataset = self.get_sampling_data()
 
-        keys.append('CHANNELS')
-        values['CHANNELS'] = str(dataset['channels'])
-        comments['CHANNELS'] = "CLAP channels"
+        if dataset.has_key('channels'):
+            keys.append('CHANNELS')
+            values['CHANNELS'] = str(dataset['channels'])
+            comments['CHANNELS'] = "CLAP channels"
         
-        keys.append('PERIOD')
-        values['PERIOD'] = dataset['period']
-        comments['PERIOD'] = "[x 20ns] CLAP sampling period"
+        if dataset.has_key('period'):
+            keys.append('PERIOD')
+            values['PERIOD'] = dataset['period']
+            comments['PERIOD'] = "[x 20ns] CLAP sampling period"
         
-        keys.append('BLOCKSZ')
-        values['BLOCKSZ'] = dataset['blocksize']
-        comments['BLOCKSZ'] = "CLAP transfer block size"
+        if dataset.has_key('blocksize'):
+            keys.append('BLOCKSZ')
+            values['BLOCKSZ'] = dataset['blocksize']
+            comments['BLOCKSZ'] = "CLAP transfer block size"
 
-        keys.append('TIMESTMP')
-        values['TIMESTMP'] = dataset['timestamp']
-        comments['TIMESTMP'] = "Unix timestamp of the PC"
+        if dataset.has_key('timestamp'):
+            keys.append('TIMESTMP')
+            values['TIMESTMP'] = dataset['timestamp']
+            comments['TIMESTMP'] = "Unix timestamp of the PC"
 
-        keys.append('CLAPTIME')
-        values['CLAPTIME'] = dataset['board_timestamp']
-        comments['CLAPTIME'] = "[x 20 ns] CLAP internal clock"
+        if dataset.has_key('board_timestamp'):
+            keys.append('CLAPTIME')
+            values['CLAPTIME'] = dataset['board_timestamp']
+            comments['CLAPTIME'] = "[x 20 ns] CLAP internal clock"
         
         return keys, values, comments, dataset.get('data', [])
 
     # ===================================================================
 
-
-4
