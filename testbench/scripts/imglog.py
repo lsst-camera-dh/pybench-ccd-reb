@@ -28,7 +28,7 @@ B.shutdown_CCD()
 
 B.register('laser')
 B.laser.select(2)
-B.laser.setCurrent(2,55.0)
+B.laser.setCurrent(2,45.0)
 B.laser.enable()
 B.laser.disable()
 
@@ -47,5 +47,7 @@ import lsst.testbench.scripts.ccd.functions
 from lsst.camera.generic import rebxml
 B.reb.reb.seq = rebxml.fromxmlfile('/home/lsst/git/py/camera/reb1/sequencer-soi.xml')
 B.reb.reb.exptime = B.reb.reb.get_exposure_time()
+
+# should be obsolete with B.reb.reb.seq now loaded in REB.__init__()
 
 
