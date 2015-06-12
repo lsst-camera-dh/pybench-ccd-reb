@@ -94,14 +94,9 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4
     self.reb.execute_sequence()
     # delay for clear before exposure
     time.sleep(delaytime)
-<<<<<<< HEAD
-    self.PhD.read_measurement()
-    # delay for exposure plus readout
-    time.sleep(self.reb.reb.exptime + 4)
-=======
 
     # delay for exposure
-    time.sleep(self.reb.reb.exptime+1.0)
+    time.sleep(self.reb.reb.exptime)
 
     # Here execute, for all instruments, the post_exposure functions
     self.post_exposure()
@@ -109,8 +104,7 @@ def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4
     # self.PhD.read_measurement() -> transfered in post exposure hook
 
     # delay for readout
-    time.sleep(3.0)
->>>>>>> 7516560334064789062dbefa076c153d8c715876
+    time.sleep(4.0)
     
     meta = {}
     if withmeta:
