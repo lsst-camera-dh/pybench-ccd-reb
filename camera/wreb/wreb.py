@@ -227,6 +227,8 @@ class WREB(reb.REB):
         # power-up the CABAC low voltages, Vsub and VddOD if using CABAC biases
         self.fpga.cabac_power(True, useCABACbias=self.useCABACbias)
         # power-up the clock rails (in V)
+        print("Power on clock rails supplies here")
+        time.sleep(2)
         rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
         self.fpga.set_clock_voltages(rails)
         self.config.update(rails)
@@ -328,7 +330,7 @@ class WREB(reb.REB):
     # --------------------------------------------------------------------
 
 
-def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of REB class, will call other instruments
+def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be part of REB class, will call other instruments
     """
     Managing FITS creation from img file and adding other header information.
     :param R: WREB
@@ -336,7 +338,10 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
     :param fitsname: name if not using default structure.
     :return:
     """
-    imgname = R.make_img_name()
+    if rawimg:
+        imgname = rawimg
+    else:
+        imgname = R.make_img_name()
     if os.path.isfile(imgname):
         hdulist = R.conv_to_fits(imgname, channels, displayborders=False)
         primaryhdu = hdulist[0]
@@ -360,7 +365,7 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
 
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
-                                                         array=R.get_meta_sequencer(),
+                                                         array=reb.get_sequencer_string(R.seq),
                                                          ascii=True)])
         seqhdu.header['EXTNAME'] = 'SEQUENCER'
         hdulist.append(seqhdu)
@@ -373,7 +378,7 @@ def save_to_fits(R, channels=None, fitsname = ""):  # not meant to be part of RE
 
 if __name__ == "__main__":
 
-    logfile = os.path.join('/home/lsst/logs', time.strftime('wreb-log-%Y%m%d.txt'), time.gmtime())
+    logfile = os.path.join('/home/lsst/logs', time.strftime('wreb-log-%Y%m%d.txt', time.gmtime()))
     logging.basicConfig(filename = logfile,
                         level = logging.DEBUG,
                         format = '%(asctime)s: %(message)s')
@@ -384,7 +389,7 @@ if __name__ == "__main__":
     time.sleep(0.1)
     R.CCDpowerup()
     R.config_aspic()
-    #R.load_sequencer()
+    #R.load_sequencer(R.xmlfile)
     #R.config_sequence("Bias")
     #R.execute_sequence()
     #save_to_fits(R)
