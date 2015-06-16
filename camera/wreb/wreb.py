@@ -271,7 +271,7 @@ class WREB(reb.REB):
         if self.seq:
             self.fpga.send_function(0, self.seq.get_function(0))
         else:
-            self.load_sequencer()
+            self.load_sequencer(self.xmlfile)
 
         self.fpga.enable_bss(True)
         print('BSS can be powered on now.')
@@ -382,17 +382,18 @@ if __name__ == "__main__":
     logging.basicConfig(filename = logfile,
                         level = logging.DEBUG,
                         format = '%(asctime)s: %(message)s')
-    R = WREB(rriaddress=0xFF, stripe_id=[0])
+    r = WREB(rriaddress=0xFF, stripe_id=[0])
 
     # here power on power supplies
-    R.REBpowerup()
+    r.REBpowerup()
     time.sleep(0.1)
-    R.CCDpowerup()
-    R.config_aspic()
-    #R.load_sequencer(R.xmlfile)
-    #R.config_sequence("Bias")
-    #R.execute_sequence()
-    #save_to_fits(R)
-    #R.f.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
-    #R.f.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux
+    r.CCDpowerup()
+    r.config_aspic()
+    #r.load_sequencer(r.xmlfile)
+    #r.config_sequence("Bias")
+    #r.execute_sequence()
+    #save_to_fits(r)
+    #r.fpga.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
+    #r.fpga.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux
     # TO BE CHECKED: only one of each mux outputs should be active at any time over all CABACs ?!?!
+    
