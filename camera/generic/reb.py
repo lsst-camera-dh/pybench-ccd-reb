@@ -181,6 +181,9 @@ class REB(object):
         if xmlfile:
             self.read_sequencer_file(xmlfile)
         # otherwise use self.seq already loaded
+        else:
+            if not self.seq:
+                self.read_sequencer_file(self.xmlfile)
 
         self.wait_end_sequencer()
         self.fpga.send_sequencer(self.seq)

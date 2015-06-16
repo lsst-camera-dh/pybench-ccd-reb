@@ -3,7 +3,7 @@
     <sequencer-config>
         <parameters>
             <parameter id="ReadLines">
-                <fullname>Number of rows for full readout</fullname>
+                <fullname>Number of lines for full readout</fullname>
                 <value>2020</value>
             </parameter>
             <parameter id="ReadColumns">
@@ -19,7 +19,7 @@
                 <value>50</value>
             </parameter>
             <parameter id="WindowLines">
-                <fullname>Number of rows of the window</fullname>
+                <fullname>Number of lines of the window</fullname>
                 <value>2020</value>
             </parameter>
             <parameter id="WindowColumns">
@@ -27,11 +27,11 @@
                 <value>256</value>
             </parameter>
             <parameter id="EndLine">
-                <fullname>Number of lines left after window</fullname>
+                <fullname>Number of lines after window</fullname>
                 <value>0</value>
             </parameter>
             <parameter id="EndColumn">
-                <fullname>Number of columns left after window</fullname>
+                <fullname>Number of columns after window</fullname>
                 <value>244</value>
             </parameter>
             <parameter id="FastColumns">
@@ -39,7 +39,7 @@
                 <value>2</value>
             </parameter>
             <parameter id="ExposureTime">
-                <fullname>Duration of exposure in unit of 20 ms</fullname>
+                <fullname>Duration of exposure in unit of 26 ms</fullname>
                 <value>100</value>
             </parameter>
             <parameter id="clockperiod">
@@ -253,6 +253,10 @@
                         <duration>50 ns</duration>
                         <value>001000001</value>
                     </timeslice>
+                    <timeslice id="slice11">
+                        <duration>500 ns</duration>
+                        <value>001000000</value>
+                    </timeslice>
                 </slicelist>
                 <constants>
                     <constant ref="P2">1</constant>
@@ -266,10 +270,14 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
+                        <duration>1600 ns</duration>
+                        <value>0</value>
+                    </timeslice>
+                    <timeslice id="slice2">
                         <duration>100 ns</duration>
                         <value>1</value>
                     </timeslice>
-                    <timeslice id="slice2">
+                    <timeslice id="slice3">
                         <duration>100 ns</duration>
                         <value>0</value>
                     </timeslice>
