@@ -43,8 +43,18 @@ class CABAC(object):
     RDconv = 0.049
     OGconv = 0.049
     # set of accepted parameters
-    params = set(["OD", "OD0", "OD1", "OD0EM", "OD1EM","OD0RM", "OD1RM","GD", "RD", "OG", "IP", "IS", "IC", "SPA",
-              "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG", "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
+    params = set(["OD", "OD0", "OD1", 'ODEM', 'ODRM',"OD0EM", "OD1EM","OD0RM", "OD1RM",
+                  "GD", "RD", "OG", "IP", "IS", "IC", "SPA",
+                  "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG",
+                  "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
+    groups = {'OD': ["OD0EM", "OD0RM", "OD1EM", "OD1RM"],
+              'OD0': ["OD0EM", "OD0RM"],
+              'OD1': ["OD1EM", "OD1RM"],
+              'ODEM': ['OD0EM', 'OD1EM'],
+              'ODRM': ['OD0RM', 'OD1RM'],
+              'IP': ["P0", "P1", "P2", "P3"],
+              'IS': ["S0", "S1", "S2"],
+              'IC': ["P0", "P1", "P2", "P3", "S0", "S1", "S2", 'RG']}
     # TODO: manage rise and fall currents
     conv = {'OD0EM': ODconv,
             'OD1EM': ODconv,
@@ -98,50 +108,31 @@ class CABAC(object):
         if param not in self.params:
             raise ValueError("No CABAC parameter with this name: "+ param)
 
-        if param in self.conv:
-            value_int = int(value // self.conv[param]) & 0x3ff
-            if param == "OD":
-                regs = self.set_cabac_fromstring("OD0", value)
-                regs.extend(self.set_cabac_fromstring("OD1", value))
-            elif param == "OD0":
-                regs = self.set_cabac_fromstring("OD0EM", value)
-                regs.extend(self.set_cabac_fromstring("OD0RM", value))
-            elif param == "OD1":
-                regs = self.set_cabac_fromstring("OD1EM", value)
-                regs.extend(self.set_cabac_fromstring("OD1RM", value))
-            elif param in ["GD", "RD", "OG", "SPA", "OD0EM", "OD0RM", "OD1EM", "OD1RM"]:
+        if param in self.groups:
+            for subparam in self.groups[param]:
+                regs.extend(self.set_cabac_fromstring(subparam, value))
+        else:
+            if param in self.conv:
+                value_int = int(value // self.conv[param]) & 0x3ff
                 regs.append(self.spi_reg(param, value_int))
-        elif param in ["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]:
-            value_int = value & 0xff
-            # rise and fall currents
-            regs.append(self.spi_reg(param, value_int * 0x101))
-        elif param == "IP":
-            value_int = value & 0xff
-            for subpar in ["P0", "P1", "P2", "P3"]:
-                regs.extend(self.set_cabac_fromstring(subpar, value))
-        elif param == "IS":
-            value_int = value & 0xff
-            for subpar in ["S0", "S1", "S2"]:
-                regs.extend(self.set_cabac_fromstring(subpar, value))
-        elif param == "IC":
-            value_int = value & 0xff
-            regs = self.set_cabac_fromstring("IP", value)
-            regs.extend(self.set_cabac_fromstring("IS", value))
-            regs.extend(self.set_cabac_fromstring("RG", value))
-        elif param == "PULS":
-            value_int = value & 1
-            regs.append(self.spi_reg(param, value_int))
-        elif param == "MUX":
-            # need two strings as parameters for mux outputs
-            value_int = self.set_muxout(value[0], value[1])
-            regs.append(self.spi_reg(param, value_int))
-        elif param == "OFMUX":
-            value_int = value & 0xff
-            regs.append(self.spi_reg(param, value_int * 0x101))
-        elif param == "EXPCK":
-            value_int = value & 0xff
-            regs.append(self.spi_reg(param, value_int))
-        self.settings[param] = value_int
+            elif param in ["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]:
+                value_int = value & 0xff
+                # rise and fall currents
+                regs.append(self.spi_reg(param, value_int * 0x101))
+            elif param == "PULS":
+                value_int = value & 1
+                regs.append(self.spi_reg(param, value_int))
+            elif param == "MUX":
+                # need two strings as parameters for mux outputs
+                value_int = self.set_muxout(value[0], value[1])
+                regs.append(self.spi_reg(param, value_int))
+            elif param == "OFMUX":
+                value_int = value & 0xff
+                regs.append(self.spi_reg(param, value_int * 0x101))
+            elif param == "EXPCK":
+                value_int = value & 0xff
+                regs.append(self.spi_reg(param, value_int))
+            self.settings[param] = value_int
         return regs
 
     def get_cabac_fromstring(self, param):
@@ -259,6 +250,41 @@ class CABAC(object):
         reg = (ena1 << 9) | (ena0 << 8) | (add1 << 4) | add0
 
         return reg
+
+    # ----------------------------------------------------------
+
+    def check_bias_safety(self, param, value):
+        """
+        Checks that the given parameter is safe for the CCD, comparing to saved values.
+        :param param: string
+        :param value: float
+        :return: bool
+        """
+        # safety: OG<OD
+        if param == "OG":
+            for subparam in self.groups['OD']:
+                if self.settings[subparam] < value:
+                    print("Warning: trying to program OG at %f, higher than OD" % value)
+                    return False
+
+        # safety: OD-RD < 20 V, but preferably also OD>RD
+        elif param in self.groups['OD']:
+            if value < self.settings['RD']:
+                print("Warning: trying to program %s lower than RD" % param)
+                return False
+            elif value > self.settings['RD'] + 20:
+                print("Warning: trying to program %s higher than RD + 20 V" % param)
+                return False
+        elif param == "RD":
+            for subparam in self.groups['OD']:
+                if self.settings[subparam] < value:
+                    print("Warning: trying to program RD higher than %s" % subparam)
+                    return False
+                elif self.settings[subparam] > value + 20:
+                    print("Warning: trying to program RD lower than %s - 20 V" % subparam)
+                    return False
+
+        return True
 
     # ----------------------------------------------------------
 
