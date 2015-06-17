@@ -40,17 +40,12 @@ class WREB(reb.REB):
         """
         Sets CABAC parameters defined in the params dictionary and writes to CABAC, then checks the readback.
         Note: if params is empty, this simply rewrites the same parameters in the CABAC objects and updates config.
-        THERE IS NO SAFETY CHECK on this function, use set_biases as a high-level function for biases.
         """
         for s in self.stripes:
             for param in iter(params):
                 print("Setting %s to %r" % (param, params[param]))
-                self.fpga.set_cabac_value(param, params[param], s)
+                self.fpga.set_cabac_value(param, params[param], s, check=True)
         time.sleep(0.1)
-
-        self.config.update(params)  # for higher level parameters not in cabac
-        for s in self.stripes:
-            self.config.update(self.fpga.get_cabac_config(s), check=True)
 
     def get_cabac_config(self):
         """
@@ -60,9 +55,6 @@ class WREB(reb.REB):
         cabacconfig = {}
         for s in self.stripes:
             cabacconfig.update(self.fpga.get_cabac_config(s), check=False)
-
-        self.config.update(cabacconfig)
-
         return cabacconfig
 
     def cabac_reset(self):
@@ -90,103 +82,20 @@ class WREB(reb.REB):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
         self.send_aspic_config(settings)
 
-    def check_bias_safety(self, param, value):
-        """
-        Checks that the given parameter is safe for the CCD, comparing to saved values.
-        :param param: string
-        :param value: float
-        :return: bool
-        """
-        # safety: OG<OD
-        if param == "OG":
-            if "OD" in self.config:
-                if self.config["OD"] < value:
-                    print("Warning: trying to program OG at %f, higher than OD" % value)
-                    return False
-                else:
-                    return True
-            else:
-                print("No saved value of OD to compare to OG")
-                return False
-        # safety: OD-RD < 20 V, but preferably also OD>RD
-        elif param in ['OD', 'RD']:
-            if param == "OD":
-                od = value
-                if "RD" in self.config:
-                    rd = self.config["RD"]
-                else:
-                    print("No saved value of RD to compare to OD")
-                    return False
-            elif param == "RD":
-                rd = value
-                if "OD" in self.config:
-                    od = self.config["OD"]
-                else:
-                    print("No saved value of OD to compare to RD")
-                    return False
-            if od < rd:
-                print("Warning: trying to program OD lower than RD")
-                return False
-            elif od > rd+20:
-                print("Warning: trying to program OD higher than RD + 20 V")
-                return False
-            else:
-                return True
-        else:
-            return True
-
-    def validate_biases(self, params):
-        """
-        Intermediate step to manage safe changes in bias values, from CABAC or alternative biases.
-        :param params: dict
-        :return:
-        """
-        valid = {}
-
-        if self.useCABACbias:
-            # by steps
-            for param in params:
-                if self.check_bias_safety(param, params[param]):
-                    valid[param] = params[param]
-                else:
-                    # try half-way
-                    half = params[param]/2
-                    if self.check_bias_safety(param, half):
-                        valid[param] = half
-            self.send_cabac_config(valid)
-
-        else:
-            # simultaneous activation works fine if all new values are valid
-            configsave = self.config
-            self.config.update(params)
-            valid = params.copy()
-            for param in params:
-                if not self.check_bias_safety(param, params[param]):
-                    # cancels change
-                    valid = {}
-                    self.config.update(configsave)
-                    break
-            self.fpga.set_bias_voltages(valid)
-        return valid
-
     def set_biases(self, params):
         """
-        Manages safe changes in bias values, from CABAC or alternative biases.
+        Manages safe changes in bias values from CABAC, or sets alternative biases.
         :param params: dict
         :return:
         """
-        target = params.copy()
-        for i in range(len(params)):
-            valid = self.validate_biases(target)
-            if valid == target:
-                break  # all done
-            elif not valid:
-                print("No valid biases to be set")
-                break
-            else:
-                # repeat loop for the rest
-                for param in valid:
-                    target.pop(param)
+        if self.useCABACbias:
+            for s in self.stripes:
+                for param in params:
+                    self.fpga.set_cabac_value(param, params[param], s)  # includes safety and readback by default
+        else:
+            # simultaneous activation works fine if all new values are valid (not checked here)
+            self.fpga.set_bias_voltages(params)
+            self.config.update(params)
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
@@ -198,13 +107,12 @@ class WREB(reb.REB):
         if param in self.fpga.aspic_top[0].params:
             self.fpga.set_aspic_value(param, value, stripe, location)
             time.sleep(0.1)
-            self.config.update(self.fpga.get_aspic_config(stripe, check=True))
+            self.fpga.get_aspic_config(stripe, check=True)
 
         elif param in self.fpga.cabac_top[0].params:
-            if self.check_bias_safety(param, value):
-                self.fpga.set_cabac_value(param, value, stripe, location)
-                time.sleep(0.1)
-                self.config.update(self.fpga.get_cabac_config(stripe, check=True))
+            # includes safety and readback by default
+            self.fpga.set_cabac_value(param, value, stripe, location)
+            time.sleep(0.1)
 
         elif param in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
             self.fpga.set_clock_voltages({param: value})
@@ -359,7 +267,7 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         # for more meta, use the driver
         # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
         exthdu = pyfits.ImageHDU(name="CCD_COND")
-        for keyword in R.config:
+        for keyword in R.config.update(R.get_cabac_config()):
             exthdu.header[keyword] = R.config[keyword]
         hdulist.append(exthdu)
 

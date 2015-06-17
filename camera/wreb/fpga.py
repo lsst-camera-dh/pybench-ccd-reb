@@ -275,7 +275,18 @@ class FPGA1(FPGA):
 
     # ----------------------------------------------------------
 
-    def set_cabac_value(self, param, value, s=0, loc=3):
+    def get_cabac_value(self, reg, s, loc):  # stripe 's'
+        """
+        Low-level readback of CABAC configuration for a single register.
+        """
+        self.check_location(s, loc)
+
+        self.write_spi(0x500000, s, loc, reg, False)
+        value = self.read(0x500010 + s, 1)[0x500010 + s]
+
+        return value
+
+    def set_cabac_value(self, param, value, s=0, loc=3, check=True):
         """
         Sets the CABAC parameter at the appropriate stripe and location (1 for bottom, 2 for top, 3 for both).
         Default values for retro-compatibility.
@@ -284,14 +295,25 @@ class FPGA1(FPGA):
 
         if loc == 1 or loc == 3:
             # bottom CABAC
-            regs = self.cabac_bottom[s].set_cabac_fromstring(param, value)
-            for reg in regs:
-                self.write_spi(0x500000, s, 1, reg, True)
+            if self.cabac_bottom[s].check_bias_safety(param, value):
+                regs = self.cabac_bottom[s].set_cabac_fromstring(param, value)
+                for reg in regs:
+                    self.write_spi(0x500000, s, 1, reg, True)
+                    if check:
+                        value_int = self.get_cabac_value(reg, s, 1)
+                        if value_int != self.cabac_bottom[s].get_cabac_fromstring(param):
+                            print("Warning: unexpected value for %s: %d" % (param, value_int))
+
         if loc == 2 or loc == 3:
             # top CABAC
-            regs = self.cabac_top[s].set_cabac_fromstring(param, value)
-            for reg in regs:
-                self.write_spi(0x500000, s, 2, reg, True)
+            if self.cabac_top[s].check_bias_safety(param, value):
+                regs = self.cabac_top[s].set_cabac_fromstring(param, value)
+                for reg in regs:
+                    self.write_spi(0x500000, s, 2, reg, True)
+                    if check:
+                        value_int = self.get_cabac_value(reg, s, 2)
+                        if value_int != self.cabac_top[s].get_cabac_fromstring(param):
+                            print("Warning: unexpected value for %s: %d" % (param, value_int))
 
     # ----------------------------------------------------------
 
