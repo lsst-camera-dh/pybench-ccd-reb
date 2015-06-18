@@ -19,7 +19,7 @@ B = bench.Bench()  # singleton
 
 B.register('reb')  # connect to the REB
 B.register('bss')  # connect (remotely) to the BackSubstrate Power
-B.register('PhD')
+# B.register('PhD')
 
 def load_sequencer(self, filename=None):
     self.reb.load_sequencer(filename)
@@ -73,7 +73,7 @@ def shutdown_CCD(self):
 bench.Bench.shutdown_CCD = shutdown_CCD
 
 
-def execute_reb_sequence(self, withmeta=True, name='', exptime=None, delaytime=4, withclap=True):
+def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True, withmeta=True):
     """
     Configure new REB sequence if name and/or exptime are given.
     Executes the sequence.

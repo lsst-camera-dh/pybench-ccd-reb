@@ -233,10 +233,7 @@ class Instrument(Driver):
             return
 
         # start a sampling
-        if exptime < 2.0:
-            duration = 4.0
-        else:
-            duration = 2.0 * exptime
+        duration = 5.0 + exptime
 
         self.wordcount = int(duration / ( self.period * 20.0e-9))
         
