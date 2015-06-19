@@ -165,7 +165,8 @@ class WREB(reb.REB):
         time.sleep(0.5)
 
         #sets clock currents on CABAC
-        iclock = {"IC": 200}
+        iclock = {"ISR": 220, 'ISF': 190, 'IPR': 170, 'IPF': 205, 'RGR': 200, 'RGF': 190}
+        # should give 80 ns rise/fall on serial, 60 ns on RG, 1 us on parallel
         self.send_cabac_config(iclock)
         #time.sleep(1)
 
