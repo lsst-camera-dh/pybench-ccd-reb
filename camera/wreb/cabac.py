@@ -92,7 +92,7 @@ class CABAC(object):
             self.settings[param] = 0
         self.settings["SAFE"] = 1
         self.settings["EXPCK"] = 0xff
-        # actual CABAC1 settings at start-up
+        # actual CABAC1/2 settings at start-up
     
 # Note: serial link works differently from CABAC0. Setting a parameter
 # returns a list of registers to write (address on CABAC + value).
@@ -315,20 +315,25 @@ class CABAC(object):
         Writes current CABAC settings to a dictionary to include in FITS header file.
         :param position: string = 'T' or 'B' plus stripe information, or nothing
         """
-
+        keys = []
         header = {}
+        comments = {}
 
-        suffix = ""
-        if position != '':
+        if position:
             suffix = "_" + position
+            positioncomment = ' at ' + position
+        else:
+            suffix = ''
+            positioncomment = ''
 
         for field in self.params:
+            key = field + suffix
             if field in self.conv:
-                key = field + suffix
                 header[key] = self.settings[field] * self.conv[field]
             else:
-                key = field + suffix
                 header[key] = self.settings[field]
+            keys.append(key)
+            comments[key] = 'CABAC2 '+ field + positioncomment
 
-        return header
+        return keys, header, comments
 
