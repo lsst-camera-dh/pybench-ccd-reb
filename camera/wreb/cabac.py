@@ -14,8 +14,8 @@ def parse_reg_clock(reg):
         Parses CABAC 16-bit data two 8-bit clock currents
     """
 
-    crise = (reg >> 8) & 0xff
-    cfall =  reg & 0xff
+    cfall = (reg >> 8) & 0xff
+    crise =  reg & 0xff
     #TODO: check rise/fall order
 
     return crise, cfall
@@ -45,17 +45,26 @@ class CABAC(object):
     # set of accepted parameters
     params = set(["OD", "OD0", "OD1", 'ODEM', 'ODRM',"OD0EM", "OD1EM","OD0RM", "OD1RM",
                   "GD", "RD", "OG", "IP", "IS", "IC", "SPA",
-                  "P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG",
+                  "P0R", "P1R", "P2R", "P3R", "S0R", "S1R", "S2R", 'RGR',
+                  "P0F", "P1F", "P2F", "P3F", "S0F", "S1F", "S2F", 'RGF',
                   "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
+
     groups = {'OD': ["OD0EM", "OD0RM", "OD1EM", "OD1RM"],
               'OD0': ["OD0EM", "OD0RM"],
               'OD1': ["OD1EM", "OD1RM"],
               'ODEM': ['OD0EM', 'OD1EM'],
               'ODRM': ['OD0RM', 'OD1RM'],
-              'IP': ["P0", "P1", "P2", "P3"],
-              'IS': ["S0", "S1", "S2"],
-              'IC': ["P0", "P1", "P2", "P3", "S0", "S1", "S2", 'RG']}
-    # TODO: manage rise and fall currents
+              'IP': ["P0R", "P1R", "P2R", "P3R", "P0F", "P1F", "P2F", "P3F"],
+              'IPR': ["P0R", "P1R", "P2R", "P3R"],
+              'IPF': ["P0F", "P1F", "P2F", "P3F"],
+              'IS': ["S0R", "S1R", "S2R", "S0F", "S1F", "S2F"],
+              'ISR': ["S0R", "S1R", "S2R"],
+              'ISF': ["S0F", "S1F", "S2F"],
+              'IC': ["P0R", "P1R", "P2R", "P3R", "S0R", "S1R", "S2R", 'RGR',
+                     "P0F", "P1F", "P2F", "P3F", "S0F", "S1F", "S2F", 'RGF'],
+              'ICR': ["P0R", "P1R", "P2R", "P3R", "S0R", "S1R", "S2R", 'RGR'],
+              'ICF': ["P0F", "P1F", "P2F", "P3F", "S0F", "S1F", "S2F", 'RGF']}
+
     conv = {'OD0EM': ODconv,
             'OD1EM': ODconv,
             'OD0RM': ODconv,
@@ -115,10 +124,17 @@ class CABAC(object):
             if param in self.conv:
                 value_int = int(value // self.conv[param]) & 0x3ff
                 regs.append(self.spi_reg(param, value_int))
-            elif param in ["P0", "P1", "P2", "P3", "S0", "S1", "S2", "RG"]:
+            elif param in self.groups['IC']:
                 value_int = value & 0xff
-                # rise and fall currents
-                regs.append(self.spi_reg(param, value_int * 0x101))
+                # rise and fall currents: order to be checked
+                ck, side = param[:-1], param[-1]
+                if side == 'R':
+                    ifall = self.settings[ck + 'F']
+                    irise = value_int
+                else :
+                    irise = self.settings[ck + 'R']
+                    ifall = value_int
+                regs.append(self.spi_reg(param, (ifall << 8) + irise))
             elif param == "PULS":
                 value_int = value & 1
                 regs.append(self.spi_reg(param, value_int))
@@ -154,21 +170,27 @@ class CABAC(object):
         :param reg: int
         :param check: bool
         """
-
         name = self.SPIaddress.reverse[address]
-        saved = self.settings[name]
 
         if address < self.SPIaddress["OD0EM"]:
-            value_int = parse_reg_clock(reg)[0]
-        elif address < self.SPIaddress["MUX"]:
-            value_int = parse_reg_dc(reg)
+            savedr = self.settings[name + 'R']
+            savedf = self.settings[name + 'F']
+            cfall, crise = parse_reg_clock(reg)
+            self.settings[name + 'R'] = crise
+            self.settings[name + 'F'] = cfall
+            if check:
+                if savedr != crise or savedf != cfall:
+                    print("Warning: unexpected values for %s: %d, %d" % (name, crise, cfall))
         else:
-            value_int = reg & 0xFFFF
-        self.settings[name] = value_int
-
-        if check:
-            if saved != value_int:
-                print("Warning: unexpected value for %s: %d" % (name, value_int))
+            saved = self.settings[name]
+            if address < self.SPIaddress["MUX"]:
+                value_int = parse_reg_dc(reg)
+            else:
+                value_int = reg & 0xFFFF
+            self.settings[name] = value_int
+            if check:
+                if saved != value_int:
+                    print("Warning: unexpected value for %s: %d" % (name, value_int))
 
     def read_all_registers(self, regs, check=True):
         """
