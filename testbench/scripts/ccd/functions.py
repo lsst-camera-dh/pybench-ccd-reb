@@ -18,7 +18,8 @@ B = bench.Bench()  # singleton
 
 B.register('reb')  # connect to the REB
 B.register('bss')  # connect (remotely) to the BackSubstrate Power
-#B.register('PhD')
+# B.register('PhD')
+
 
 def load_sequencer(self, filename=None):
     """
