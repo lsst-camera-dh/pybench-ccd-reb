@@ -162,13 +162,13 @@ class WREB(reb.REB):
         """
 
         #starting drain voltages
-        drains = {"RD": 8, "OD": 12, "GD": 10}
+        drains = {"RD": 15, "OD": 20, "GD": 18}
         self.set_biases(drains)
 
         time.sleep(0.5)
 
         #starting OG voltage
-        og = {"OG": 3.5}
+        og = {"OG": 3.}
         self.set_biases(og)
 
         time.sleep(0.5)
