@@ -232,17 +232,22 @@ class ASPIC(object):
         Writes current ASPIC settings to a dictionary to include in FITS header file.
         'position' is a string to indicate top or bottom and/or stripe.
         """
-
+        keys = self.params
         header = {}
+        comments = {}
 
-        suffix = ""
-        if position != '':
+        if position:
             suffix = "_" + position
+            positioncomment = ' at ' + position
+        else:
+            suffix = ''
+            positioncomment = ''
 
         for field in self.params:
             key = field + suffix
             header[key] = self.get_aspic_fromstring(field)
+            comments[key] = 'ASPIC '+ field + positioncomment
 
-        return header
+        return keys, header, comments
 
 
