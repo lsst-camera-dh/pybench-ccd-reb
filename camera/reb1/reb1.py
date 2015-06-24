@@ -132,8 +132,6 @@ class REB1(reb.REB):
 
         return config
 
-    # --------------------------------------------------------------------
-
     def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
@@ -151,8 +149,6 @@ class REB1(reb.REB):
             for param in iter(params):
                 self.fpga.check_cabac_value(param, params[param], stripe)
 
-    # --------------------------------------------------------------------
-
     def cabac_reset(self):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
@@ -163,6 +159,22 @@ class REB1(reb.REB):
         time.sleep(0.1)
 
         self.get_cabac_config()
+
+    # --------------------------------------------------------------------
+
+    def send_aspic_config(self, params):
+        pass
+
+    def get_aspic_config(self, s=0):
+        """
+        Dummy read of the ASPIC parameters.
+        :param s:
+        :return:
+        """
+        return {'G_T': 4, 'RC_T': 500, 'G_B': 4, 'RC_B': 500}
+
+    def config_aspic(self):
+        pass
 
    # --------------------------------------------------------------------
 
