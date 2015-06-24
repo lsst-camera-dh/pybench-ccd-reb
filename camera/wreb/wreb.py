@@ -49,7 +49,7 @@ class WREB(reb.REB):
 
     def get_cabac_config(self):
         """
-        Read CABAC configurations and store it to config.
+        Read CABAC configurations from the SPI readback.
         Useful for recovery and headers.
         """
         cabacconfig = {}
@@ -69,14 +69,23 @@ class WREB(reb.REB):
 
     def send_aspic_config(self, params):
         """
-        Sets ASPIC parameters, writes to ASPIC, then check readback.
+        Sets ASPIC parameters, writes to ASPIC, then checks readback.
         Notes: if params is empty, this simply rewrites the same parameters in the ASPIC objects and updates config.
         """
         for s in self.stripes:
             for param in iter(params):
                 self.fpga.set_aspic_value(param, params[param], s)
-            time.sleep(0.1)
-            self.config.update(self.fpga.get_aspic_config(s, check=True))
+            self.fpga.get_aspic_config(s, check=True)
+
+    def get_aspic_config(self):
+        """
+        Reads ASPIC configurations from the SPI readback.
+        :return:
+        """
+        aspicconfig = {}
+        for s in self.stripes:
+            aspicconfig.update(self.fpga.get_aspic_config(s, check=False))
+        return aspicconfig
 
     def config_aspic(self):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
@@ -153,19 +162,20 @@ class WREB(reb.REB):
         """
 
         #starting drain voltages
-        drains = {"RD": 8, "OD": 12, "GD": 10}
+        drains = {"RD": 15, "OD": 20, "GD": 18}
         self.set_biases(drains)
 
         time.sleep(0.5)
 
         #starting OG voltage
-        og = {"OG": 3.5}
+        og = {"OG": 3.}
         self.set_biases(og)
 
         time.sleep(0.5)
 
         #sets clock currents on CABAC
-        iclock = {"IC": 200}
+        iclock = {"ISR": 220, 'ISF': 190, 'IPR': 170, 'IPF': 205, 'RGR': 200, 'RGF': 190}
+        # should give 80 ns rise/fall on serial, 60 ns on RG, 1 us on parallel
         self.send_cabac_config(iclock)
         #time.sleep(1)
 
@@ -241,7 +251,7 @@ class WREB(reb.REB):
 def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be part of REB class, will call other instruments
     """
     Managing FITS creation from img file and adding other header information.
-    :param R: WREB
+    :param R: lsst.camera.wreb.wreb.WREB
     :param channels: list of channels
     :param fitsname: name if not using default structure.
     :return:
@@ -267,8 +277,9 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         # for more meta, use the driver
         # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
         exthdu = pyfits.ImageHDU(name="CCD_COND")
-        for keyword in R.config.update(R.get_cabac_config()):
-            exthdu.header[keyword] = R.config[keyword]
+        headerdict = R.config.update(R.get_cabac_config(), R.get_aspic_config())
+        for keyword in headerdict:
+            exthdu.header[keyword] = headerdict[keyword]
         hdulist.append(exthdu)
 
         # Sequencer content (no actual readback, get it from the seq object)

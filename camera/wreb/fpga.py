@@ -244,7 +244,7 @@ class FPGA1(FPGA):
     def get_cabac_config(self, s, check=True):  # stripe 's'
         """
         read CABAC configuration for stripe <s>,
-        store it in the CABAC objects and the header string.
+        store it in the CABAC objects and the header dict.
         """
 
         self.check_location(s)
@@ -268,8 +268,11 @@ class FPGA1(FPGA):
         self.cabac_top[s].read_all_registers(topconfig, check)
         self.cabac_bottom[s].read_all_registers(bottomconfig, check)
 
-        config = self.cabac_top[s].get_header("%dT" % s)
-        config.update(self.cabac_bottom[s].get_header("%dB" % s))
+        keyst, configt, comt = self.cabac_top[s].get_header("%dT" % s)
+        keysb, configb, comb = self.cabac_bottom[s].get_header("%dB" % s)
+
+        config = MetaData(keyst, configt, comt, 'CABACS')
+        config.update_ordered(keysb, configb, comb)
 
         return config
 
@@ -351,8 +354,11 @@ class FPGA1(FPGA):
         self.aspic_top[s].read_all_registers(topconfig, True)
         self.aspic_bottom[s].read_all_registers(bottomconfig, True)
 
-        config = self.aspic_top[s].get_header("%dT" % s)
-        config.update(self.aspic_bottom[s].get_header("%dB" % s))
+        keyst, configt, comt = self.aspic_top[s].get_header("%dT" % s)
+        keysb, configb, comb = self.aspic_bottom[s].get_header("%dB" % s)
+
+        config = MetaData(keyst, configt, comt, 'ASPICS')
+        config.update_ordered(keysb, configb, comb)
 
         return config
 

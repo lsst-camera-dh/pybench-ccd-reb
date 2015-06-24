@@ -2,9 +2,8 @@
 #
 # LSST
 #
-# Testing a Python class to replace CCD bench scripts
-# Here we should put the basic functions that use several instruments
-# of the bench.
+# Basic functions using REB and BSS Keithley to manage the CCD.
+# 
 
 import os
 import time
@@ -21,26 +20,53 @@ B.register('reb')  # connect to the REB
 B.register('bss')  # connect (remotely) to the BackSubstrate Power
 # B.register('PhD')
 
+
 def load_sequencer(self, filename=None):
+    """
+    Loads the functions and the program from a file (default file for this REB if none given).
+    """
     self.reb.load_sequencer(filename)
 
 bench.Bench.load_sequencer = load_sequencer
 
 
 def initialize_REB(self):
-    self.reb.REBpowerup()
+    """
+    Puts REB in a state where it is ready to be connected to a CCD (for REB1)
+    or where it is ready to start the CCD power-up (WREB).
+    :return:
+    """
+    # TODO : add power supplies here for controlled power-up
+    if not self.bss.voltageStatus():
+        self.reb.REBpowerup()
+    else:
+        logging.info("Back-Substrate is enabled, we should not be in this state when executing intitialize_REB")
 
 bench.Bench.initialize_REB = initialize_REB
 
 
 def shutdown_REB(self):
-    self.reb.REBshutdown()
-    # TODO: need to add power supplies here for WREB shutdown
+    """
+    Shuts down the REB.
+    For REB1, it does nothing, but should include the power supplies shutdown.
+    For WREB, it starts shutting down power to the CABACs, and should be followed by power supplies shutdown.
+    :return:
+    """
+    if not self.bss.voltageStatus():
+        self.reb.REBshutdown()
+    else:
+        logging.info("Back-Substrate is enabled, we should not be in this state when executing shutdown_REB")
+
+    # TODO: need to add power supplies here for shutdown
 
 bench.Bench.shutdown_REB = shutdown_REB
 
 
 def powerup_CCD(self):
+    """
+    CCD complete power-up sequence with REB and back-substrate.
+    :return:
+    """
     logging.info("Starting CCD power-up sequence")
     self.reb.CCDpowerup()
     time.sleep(1)
@@ -61,6 +87,10 @@ bench.Bench.powerup_CCD = powerup_CCD
 
 
 def shutdown_CCD(self):
+    """
+    CCD complete shutdown sequence with REB and back-substrate.
+    :return:
+    """
     logging.info("Starting CCD shut-down sequence")
     self.reb.wait_end_sequencer()
     # Back-substrate first
@@ -78,6 +108,7 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True
     Configure new REB sequence if name and/or exptime are given.
     Executes the sequence.
     Acquires meta parameters if withmeta is True.
+    :return: dict
     """
     if name and exptime:
         self.reb.config_sequence(name, exptime)
@@ -138,6 +169,7 @@ def append_kvc(exthdu, keys, values, comments):
 def conv_to_fits(self, channels=None, borders=False, imgname=None):
     """
     Converts the given raw image to FITS data.
+    :return: pyfits.HDUlist
     """
     if imgname:
         rawfile = imgname
@@ -286,19 +318,5 @@ bench.Bench.basic_stats = basic_stats
 #         s = s.lower()
 
 
-
-# def start():
-#     """
-#     Bench start-up operations strung together.
-
-#     :return: Bench
-#     """
-#     b = Bench()
-#     b.REBpowerup()
-#     wait_for_action("REB can be connected to CCD now.")
-#     b.CCDpowerup()
-#     # Puts CCD in waiting state by clearing periodically, while waiting for a new command.
-#
-#     return b
 
 
