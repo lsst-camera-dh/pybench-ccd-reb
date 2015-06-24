@@ -119,7 +119,7 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True
     self.reb.wait_end_sequencer()
 
     # Here execute, for all instruments, the pre_exposure functions
-    self.pre_exposure(exptime, delaytime)
+    self.pre_exposure(exptime)
     
     # ... then send the execute sequence command 
     self.reb.execute_sequence()
