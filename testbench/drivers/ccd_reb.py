@@ -513,9 +513,9 @@ class Instrument(Driver):
         # cabacs
         header.update(self.get_cabac_config())
         # aspics
-        header.update(self.get_aspic_config())
+        # BUG BUG LLG 2015-06-24 header.update(self.get_aspic_config())
         # clock rail voltages and current source
-        header.update(self.reb.fpga.get_dacs())
+        # BUG BUG LLG 2015-06-24 header.update(self.reb.fpga.get_dacs())
         # TODO: add board temperature
 
         return header.keys, header.values, header.comments
