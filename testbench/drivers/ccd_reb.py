@@ -327,7 +327,7 @@ class Instrument(Driver):
 
     def get_cabac_config(self):
         """
-        read CABAC configuration.
+        Reads CABAC configuration.
         """
         return self.reb.get_cabac_config()
 
@@ -344,6 +344,30 @@ class Instrument(Driver):
         """
         self.reb.cabac_reset()
         logging.info("REB: sent CABAC resets")
+
+    # --------------------------------------------------------------------
+
+    def get_aspic_config(self):
+        """
+        Reads ASPIC configuration (dummy if ASPIC2).
+        """
+        return self.reb.get_aspic_config()
+
+    def send_aspic_config(self, params):
+        """
+        Sets ASPIC parameters defined in the params dictionay and writes to ASPIC, then checks the readback.
+        If it is programmable (not REB1 / ASPIC2).
+        """
+        self.reb.send_cabac_config(params)
+        logging.info("REB: sent ASPIC values")
+
+    def config_aspic(self):
+        """
+        Sets ASPIC into pre-defined configuration with baseline parameters.
+        If it is programmable (not REB1 / ASPIC2).
+        """
+        self.reb.config_aspic()
+        logging.info("REB: loaded ASPIC baseline configuration")
 
     # --------------------------------------------------------------------
 
@@ -480,7 +504,7 @@ class Instrument(Driver):
 
     def get_meta_operating(self):
         """
-        More meta data for operating parameters (CABACs, ASPICs when they are added, various REB DACs).
+        More meta data for operating parameters (CABACs, ASPICs, various REB DACs).
         :return:
         """
 
@@ -488,6 +512,8 @@ class Instrument(Driver):
         header = self.reb.get_input_voltages_currents()
         # cabacs
         header.update(self.get_cabac_config())
+        # aspics
+        header.update(self.get_aspic_config())
         # clock rail voltages and current source
         header.update(self.reb.fpga.get_dacs())
         # TODO: add board temperature
