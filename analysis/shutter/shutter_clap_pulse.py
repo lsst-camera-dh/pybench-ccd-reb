@@ -10,6 +10,11 @@ def model(x, A,B,x1,x2,a1,a2):
 from peakdetect import *
 
 def lookforswitch(data, threshold, n, start=0, up=True):
+    """
+    Find the index where data cross threshold at least n times
+    successively, up (if up is True) or down (otherwise).
+    Return the index of the first occurrence, or -1 if not found.
+    """
     if up: 
         mask = (data > threshold)
     else: 
@@ -26,6 +31,11 @@ def lookforswitch(data, threshold, n, start=0, up=True):
 
 
 def analyse(fluxes):
+    """
+    Fit the pulse with a the two sigmoid product model.
+    Return the fit parameters.
+    """
+
     ys,xs = np.histogram(fluxes, bins=50)
     centers = (xs[1:] + xs[:-1])/2.
     uppeaks,downpeaks = peakdetect(ys, centers, lookahead=1)
@@ -87,6 +97,8 @@ def analyse(fluxes):
 
     print chi2, dof, chi2dof
 
+    # The graphical display is for debug purpose only
+
     pb.figure(1)
     pb.scatter(times, fluxes, marker='+', color='black')
     pb.plot(times, model(times,A,B,x1,x2,a1,a2), color='red')
@@ -97,3 +109,7 @@ def analyse(fluxes):
     pb.plot(times, np.zeros(shape=(len(times),)), color='red')
 
     pb.show()
+
+
+    return A,B,x1,x2,a1,a2
+
