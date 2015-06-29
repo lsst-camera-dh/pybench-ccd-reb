@@ -52,10 +52,12 @@ class WREB(reb.REB):
         Read CABAC configurations from the SPI readback.
         Useful for recovery and headers.
         """
-        cabacconfig = {}
-        for s in self.stripes:
-            cabacconfig.update(self.fpga.get_cabac_config(s), check=False)
-        return cabacconfig
+        config = self.fpga.get_cabac_config(self.stripes[0])
+        if len(self.stripes) > 1:
+            for stripe in self.stripes[1:]:
+                config.update(self.fpga.get_cabac_config(stripe))
+
+        return config
 
     def cabac_reset(self):
         """

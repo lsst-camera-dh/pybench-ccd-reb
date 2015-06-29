@@ -34,7 +34,7 @@ def calibrate_shutter(self):
     B.laser.select(2)
 
     # for current in [0.0, 10.0, 20.0, 30.0, 40.0, 42.0, 45.0, 50.0]:
-    for current in [40.0, 42.0, 44.0, 46.0]:
+    for current in [42.0, 44.0, 46.0]:
         B.log("Set laser current to %f on channel 2..." % current)
         B.laser.setCurrent(2, current)
         B.laser.enable()

@@ -38,7 +38,7 @@ class CABAC(object):
     CABAC settings
     """
     ODconv = 0.049 #V/DAC unit conversion (approximation)
-    # beware of CABAC1 offsets
+    # beware of CABAC2 offsets
     GDconv = 0.049
     RDconv = 0.049
     OGconv = 0.049
@@ -134,7 +134,7 @@ class CABAC(object):
                 else :
                     irise = self.settings[ck + 'R']
                     ifall = value_int
-                regs.append(self.spi_reg(param, (ifall << 8) + irise))
+                regs.append(self.spi_reg(ck, (ifall << 8) + irise))
             elif param == "PULS":
                 value_int = value & 1
                 regs.append(self.spi_reg(param, value_int))
