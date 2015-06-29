@@ -2,54 +2,40 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
-
-
-def func(x, A,B,x1,x2,a1,a2):
-    return A*.25*(1+np.tanh(a1*(x-x1)))*(1-np.tanh(a2*(x-x2))) + B
-
-
-flux = np.loadtxt("shutter-clap-laser-0001-first-pulse.data")
-time = np.arange(len(flux))
-
-A=-120.
-B=5
-x1=68000.
-x2=85000.
-a1=0.1
-a2=0.1
-p0 = [A,B,x1,x2,a1,a2]
-
-
-
-popt, pcov = curve_fit(func, time, flux, p0=p0)
-print popt
-
-A,B,x1,x2,a1,a2 = popt
-
-residuals = flux - func(time,A,B,x1,x2,a1,a2)
-# error ??
-chi2 = (residuals**2).sum()
-dof = len(flux) - 6
-chi2dof = chi2/dof
-
-print chi2, dof, chi2dof
-
 import pylab as pb
 
-pb.figure(1)
-pb.scatter(time, flux, marker='+', color='black')
-pb.plot(time, func(time,A,B,x1,x2,a1,a2), color='red')
-
-pb.figure(2)
-pb.scatter(time, flux -  func(time,A,B,x1,x2,a1,a2), marker='+', color='black')
-pb.plot(time, np.zeros(shape=(len(time),)), color='red')
-
-
+def model(x, A,B,x1,x2,a1,a2):
+    return A*.25*(1+np.tanh(a1*(x-x1)))*(1-np.tanh(a2*(x-x2))) + B
 
 from peakdetect import *
 
+def lookforswitch(data, threshold, n, start=0, up=True):
+    """
+    Find the index where data cross threshold at least n times
+    successively, up (if up is True) or down (otherwise).
+    Return the index of the first occurrence, or -1 if not found.
+    """
+    if up: 
+        mask = (data > threshold)
+    else: 
+        mask = (data < threshold)
 
-def analyze(fluxes):
+    mask_str = mask.tostring()
+
+    pattern = np.array(n * [True])
+    pattern_str = pattern.tostring()
+
+    idx = mask_str.find(pattern_str, start)
+
+    return idx
+
+
+def analyse(fluxes):
+    """
+    Fit the pulse with a the two sigmoid product model.
+    Return the fit parameters.
+    """
+
     ys,xs = np.histogram(fluxes, bins=50)
     centers = (xs[1:] + xs[:-1])/2.
     uppeaks,downpeaks = peakdetect(ys, centers, lookahead=1)
@@ -71,4 +57,59 @@ def analyze(fluxes):
 
     B0 = xpeaks[1]
     A0 = xpeaks[0] - B0
+    print B0
+    print A0
+
+    # Try to identify the two transitions, in a robust way
+    # (to avoid misidentification due to spikes)
+
+    down = lookforswitch(fluxes, (A0+B0)/2.0, n = 3, start = 0, up = False)
+
+    if down == -1:
+        down = 0
+
+    up = lookforswitch(fluxes, (A0+B0)/2.0, n = 3, start = down, up = True)
+
+    if up == -1:
+        up = len(fluxes) - 1
+
+    # Fit tentative
+
+    x1=down
+    x2=up
+    a1=0.1
+    a2=0.1
+    p0 = [A0,B0,x1,x2,a1,a2]
+
+    # flux = np.loadtxt("shutter-clap-laser-0001-first-pulse.data")
+    times = np.arange(len(fluxes))
+    popt, pcov = curve_fit(model, times, fluxes, p0=p0)
+    print popt
+
+    A,B,x1,x2,a1,a2 = popt
+
+    residuals = fluxes - model(times,A,B,x1,x2,a1,a2)
+
+    # error ??
+    chi2 = (residuals**2).sum()
+    dof = len(fluxes) - 6
+    chi2dof = chi2/dof
+
+    print chi2, dof, chi2dof
+
+    # The graphical display is for debug purpose only
+
+    pb.figure(1)
+    pb.scatter(times, fluxes, marker='+', color='black')
+    pb.plot(times, model(times,A,B,x1,x2,a1,a2), color='red')
+
+    pb.figure(2)
+    pb.scatter(times, 
+               fluxes - model(times,A,B,x1,x2,a1,a2), marker='+', color='black')
+    pb.plot(times, np.zeros(shape=(len(times),)), color='red')
+
+    pb.show()
+
+
+    return A,B,x1,x2,a1,a2
 
