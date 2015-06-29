@@ -201,6 +201,7 @@ class FPGA1(FPGA):
     def set_OD_voltage(self, value):
         """
         Sets OD voltage alone. Useful when using it as CABAC high voltage power supply.
+        Currently disabled on the WREB hardware.
         :param value: float
         :return:
         """
@@ -210,18 +211,16 @@ class FPGA1(FPGA):
         self.write(0x400011, 1)
 
     # ----------------------------------------------------------
-    def cabac_power(self, enable, useCABACbias):
+    def cabac_power(self, enable):
         """
-        Enables/disables power to CABAC low voltage power supplies, VEE, and V_OD (if using CABAC biases).
-        Not in that order, for CABAC safety.
+        Enables/disables power to CABAC low voltage VEE and power supplies, powered in that order for CABAC safety.
+        VddOD needs to be powered on before / shut down after.
+        The clock rails need to be done after power-on/ before power-down, in the higher level function.
         :param enable: bool
         :return:
         """
         if enable:
-            # staged:
-            if useCABACbias:
-                self.set_OD_voltage(self.VddOD)  # need to power VddOD first
-            # then enables VEE and then all low voltages
+            # enable VEE and then all low voltages
             self.write(0xD00001, 0x4)  # VEE (CABAC substrate) set to V_CLK_L (low clock power supply) if connected
             time.sleep(0.2)
             self.write(0xD00001, 0x1F)
@@ -230,9 +229,6 @@ class FPGA1(FPGA):
             self.write(0xD00001, 0x4)
             time.sleep(0.2)
             self.write(0xD00001, 0)
-            if useCABACbias:
-                self.set_OD_voltage(0)
-        # need to do clock rails after power-on/ before power-down, done in the higher level function
 
     def check_location(self, s, loc=3):
         if s not in [0, 1, 2]:
@@ -293,6 +289,7 @@ class FPGA1(FPGA):
         """
         Sets the CABAC parameter at the appropriate stripe and location (1 for bottom, 2 for top, 3 for both).
         Default values for retro-compatibility.
+        :return: bool
         """
         self.check_location(s, loc)
 
@@ -306,6 +303,8 @@ class FPGA1(FPGA):
                         value_int = self.get_cabac_value(reg, s, 1)
                         if value_int != self.cabac_bottom[s].get_cabac_fromstring(param):
                             print("Warning: unexpected value for %s: %d" % (param, value_int))
+            else:
+                return False
 
         if loc == 2 or loc == 3:
             # top CABAC
@@ -317,6 +316,9 @@ class FPGA1(FPGA):
                         value_int = self.get_cabac_value(reg, s, 2)
                         if value_int != self.cabac_top[s].get_cabac_fromstring(param):
                             print("Warning: unexpected value for %s: %d" % (param, value_int))
+            else:
+                return False
+        return True
 
     # ----------------------------------------------------------
 

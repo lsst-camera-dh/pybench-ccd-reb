@@ -39,13 +39,13 @@ class WREB(reb.REB):
     def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionary and writes to CABAC, then checks the readback.
-        Note: if params is empty, this simply rewrites the same parameters in the CABAC objects and updates config.
         """
         for s in self.stripes:
             for param in iter(params):
                 print("Setting %s to %r" % (param, params[param]))
-                self.fpga.set_cabac_value(param, params[param], s, check=True)
-        time.sleep(0.1)
+                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=True)
+                if not testsafe:
+                    raise ValueError("Safety test failed while programming %s to %r" % (param, params[param]))
 
     def get_cabac_config(self):
         """
@@ -143,8 +143,9 @@ class WREB(reb.REB):
         To be executed at power-up to safeguard CABAC2.
         :return:
         """
-        # power-up the CABAC low voltages, Vsub and VddOD if using CABAC biases
-        self.fpga.cabac_power(True, useCABACbias=self.useCABACbias)
+        # VddOD must be powered on before, followed by the 6.5V regulator supply.
+        # power-up the CABAC Vsub and low voltages
+        self.fpga.cabac_power(True)
         # power-up the clock rails (in V)
         print("Power on clock rails supplies here")
         time.sleep(2)
@@ -241,9 +242,9 @@ class WREB(reb.REB):
         rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
         self.fpga.set_clock_voltages(rails)
         self.config.update(rails)
-        # shutdown the CABAC low voltages
-        self.fpga.cabac_power(False, useCABACbias=self.useCABACbias)
-        # need to shutdown VddOD right here on power supply if not using CABAC biases (else it's done above)
+        # shutdown the CABAC low voltages and Vsub
+        self.fpga.cabac_power(False)
+        # need to shutdown 6.5V, then VddOD right here on power supply
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
