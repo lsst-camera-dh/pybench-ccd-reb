@@ -44,11 +44,11 @@ class CABAC(object):
     RDconv = 0.049
     OGconv = 0.049
     # set of parameters that CABAC() keeps track of
-    params = set(['ODEM', 'ODRM',"OD0EM", "OD1EM","OD0RM", "OD1RM",
-                  "GD", "RD", "OG", "SPA", 
-                  "P0R", "P1R", "P2R", "P3R", "S0R", "S1R", "S2R", 'RGR',
-                  "P0F", "P1F", "P2F", "P3F", "S0F", "S1F", "S2F", 'RGF',
-                  "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
+    params = ['ODEM', 'ODRM',"OD0EM", "OD1EM","OD0RM", "OD1RM",
+              "GD", "RD", "OG", "SPA", 
+              "P0R", "P1R", "P2R", "P3R", "S0R", "S1R", "S2R", 'RGR',
+              "P0F", "P1F", "P2F", "P3F", "S0F", "S1F", "S2F", 'RGF',
+              "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"]
     # define groups for programming shortcuts
     groups = {'OD': ["OD0EM", "OD0RM", "OD1EM", "OD1RM"],
               'OD0': ["OD0EM", "OD0RM"],
