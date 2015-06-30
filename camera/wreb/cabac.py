@@ -7,6 +7,7 @@
 
 from lsst.camera.generic import bidi
 
+
 ## -----------------------------------------------------------------------
 
 def parse_reg_clock(reg):
@@ -42,13 +43,13 @@ class CABAC(object):
     GDconv = 0.049
     RDconv = 0.049
     OGconv = 0.049
-    # set of accepted parameters
-    params = set(["OD", "OD0", "OD1", 'ODEM', 'ODRM',"OD0EM", "OD1EM","OD0RM", "OD1RM",
-                  "GD", "RD", "OG", "IP", "IS", "IC", "SPA",
+    # set of parameters that CABAC() keeps track of
+    params = set(['ODEM', 'ODRM',"OD0EM", "OD1EM","OD0RM", "OD1RM",
+                  "GD", "RD", "OG", "SPA", 
                   "P0R", "P1R", "P2R", "P3R", "S0R", "S1R", "S2R", 'RGR',
                   "P0F", "P1F", "P2F", "P3F", "S0F", "S1F", "S2F", 'RGF',
                   "HIZ", "SAFE", "PULS", "MUX", "OFMUX", "EXPCK"])
-
+    # define groups for programming shortcuts
     groups = {'OD': ["OD0EM", "OD0RM", "OD1EM", "OD1RM"],
               'OD0': ["OD0EM", "OD0RM"],
               'OD1': ["OD1EM", "OD1RM"],
@@ -114,8 +115,6 @@ class CABAC(object):
         """
         regs = []
         value_int = 0
-        if param not in self.params:
-            raise ValueError("No CABAC parameter with this name: "+ param)
 
         if param in self.groups:
             for subparam in self.groups[param]:
@@ -148,7 +147,10 @@ class CABAC(object):
             elif param == "EXPCK":
                 value_int = value & 0xff
                 regs.append(self.spi_reg(param, value_int))
+            else:
+                raise ValueError("No CABAC parameter with this name: "+ param)
             self.settings[param] = value_int
+            
         return regs
 
     def get_cabac_fromstring(self, param):
@@ -285,24 +287,24 @@ class CABAC(object):
         # safety: OG<OD
         if param == "OG":
             for subparam in self.groups['OD']:
-                if self.settings[subparam] < value:
-                    print("Warning: trying to program OG at %f, higher than OD" % value)
+                if (self.settings[subparam]*self.conv[subparam]) < value:
+                    print("Warning: trying to program OG at %f, higher than %s" % (value, subparam))
                     return False
 
         # safety: OD-RD < 20 V, but preferably also OD>RD
         elif param in self.groups['OD']:
-            if value < self.settings['RD']:
+            if value < self.settings['RD']*self.conv['RD']:
                 print("Warning: trying to program %s lower than RD" % param)
                 return False
-            elif value > self.settings['RD'] + 20:
+            elif value > self.settings['RD']*self.conv['RD'] + 20:
                 print("Warning: trying to program %s higher than RD + 20 V" % param)
                 return False
         elif param == "RD":
             for subparam in self.groups['OD']:
-                if self.settings[subparam] < value:
+                if self.settings[subparam]*self.conv[subparam] < value:
                     print("Warning: trying to program RD higher than %s" % subparam)
                     return False
-                elif self.settings[subparam] > value + 20:
+                elif self.settings[subparam]*self.conv[subparam] > value + 20:
                     print("Warning: trying to program RD lower than %s - 20 V" % subparam)
                     return False
 
