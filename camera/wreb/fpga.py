@@ -301,8 +301,7 @@ class FPGA1(FPGA):
                     self.write_spi(0x500000, s, 1, reg, True)
                     if check:
                         value_int = self.get_cabac_value(reg, s, 1)
-                        if value_int != self.cabac_bottom[s].get_cabac_fromstring(param):
-                            print("Warning: unexpected value for %s: %d" % (param, value_int))
+                        self.cabac_bottom[s].set_from_register(address=(reg >> 16), reg=value_int, check=True)
             else:
                 return False
 
@@ -314,8 +313,7 @@ class FPGA1(FPGA):
                     self.write_spi(0x500000, s, 2, reg, True)
                     if check:
                         value_int = self.get_cabac_value(reg, s, 2)
-                        if value_int != self.cabac_top[s].get_cabac_fromstring(param):
-                            print("Warning: unexpected value for %s: %d" % (param, value_int))
+                        self.cabac_top[s].set_from_register(address=(reg >> 16), reg=value_int, check=True)
             else:
                 return False
         return True

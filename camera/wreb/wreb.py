@@ -43,7 +43,7 @@ class WREB(reb.REB):
         for s in self.stripes:
             for param in iter(params):
                 print("Setting %s to %r" % (param, params[param]))
-                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=True)
+                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=False)  # broken SPI link
                 if not testsafe:
                     raise ValueError("Safety test failed while programming %s to %r" % (param, params[param]))
 
@@ -100,9 +100,7 @@ class WREB(reb.REB):
         :return:
         """
         if self.useCABACbias:
-            for s in self.stripes:
-                for param in params:
-                    self.fpga.set_cabac_value(param, params[param], s)  # includes safety and readback by default
+            self.send_cabac_config(params)  # includes safety and readback by default
         else:
             # simultaneous activation works fine if all new values are valid (not checked here)
             self.fpga.set_bias_voltages(params)
@@ -164,9 +162,12 @@ class WREB(reb.REB):
         Sequence to power up the CCD.
         """
 
-        #starting drain voltages
-        drains = {"RD": 15, "OD": 20, "GD": 18}
-        self.set_biases(drains)
+        # starting drain voltages
+        # staged steps for CCD safety
+        self.set_biases({'OD': 16})
+        self.set_biases({'RD': 14, 'GD': 14})
+        self.set_biases({'OD': 28})
+        self.set_biases({'RD': 18, 'GD': 24})
 
         time.sleep(0.5)
 
@@ -226,9 +227,11 @@ class WREB(reb.REB):
 
         time.sleep(0.5)
 
-        #shutting drain voltages
-        drains = {"OD": 0, "GD": 0, "RD": 0}
-        self.set_biases(drains)
+        #shutting drain voltages (staged for CCD extra safety)
+        self.set_biases({'RD': 14, 'GD': 14})        
+        self.set_biases({'OD': 16})
+        self.set_biases({'RD': 0, 'GD': 0})
+        self.set_biases({'OD': 0})
 
         time.sleep(0.5)
         print('CCD shutdown complete on WREB.')
