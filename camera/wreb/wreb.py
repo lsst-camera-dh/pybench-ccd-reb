@@ -84,10 +84,12 @@ class WREB(reb.REB):
         Reads ASPIC configurations from the SPI readback.
         :return:
         """
-        aspicconfig = {}
-        for s in self.stripes:
-            aspicconfig.update(self.fpga.get_aspic_config(s, check=False))
-        return aspicconfig
+        config = self.fpga.get_aspic_config(self.stripes[0])
+        if len(self.stripes) > 1:
+            for stripe in self.stripes[1:]:
+                config.update(self.fpga.get_aspic_config(stripe))
+
+        return config
 
     def config_aspic(self):
         settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
