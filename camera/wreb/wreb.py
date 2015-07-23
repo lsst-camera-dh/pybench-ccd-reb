@@ -284,11 +284,13 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         primaryhdu.header.update(localheader)
         # for more meta, use the driver
         # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
-        exthdu = pyfits.ImageHDU(name="CCD_COND")
-        headerdict = R.config.update(R.get_cabac_config(), R.get_aspic_config())
-        for keyword in headerdict:
-            exthdu.header[keyword] = headerdict[keyword]
-        hdulist.append(exthdu)
+        #exthdu = pyfits.ImageHDU(name="CCD_COND")
+        #headerdict = R.config
+        #headerdict.update(R.get_cabac_config())
+        #headerdict.update(R.get_aspic_config())
+        #for keyword in headerdict:
+        #    exthdu.header[keyword] = headerdict[keyword]
+        #hdulist.append(exthdu)
 
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
