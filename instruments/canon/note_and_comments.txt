@@ -700,3 +700,17 @@ Command : 6  Answer : 0
 - Need to put the theo_mov and position in the HDU list ?
 - After many auto_focus, it seems to be reproductible : the max is still around the same position (here it is about 600)
 - Strange shape in the variance plot : the is a small gap at the middle of the curve ?
+
+2015-05-29
+
+- Masquer le fit de la FFT et oir si on retrouve un flat.
+- Comment ça se compare en regardant un flat avant.
+- Si je compare avec un flat avec les angles et la modulation obtenue avec la FFT et que je module une flat.
+- Quand je tourne la mire, j'ai un flat, mise au point,.... est- ce qu'on peut utiliser le meme flat pour toute les orientations ?
+- Ajouter un model d'erreur pour le calcul de variance ?
+
+2015-06-01
+
+- Flat, modulé par sonusoide, et voir comment se comporte la FFT (essaye de lire l'angle, la longueur)
+- Prendre ces resultats et voir si on peut faire un fit direct sur l'image.
+
