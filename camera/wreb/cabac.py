@@ -17,7 +17,6 @@ def parse_reg_clock(reg):
 
     cfall = (reg >> 8) & 0xff
     crise =  reg & 0xff
-    #TODO: check rise/fall order
 
     return crise, cfall
 
@@ -125,7 +124,6 @@ class CABAC(object):
                 regs.append(self.spi_reg(param, value_int))
             elif param in self.groups['IC']:
                 value_int = value & 0xff
-                # rise and fall currents: order to be checked
                 ck, side = param[:-1], param[-1]
                 if side == 'R':
                     ifall = self.settings[ck + 'F']
@@ -177,7 +175,7 @@ class CABAC(object):
         if address < self.SPIaddress["OD0EM"]:
             savedr = self.settings[name + 'R']
             savedf = self.settings[name + 'F']
-            cfall, crise = parse_reg_clock(reg)
+            crise, cfall = parse_reg_clock(reg)
             self.settings[name + 'R'] = crise
             self.settings[name + 'F'] = cfall
             if check:

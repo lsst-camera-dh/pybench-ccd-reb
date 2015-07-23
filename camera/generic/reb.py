@@ -91,7 +91,7 @@ class REB(object):
     xmldir = "/home/lsst/lsst/py/camera/generic/"
     full18bits = True  # TODO: check from version of the firmware
     # compression = True
-    # to be loaded from XML later
+    # TODO: load from XML later
     imglines = 2020
     imgcols = 550
     exposuresub = "Exposure"
@@ -211,6 +211,7 @@ class REB(object):
         self.fpga.send_program_instruction(0x0, first_instr)
         self.seq.program.instructions[0x0] = first_instr  # to keep it in sync
         self.seqname = subname
+        print('Sequencer program set to %s' % subname)
 
     def get_exposure_time(self, darktime=False):
         """
@@ -285,7 +286,7 @@ class REB(object):
         # wait_end_sequencer is now included in select_subroutine
         self.select_subroutine(name)
 
-        if name in ["Bias", "Test", "Wait", "ClearBias"]:
+        if name in ["Bias", "Test", "Wait", "ClearBias", 'InfiniteWait']:
             self.shutdelay = 0
             self.exptime = 0
         else:

@@ -111,6 +111,9 @@ class WREB(reb.REB):
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
         Generic interface to set any single parameter of the REB, and check the readback if possible.
+        :type param: basestring
+        :param stripe:
+        :param location:
         :param param:
         :param value:
         :return:
@@ -254,6 +257,28 @@ class WREB(reb.REB):
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
     # --------------------------------------------------------------------
+
+    def increment(self, offset=0):
+        """
+        Increments the ADC sampling signal by 1 FPGA clock cycle (10 ns) every sampling, up to 255.
+        :type offset: int
+        :param offset: offset at the first sample
+        """
+        self.fpga.increment(offset)
+        self.select_subroutine('Window')
+        self.imgcols = 256  # TODO: get it from XML
+        self.imglines = 2020
+
+    def stop_increment(self, offset=0):
+        """
+        Returns to normal configuration after increment().
+        """
+        self.fpga.stop_increment()
+        self.select_subroutine('Acquisition')
+        self.imgcols = 550  # TODO: get it from XML
+        self.imglines = 2020
+
+# --------------------------------------------------------------------
 
 
 def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be part of REB class, will call other instruments

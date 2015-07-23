@@ -28,6 +28,8 @@ class XMLParser(object):
 
     def process_number(self, s):
         ss = s.strip()
+        if s == 'Inf':
+            return 'Inf'
         try:
             value = int(ss)
         except ValueError:
@@ -237,9 +239,13 @@ class XMLParser(object):
 
             # is it a 'function' call?
             if self.functions_desc.has_key(called):
+                infinite_loop = False
+                if repeat == 'Inf':
+                    infinite_loop = True
+                    repeat = 1
                 instr = Instruction(opcode=Instruction.OP_CallFunction,
                                     function_id=self.functions_desc[called]['idfunc'],
-                                    infinite_loop=False,
+                                    infinite_loop=infinite_loop,
                                     repeat=repeat)
                 print instr
                 return instr
