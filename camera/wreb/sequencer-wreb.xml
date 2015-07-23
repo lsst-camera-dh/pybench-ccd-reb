@@ -588,6 +588,81 @@
                     <constant ref="R3">0</constant>
                 </constants>
             </function>
+            <function id="SlowFlush">
+                <fullname>Serial and parallel flush</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                    <clock ref="P1"/>
+                    <clock ref="P2"/>
+                    <clock ref="P3"/>
+                    <clock ref="P4"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeP</duration>
+                        <value>00100110</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>TimeP</duration>
+                        <value>00010110</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeP</duration>
+                        <value>01000110</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>TimeP</duration>
+                        <value>00100110</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeP</duration>
+                        <value>00010110</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>TimeP</duration>
+                        <value>01000110</value>
+                    </timeslice>
+                   <timeslice id="slice7">
+                        <duration>TimeP</duration>
+                        <value>00100110</value>
+                    </timeslice>
+                    <timeslice id="slice8">
+                        <duration>TimeP</duration>
+                        <value>00010110</value>
+                    </timeslice>
+                    <timeslice id="slice9">
+                        <duration>TimeP</duration>
+                        <value>01000110</value>
+                    </timeslice>
+                    <timeslice id="slice10">
+                        <duration>TimeP</duration>
+                        <value>101000110</value>
+                    </timeslice>
+                    <timeslice id="slice11">
+                        <duration> 20 us</duration>
+                        <value>10100011</value>
+                    </timeslice>
+                    <timeslice id="slice12">
+                        <duration> 20 us</duration>
+                        <value>10101001</value>
+                    </timeslice>
+                    <timeslice id="slice13">
+                        <duration>20 us</duration>
+                        <value>10101100</value>
+                    </timeslice>
+                    <timeslice id="slice14">
+                        <duration>20 us</duration>
+                        <value>10100110</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="CL">1</constant>
+                    <constant ref="RST">1</constant>
+                </constants>
+            </function>
             <function id="FastFlush2">
                 <fullname>Second step of fast flush</fullname>
                 <clocklist>
@@ -936,6 +1011,12 @@
                 <fullname>Clearing while waiting</fullname>
                 <call ref="ClearCCD">
                     <repeat>10</repeat>
+                </call>
+            </main>
+            <main id="InfiniteWait">
+                <fullname>Slowly clearing rows and columns together</fullname>
+                <call ref="SlowFlush">
+                    <repeat>Inf</repeat>
                 </call>
             </main>
             <main id="Bias">
