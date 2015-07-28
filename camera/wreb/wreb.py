@@ -43,8 +43,8 @@ class WREB(reb.REB):
         for s in self.stripes:
             for param in iter(params):
                 print("Setting %s to %r" % (param, params[param]))
-                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=False)  # broken SPI link
-                if not testsafe:
+                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=True)
+                if not testsafe:  # may need to remove it if SPI readback is broken
                     raise ValueError("Safety test failed while programming %s to %r" % (param, params[param]))
 
     def get_cabac_config(self):
