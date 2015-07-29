@@ -43,8 +43,8 @@ class WREB(reb.REB):
         for s in self.stripes:
             for param in iter(params):
                 print("Setting %s to %r" % (param, params[param]))
-                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=False)  # broken SPI link
-                if not testsafe:
+                testsafe = self.fpga.set_cabac_value(param, params[param], s, check=True)
+                if not testsafe:  # may need to remove it if SPI readback is broken
                     raise ValueError("Safety test failed while programming %s to %r" % (param, params[param]))
 
     def get_cabac_config(self):
@@ -111,6 +111,9 @@ class WREB(reb.REB):
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
         Generic interface to set any single parameter of the REB, and check the readback if possible.
+        :type param: basestring
+        :param stripe:
+        :param location:
         :param param:
         :param value:
         :return:
@@ -255,6 +258,28 @@ class WREB(reb.REB):
 
     # --------------------------------------------------------------------
 
+    def increment(self, offset=0):
+        """
+        Increments the ADC sampling signal by 1 FPGA clock cycle (10 ns) every sampling, up to 255.
+        :type offset: int
+        :param offset: offset at the first sample
+        """
+        self.fpga.increment(offset)
+        self.select_subroutine('Window')
+        self.imgcols = 256  # TODO: get it from XML
+        self.imglines = 2020
+
+    def stop_increment(self, offset=0):
+        """
+        Returns to normal configuration after increment().
+        """
+        self.fpga.stop_increment()
+        self.select_subroutine('Acquisition')
+        self.imgcols = 550  # TODO: get it from XML
+        self.imglines = 2020
+
+# --------------------------------------------------------------------
+
 
 def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be part of REB class, will call other instruments
     """
@@ -284,11 +309,13 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         primaryhdu.header.update(localheader)
         # for more meta, use the driver
         # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
-        exthdu = pyfits.ImageHDU(name="CCD_COND")
-        headerdict = R.config.update(R.get_cabac_config(), R.get_aspic_config())
-        for keyword in headerdict:
-            exthdu.header[keyword] = headerdict[keyword]
-        hdulist.append(exthdu)
+        #exthdu = pyfits.ImageHDU(name="CCD_COND")
+        #headerdict = R.config
+        #headerdict.update(R.get_cabac_config())
+        #headerdict.update(R.get_aspic_config())
+        #for keyword in headerdict:
+        #    exthdu.header[keyword] = headerdict[keyword]
+        #hdulist.append(exthdu)
 
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',

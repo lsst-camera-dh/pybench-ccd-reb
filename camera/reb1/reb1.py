@@ -124,6 +124,7 @@ class REB1(reb.REB):
     def get_cabac_config(self):
         """
         read CABAC configuration.
+        :return: lsst.camera.generic.fpga.MetaData()
         """
         config = self.fpga.get_cabac_config(self.stripes[0])
         if len(self.stripes) > 1:
@@ -169,9 +170,9 @@ class REB1(reb.REB):
         """
         Dummy read of the ASPIC parameters.
         :param s:
-        :return:
+        :return: lsst.camera.generic.fpga.MetaData()
         """
-        return {'G_T': 4, 'RC_T': 500, 'G_B': 4, 'RC_B': 500}
+        return self.fpga.get_aspic_config(s)
 
     def config_aspic(self):
         pass
