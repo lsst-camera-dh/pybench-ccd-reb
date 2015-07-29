@@ -243,7 +243,7 @@ class Instrument(Driver):
         """
         if self.identifier == 'wreb':
             logging.info("Starting ADC increment at %d" % offset)
-            self.reb.fpga.increment(offset)
+            self.reb.increment(offset)
         else:
             logging.info("ADC increment not implemented in this version")
 
@@ -254,7 +254,7 @@ class Instrument(Driver):
         """
         if self.identifier == 'wreb':
             logging.info("Stopping ADC increment")
-            self.reb.fpga.stop_increment()
+            self.reb.stop_increment()
         else:
             logging.info("ADC increment not implemented in this version")
 

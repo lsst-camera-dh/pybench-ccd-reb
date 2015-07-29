@@ -246,3 +246,18 @@ class FPGA0(FPGA):
         self.write(0x500000, s)  # starts the CABAC configuration
 
         # ASPIC stuff: not needed for REB1+ASPIC2. Take from wreb for REB2/WGREB+ASPIC3.
+
+    # ----------------------------------------------------------
+
+    def get_aspic_config(self, s):  # stripe 's'
+        """
+        read CABAC configuration for stripe <s>,
+        store it in the CABAC objects and the header string.
+        """
+        check_location(s)
+
+        config = MetaData()
+        config.update_fromdict({'G_T': 4, 'RC_T': 500, 'G_B': 4, 'RC_B': 500})
+
+        return config
+
