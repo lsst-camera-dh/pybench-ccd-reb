@@ -1,0 +1,150 @@
+
+
+# Proposal for a REB Sequencer format
+
+[constants]  # will be substituted in the code at compilation time
+
+SensorLines:    2020     # Number of rows of the sensor
+SensorColumns:  550      # Number of columns of the sensor
+
+TimeP:        20000 ns # Parallel clock period
+BufferP:       2000 ns # Parallel buffer period
+BufferS:        200 ns # Serial buffer period
+RampTime:       500 ns # Ramp time
+
+// and so on...
+
+
+[clocks]     # Clock channels
+
+P1:   8   # Parallel clock 1
+P2:   9   # Parallel clock 2
+P3:  10   # Parallel clock 3
+P4:  11   # Parallel clock 4
+R1:   4   # Serial clock 1
+R2:   5   # Serial clock 2
+R3:   6   # Serial clock 3
+RG:   7   # Serial reset clock 1
+CL:   3   # ASPIC clamp
+RST:  2   # ASPIC integrator reset
+RD:   1   # ASPIC ramp-down integration
+RU:   0   # ASPIC ramp-up integration
+SPL: 12   # ADC sampling trigger
+SOI: 13   # Start of image
+EOI: 14   # End of image
+SHU: 16   # Shutter TTL
+
+
+
+[functions]
+
+Default:       # Default state when not operating
+   clocks:       P2, P3, CL, RST, RG, R1, R2
+   slices: 
+           1us = 1,  1,  1,  1,   1,  1,  1 
+	   
+
+TransferLine:  # Single line transfer
+   clocks:           P1, P2, P3, P4
+   slices: 
+           BufferP = 0,  1,  1,  0
+	   TimeP   = 0,  1,  1,  1
+	   TimeP   = 0,  0,  1,  1
+	   TimeP   = 1,  0,  1,  1
+	   TimeP   = 1,  0,  0,  1
+	   TimeP   = 1,  1,  0,  1
+	   TimeP   = 1,  1,  0,  0
+	   TimeP   = 1,  1,  1,  0
+
+   constants:  RG = 1, R1 = 1, R2 = 1, CL = 1, RST = 1
+	   
+
+// etc...
+
+
+[variables]   # indirect variables, accessible through FPGA registers
+
+# Exposure time
+
+exptime: 10000
+
+# window variables
+
+Ystart: 500
+Ywidth: 10
+Yremains: 1510
+
+Xstart: 100
+Xwidth: 10
+Xremains: 440
+
+
+[program]
+
+Acquisition: 
+             JSR     clear          repeat(2)
+             CALL    func(1)        repeat(10000)
+             CALL    func(6)        repeat(2048)
+             JSR     read_line      repeat(2020)
+             RTS 
+
+Acquisition: 
+             JSR     clear          repeat(2)
+             CALL    func(1)        repeat(exptime)
+             CALL    func(6)        repeat(2048)
+             JSR     ReadLine       repeat(SensorLines)
+             RTS 
+
+ReadLine: 
+	     CALL    TransferLine   repeat(1)
+             CALL    ReadPixel      repeat(SensorColumns)
+
+
+ReadWindow:  JSR     FlushLine      repeat(Ystart)
+             JSR     ReadWindowLine repeat(Ywidth)
+	     JSR     FlushLine      repeat(Yremains)
+
+
+ReadWindowLine: 
+	     CALL    TransferLine   repeat(1)
+	     CALL    PtrFlushPixel  repeat(Xstart)
+             CALL    ReadPixel      repeat(Xwidth)
+             CALL    PtrFlushPixel  repeat(Xremains)  
+
+
+FlushLine:
+	     CALL    TransferLine   repeat(1)
+	     CALL    FlushPixel     repeat(SensorColumns)
+
+Clear:       JSR     ClearLine      repeat(SensorLines)
+             RTS 
+
+bias:        CALL    func(6)        repeat(550)
+             JSR     read_line      repeat(2020)
+             RTS 
+
+clear_acq:   JSR     clear          repeat(2)
+             # exposure while clearing 
+             # (call expo_clear: 1 time = 100 us, up to 17 bits, here 4E20 = 2s)
+             JSR     expo_clear     repeat(20000)
+             # before readout : flush serial register again twice (0x44c)
+             CALL    func(6)        repeat(1100)
+             JSR     read_line      repeat(2020)
+             RTS 
+
+# auxiliary subroutine: exposure while clearing 
+# duration 100 us (for consistency with exposure without clearing)
+
+expo_clear:  CALL    func(7)        repeat(50)
+             RTS 
+
+read_line:   CALL    func(2)        repeat(1)     # line transfer 
+             # read 550 pixels (10 prescan + 512 + 28 overscan)
+             CALL    func(3)        repeat(550)   
+             RTS 
+
+clear_line:  CALL    func(5)        repeat(1)
+             CALL    func(6)        repeat(550)
+             RTS 
+
+
