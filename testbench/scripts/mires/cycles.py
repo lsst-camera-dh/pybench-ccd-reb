@@ -9,6 +9,7 @@
 import os
 import time
 import logging
+import datetime
 
 import lsst.testbench.bench as bench
 
@@ -32,10 +33,14 @@ positions = {
 
 #---------------------------------------------------------------------------------
 
-def cycles(self, angle = 0.0, exptime = 2.0, images = 20, cycles = 2):
+def cycles(self, angle = 0.0, exptime = 0.75, images = 20, cycles = 2, view=False):
     """
     Cycle sur les 4 positions pre-definies et prend 'images' images a chaque position.
     """
+
+    if view:
+        import pyds9
+        myds9 = pyds9.DS9("zorglub")
 
     for c in xrange(cycles):
         for pos in ['A', 'B', 'C', 'D']:
@@ -49,6 +54,14 @@ def cycles(self, angle = 0.0, exptime = 2.0, images = 20, cycles = 2):
                 meta['xyz']['comments']['THETAPOS'] = '[deg] Current Theta position in degree'
                 img = self.conv_to_fits()
                 self.save_to_fits(img, meta)    
+
+                if view:
+                    filename = os.path.join('/data/frames', 
+                                            datetime.datetime.utcnow().date().isoformat().replace('-',''),
+                                            img[0].header['FILENAME'])
+                    myds9.set("file mosaicimage iraf %s" % filename)
+                    
+                    
 
 bench.Bench.cycles = cycles
 
