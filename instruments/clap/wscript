@@ -24,9 +24,10 @@ def build(ctx):
                    'clap-server', 
                    chmod=0755)
 
-    ctx.install_as('/etc/init/clap.conf', 
-                   'clap.conf', 
-                   chmod=0644)
+    # only on lpnlsstclap !!!
+    # ctx.install_as('/etc/init/clap.conf', 
+    #                'clap.conf', 
+    #                chmod=0644)
 
     # ctx.recurse(submodules)
 
