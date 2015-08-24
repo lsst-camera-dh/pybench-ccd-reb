@@ -14,6 +14,8 @@ import subprocess
 import time
 import bidi
 
+# import gc # trying to avoid fork crash
+
 ## -----------------------------------------------------------------------
 
 
