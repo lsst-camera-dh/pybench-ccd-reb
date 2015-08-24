@@ -470,7 +470,8 @@ if __name__ == '__main__':
     # ------------- log file ----------------------
 
     now = datetime.datetime.utcnow()
-    logdir = os.path.join(os.getenv("HOME"), "logs")
+    # logdir = os.path.join(os.getenv("HOME"), "logs")
+    logdir = os.path.join("/data/clap", "logs")
     logname = os.path.join(logdir,
                            ( "clap-server-%d-%s.log" % 
                              ( SERVER_PORT,
