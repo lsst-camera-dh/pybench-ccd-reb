@@ -1,7 +1,9 @@
 import os
 import glob as gl
+import numpy as np
+import pyfits as pf
 
-def splice_frame(directory = "./", valid_ampl = [3,4,5,13,14]):
+def merge_head_and_splice_frame(directory = "./", valid_ampl = [4,5,6,7,12,13,14,15,16]):
     fits_list = gl.glob(directory + "*.fits")
     fits_list.sort()
     for f in fits_list:
@@ -17,8 +19,6 @@ def splice_frame(directory = "./", valid_ampl = [3,4,5,13,14]):
             else:
                 name = str(v)
             os.system("imcopy " + im_dir + im_name + "\[" + str(v) + "\] " + im_dir + "amp_" + name + ".fits")
-    
-    return fits_list
 
 def do_medianstack(directory = "./"):
     amp_list = gl.glob(directory + "*/*.fits")
@@ -58,4 +58,40 @@ def do_medianstack(directory = "./"):
         os.system("mv " + o + " " + directory + "outs/")
     for s in souts:
         os.system("mv " + s + " " + directory + "souts/")
+
+def do_unbias(directory = "./"):
+    amp_list = gl.glob(directory + "*/*.fits")
+    mbias = gl.glob(directory + "../bias/outs/*.fits")
+    fits_list = gl.glob(directory + "*.fits")
+    amp_list.sort()
+    mbias.sort()
+
+    nb_images = len(fits_list)
+    nb_amp = len(amp_list)/nb_images
+    nb_mbias = len(mbias)
+    reference = amp_list[:nb_amp]
+    remaining = amp_list[nb_amp:]
+
+    if nb_mbias != nb_amp:
+        raise ValueError("The number of channel to work on is wrong")
+
+    amp_list = np.reshape(amp_list, (nb_images,nb_amp))
+
+    for image in amp_list:
+        for num in range(0,nb_amp):
+            out_name = "unbiased_" + image[num][-11:]
+            dir_name = image[num][:-11]
+            os.system("unbias -f " + str(image[num]) + " -b " + str(mbias[num]) + " -o " + out_name)
+            temp = pf.open(out_name, mode = "update")
+            datasec = temp[0].header['DATASEC']
+            data_temp = datasec[1:-1].split(",")
+            x = data_temp[0].split(':')
+            y = data_temp[1].split(':')
+            new_datasec = "[" + str(int(x[0])-10) + ":" + str(int(x[1])-10) + "," + y[0] + ":" + y[1] +"]"
+            temp[0].header['DATASEC'] = new_datasec
+            temp.writeto(out_name, clobber = True)
+            temp.close()
+            os.system("mv " + out_name + " " + dir_name)
+        
+    
 
