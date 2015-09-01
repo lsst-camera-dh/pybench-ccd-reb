@@ -160,7 +160,7 @@ def do_flat_medianstack(directory = "./"):
                 os.system("mv " + s + " " + directory + "souts/" + p)
 
 def extract_pos(fits):
-    temp = pf.open(f)
+    temp = pf.open(fits)
     xpos = temp['XYZ'].header['XPOS']
     ypos = temp['XYZ'].header['YPOS']
     zpos = temp['XYZ'].header['ZPOS']
