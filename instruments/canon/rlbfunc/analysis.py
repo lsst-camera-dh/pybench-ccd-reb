@@ -44,12 +44,12 @@ def do_medianstack(directory = "./"):
         
         print string_same_amp
             
-        os.system("rawmedianstack -o out_" + im_amp + " -s sout_" + im_amp + string_same_amp)
+        os.system("rawmedianstack -o master_bias_" + im_amp + " -s sout_" + im_amp + string_same_amp)
 
     os.system("mkdir outs")
     os.system("mkdir souts")
 
-    outs = gl.glob("out*.fits")
+    outs = gl.glob("master_bias*.fits")
     outs.sort()
     souts = gl.glob("sout*.fits")
     souts.sort()
@@ -95,3 +95,41 @@ def do_unbias(directory = "./"):
         
     
 
+def do_flat_medianstack(directory = "./"):
+    amp_list = gl.glob(directory + "*/unbiased*.fits")
+    fits_list = gl.glob(directory + "*.fits")
+    amp_list.sort()
+
+    nb_images = len(fits_list)
+    nb_amp = len(amp_list)/nb_images
+    reference = amp_list[:nb_amp]
+    remaining = amp_list[nb_amp:]
+
+    for r in reference:
+        same_amp = [r]
+        im_amp = r[-11:]
+        for t in remaining:
+            im_amp_test = t[-11:]
+            if im_amp == im_amp_test:
+                same_amp.append(t)
+
+        string_same_amp = ""
+        for i in same_amp:
+            string_same_amp += " " + i
+        
+        print string_same_amp
+            
+        os.system("rawmedianstack -o master_flat_" + im_amp + " -s sout_" + im_amp + string_same_amp)
+
+    os.system("mkdir outs")
+    os.system("mkdir souts")
+
+    outs = gl.glob("master_flat*.fits")
+    outs.sort()
+    souts = gl.glob("sout*.fits")
+    souts.sort()
+
+    for o in outs:
+        os.system("mv " + o + " " + directory + "outs/")
+    for s in souts:
+        os.system("mv " + s + " " + directory + "souts/")
