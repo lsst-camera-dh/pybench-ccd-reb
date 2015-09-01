@@ -99,11 +99,33 @@ def do_flat_medianstack(directory = "./"):
     amp_list = gl.glob(directory + "*/unbiased*.fits")
     fits_list = gl.glob(directory + "*.fits")
     amp_list.sort()
+    fits_list.sort()
 
     nb_images = len(fits_list)
     nb_amp = len(amp_list)/nb_images
     reference = amp_list[:nb_amp]
     remaining = amp_list[nb_amp:]
+
+    positions = []
+
+    for f in fits_list:
+        temp = pf.open(f)
+        xpos = temp['XYZ'].header['XPOS']
+        ypos = temp['XYZ'].header['YPOS']
+        zpos = temp['XYZ'].header['ZPOS']
+        #tpos = temp['XYZ'].header['TPOS']
+        
+        temp_pos = str(xpos) + str(ypos) + str(zpos) # + str(tpos)
+
+        if len(positions) == 0:
+            positions.append(temp_pos)
+
+        if temp_pos not in positions:
+            positions.append(temp_pos)
+            
+        temp.close()
+
+    print positions
 
     for r in reference:
         same_amp = [r]
