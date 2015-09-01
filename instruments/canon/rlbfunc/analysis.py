@@ -109,49 +109,62 @@ def do_flat_medianstack(directory = "./"):
     positions = []
 
     for f in fits_list:
-        temp = pf.open(f)
-        xpos = temp['XYZ'].header['XPOS']
-        ypos = temp['XYZ'].header['YPOS']
-        zpos = temp['XYZ'].header['ZPOS']
-        #tpos = temp['XYZ'].header['TPOS']
-        
-        temp_pos = str(xpos) + str(ypos) + str(zpos) # + str(tpos)
+        temp_pos = extract_pos(f)
 
         if len(positions) == 0:
             positions.append(temp_pos)
 
         if temp_pos not in positions:
             positions.append(temp_pos)
-            
-        temp.close()
 
     print positions
 
+    os.system("mkdir outs")
+    os.system("mkdir souts")
+    
     for r in reference:
         same_amp = [r]
         im_amp = r[-11:]
         for t in remaining:
             im_amp_test = t[-11:]
-            if im_amp == im_amp_test:
+            if (im_amp == im_amp_test):
                 same_amp.append(t)
 
-        string_same_amp = ""
-        for i in same_amp:
-            string_same_amp += " " + i
-        
-        print string_same_amp
+        for p in positions:
+            same_amp_and_pos = []
+            for sa in same_amp:
+                temp_pos = extract_pos(sa)
+                if temp_pos == p:
+                    same_amp_and_pos.append(sa)
+
             
-        os.system("rawmedianstack -o master_flat_" + im_amp + " -s sout_" + im_amp + string_same_amp)
+            string_same_amp_and_pos = ""
+            for i in same_amp_and_pos:
+                string_same_amp_and_pos += " " + i
 
-    os.system("mkdir outs")
-    os.system("mkdir souts")
+            print string_same_amp_and_pos
 
-    outs = gl.glob("master_flat*.fits")
-    outs.sort()
-    souts = gl.glob("sout*.fits")
-    souts.sort()
+            os.system("rawmedianstack -o master_flat_" + im_amp + " -s sout_" + im_amp + string_same_amp_and_pos)
 
-    for o in outs:
-        os.system("mv " + o + " " + directory + "outs/")
-    for s in souts:
-        os.system("mv " + s + " " + directory + "souts/")
+            os.system("mkdir outs/" + p)
+            os.system("mkdir souts" + p)
+
+            outs = gl.glob("master_flat*.fits")
+            outs.sort()
+            souts = gl.glob("sout*.fits")
+            souts.sort()
+
+            for o in outs:
+                os.system("mv " + o + " " + directory + "outs/" + p)
+            for s in souts:
+                os.system("mv " + s + " " + directory + "souts/" + p)
+
+def extract_pos(fits):
+    temp = pf.open(f)
+    xpos = temp['XYZ'].header['XPOS']
+    ypos = temp['XYZ'].header['YPOS']
+    zpos = temp['XYZ'].header['ZPOS']
+    #tpos = temp['XYZ'].header['TPOS']
+        
+    temp_pos = str(xpos) + str(ypos) + str(zpos) # + str(tpos)
+    return temp_pos
