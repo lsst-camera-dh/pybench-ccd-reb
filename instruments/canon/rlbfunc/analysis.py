@@ -122,6 +122,10 @@ def do_flat_medianstack(directory = "./"):
     os.system("mkdir outs")
     os.system("mkdir souts")
     
+    for p in positions:
+        os.system("mkdir outs/" + p)
+        os.system("mkdir souts/" + p)
+    
     for r in reference:
         same_amp = [r]
         im_amp = r[-11:]
@@ -133,7 +137,7 @@ def do_flat_medianstack(directory = "./"):
         for p in positions:
             same_amp_and_pos = []
             for sa in same_amp:
-                temp_pos = extract_pos(sa)
+                temp_pos = extract_pos(sa[:-21] + ".fits")
                 if temp_pos == p:
                     same_amp_and_pos.append(sa)
 
@@ -145,9 +149,6 @@ def do_flat_medianstack(directory = "./"):
             print string_same_amp_and_pos
 
             os.system("rawmedianstack -o master_flat_" + im_amp + " -s sout_" + im_amp + string_same_amp_and_pos)
-
-            os.system("mkdir outs/" + p)
-            os.system("mkdir souts" + p)
 
             outs = gl.glob("master_flat*.fits")
             outs.sort()
