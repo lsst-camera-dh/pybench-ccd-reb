@@ -1,9 +1,30 @@
+#Remy Le Breton
+"""
+Functions to analyse data : stack, unbias, flat_field...
+In a directory, there should be three sub-directories :
+bias, flats, fringes.
+Doing merge_head_and_splice_frame enable to identify 
+the instrument with the virtual instrument in telinst
+(poloka-core) and split the frames to treat each channel
+as a single CCD.
+Tests are done with the test CCD, so not all the channels
+are working, hence the "valid_ampl" argument in the 
+"merge_head..." function.
+"""
+
+
 import os
 import glob as gl
 import numpy as np
 import pyfits as pf
 
-def merge_head_and_splice_frame(directory = "./", valid_ampl = [4,5,6,7,12,13,14,15,16]):
+def merge_head_and_splice_frame(directory = "./", valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
+    """
+    To do in the bias, flats and fringes directories.
+    Merge header to be able to idendtify the intrument,
+    and splice frame in order to only take the valid channels.
+    """
+
     fits_list = gl.glob(directory + "*.fits")
     fits_list.sort()
     for f in fits_list:
@@ -21,6 +42,11 @@ def merge_head_and_splice_frame(directory = "./", valid_ampl = [4,5,6,7,12,13,14
             os.system("imcopy " + im_dir + im_name + "\[" + str(v) + "\] " + im_dir + "amp_" + name + ".fits")
 
 def do_medianstack(directory = "./"):
+    """
+    To do in the bias directory.
+    Make the master biases for all valid channels.
+    """
+
     amp_list = gl.glob(directory + "*/*.fits")
     fits_list = gl.glob(directory + "*.fits")
     amp_list.sort()
@@ -60,6 +86,12 @@ def do_medianstack(directory = "./"):
         os.system("mv " + s + " " + directory + "souts/")
 
 def do_unbias(directory = "./"):
+    """
+    To do in the flat or fringes directory.
+    First, need to make merge_head... and do_medianstack
+    in the bias directory in order to make the masterbiases
+    """
+
     amp_list = gl.glob(directory + "*/*.fits")
     mbias = gl.glob(directory + "../bias/outs/*.fits")
     fits_list = gl.glob(directory + "*.fits")
@@ -96,11 +128,20 @@ def do_unbias(directory = "./"):
     
 
 def do_flat_medianstack(directory = "./"):
+    """
+    To do in the flats directory.
+    Work on unbiased_amp_*.fits files.
+    Make the master flats for all valid channels.
+    """
+
     amp_list = gl.glob(directory + "*/unbiased*.fits")
     fits_list = gl.glob(directory + "*.fits")
     amp_list.sort()
     fits_list.sort()
 
+    if len(amp_list) == 0:
+        raise ValueError("Make sure you have run do_unbias")
+    
     nb_images = len(fits_list)
     nb_amp = len(amp_list)/nb_images
     reference = amp_list[:nb_amp]
@@ -160,12 +201,124 @@ def do_flat_medianstack(directory = "./"):
             for s in souts:
                 os.system("mv " + s + " " + directory + "souts/" + p)
 
-def extract_pos(fits):
+def div_masterflat_byskylev(directory="./"):
+    """
+    To do in the outs directory of the flats directory
+    To do before the flatfield, to keep the dynamics.
+    """
+    pos_list = gl.glob(directory + "*")
+    pos_list.sort()
+
+    for p in pos_list:
+        mflat_list = gl.glob(p + "/*fits")
+        mflat_list.sort()
+        
+        string_mflat_list = ""
+        for i in mflat_list:
+            string_mflat_list += " " + i
+        
+        os.system("divbysky " + string_mflat_list)
+
+def back_to_original_master_flat(directory="./"):
+    """
+    To do in the outs directory of the flats directory
+    To do after the division by skylev, if we want to recover
+    original masterflats
+    """
+    
+    masterf_list = gl.glob(directory + "*/*fits")
+    masterf_list.sort()
+
+    for m in masterf_list:
+        temp = pf.open(m, mode = 'update')
+        sky = temp[0].header['SKYLEV']
+        temp[0].data *= sky
+        temp.close()
+
+def flatfield(directory = "./"):
+    """
+    To do in the same directory as bias, flats and fringes.
+    Flatfield the data images.
+    Make sure the fringes has been unbias.
+    Make sure sort_fringes_by_pos as been run.
+    """
+
+    mflat_pos_list = gl.glob(directory + "flat/*")
+    mflat_pos_list.sort()
+    
+    fringes_pos_list = gl.glob(directory + "fringes/*")
+    fringes_pos_list.sort()
+
+    if len(mflat_pos_list) != len(fringes_pos_list):
+        raise ValueError("The number of different positions is not \n the same for masterflats and fringes")
+    
+def sort_fringes_by_pos(directory = "./"):
+    """
+    To do in the fringes directory.
+    Sort fringes by pos and move unbiased data 
+    in the sorted_by_pos directory
+    """
+
+    fringes_list = gl.glob(directory + "*fits")
+    fringes_list.sort()
+
+    positions = []
+
+    for f in fringes_list:
+        temp_pos = extract_pos(f)
+
+        if len(positions) == 0:
+            positions.append(temp_pos)
+
+        if temp_pos not in positions:
+            positions.append(temp_pos)
+
+    os.system("mkdir sorted_by_pos")
+    
+    for p in positions:
+        os.system("mkdir sorted_by_pos/" + p)
+
+    for f in fringes_list:
+        pos = extract_pos(f)
+        unbiased_list = gl.glob(f[:-5] + "/unbiased_amp_*")
+        unbiased_list.sort()
+        for u in unbiased_list:
+            os.system("mv " + u + " sorted_by_pos/" + pos + "/" + u)
+    
+    
+def extract_pos(fits, theta = False):
+    """
+    Read the position (XPOS, YPOS, ZPOS and THETAPOS
+    if asked) of a header non-merged fits files in 
+    the 'XYZ' extension.
+    """
+    
     temp = pf.open(fits)
     xpos = temp['XYZ'].header['XPOS']
     ypos = temp['XYZ'].header['YPOS']
     zpos = temp['XYZ'].header['ZPOS']
-    #tpos = temp['XYZ'].header['TPOS']
-        
-    temp_pos = str(xpos) + str(ypos) + str(zpos) # + str(tpos)
+    
+    if theta:
+        tpos = temp['XYZ'].header['THETAPOS']
+        temp_pos = str(xpos) + str(ypos) + str(zpos) + str(tpos)
+    else:
+        temp_pos = str(xpos) + str(ypos) + str(zpos)
+    
     return temp_pos
+
+def launch_pipeline(valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
+    """
+    Launch the entire pipeline to obtain flatfielded images
+    To be done in the main directory (in the same directory
+    as bias/, flats/ and fringes/
+    """
+
+    direc = ["bias/", "flats/", "fringes/"]
+    
+    for d in direc:
+        merge_head_and_splice_frame(directory = d, valid_ampl = valid_ampl)
+
+    do_medianstack(directory = direc[0])
+    
+    for u in direc[1:]:
+        do_unbias(directory = u)
