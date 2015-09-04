@@ -261,12 +261,19 @@ def flatfield(directory = "./"):
             
     print "Positions to compute are : "
     print pos_to_compute
+    print ""
+
+    nb_pos = len(pos_to_compute)
+    i_pos = 1
 
     for p in pos_to_compute:
         flats = gl.glob(directory + "flats/outs/" + p + "/master_flat_amp_*.fits")
         flats.sort()
         fringes = gl.glob(directory + "fringes/sorted_by_pos/" + p + "/*/*fits")
         fringes.sort()
+        
+        nb_fringes = len(fringes)
+        i_fringes = 1
         for f in flats:
             ffile = pf.open(f)
             
@@ -281,13 +288,23 @@ def flatfield(directory = "./"):
             norm_fdata = fdata/skylev
 
             for s in same_amp:
+                print "Working on file : " + s[s.find("0x0020"):]
+                print "Flatfield of amplifier : " + str(i_fringes) + "/" + str(nb_fringes)
+                print "Position " + p + " : " + str(i_pos) + "/" + str(nb_pos)
+                print ""
+
                 sfile = pf.open(s)
                 sdata = sfile[0].data
                 flatfield_data = sdata/norm_fdata
                 pf.writeto(s[:-20] + "flatfield_" + s[-11:], flatfield_data)
                 sfile.close()
+                i_fringes += 1
 
             ffile.close()
+
+        i_pos += 1
+
+    print "Creating masterflats symbolic links"
         
     os.chdir(directory + "fringes/sorted_by_pos/")
     step_two_pos = gl.glob("*/")
