@@ -201,10 +201,11 @@ def do_flat_medianstack(directory = "./"):
             for s in souts:
                 os.system("mv " + s + " " + directory + "souts/" + p)
 
-def div_masterflat_byskylev(directory="./"):
+def put_masterflat_skylev_in_header(directory="./"):
     """
     To do in the outs directory of the flats directory
-    To do before the flatfield, to keep the dynamics.
+    Write the skylev value in the fits files header,
+    to be used in the flatfield.
     """
     pos_list = gl.glob(directory + "*")
     pos_list.sort()
@@ -217,23 +218,7 @@ def div_masterflat_byskylev(directory="./"):
         for i in mflat_list:
             string_mflat_list += " " + i
         
-        os.system("divbysky " + string_mflat_list)
-
-def back_to_original_master_flat(directory="./"):
-    """
-    To do in the outs directory of the flats directory
-    To do after the division by skylev, if we want to recover
-    original masterflats
-    """
-    
-    masterf_list = gl.glob(directory + "*/*fits")
-    masterf_list.sort()
-
-    for m in masterf_list:
-        temp = pf.open(m, mode = 'update')
-        sky = temp[0].header['SKYLEV']
-        temp[0].data *= sky
-        temp.close()
+        os.system("skylevinheader " + string_mflat_list)
 
 def flatfield(directory = "./"):
     """
@@ -243,15 +228,83 @@ def flatfield(directory = "./"):
     Make sure sort_fringes_by_pos as been run.
     """
 
-    mflat_pos_list = gl.glob(directory + "flat/*")
-    mflat_pos_list.sort()
+    mflat_list = gl.glob(directory + "flats/*.fits")
+    mflat_list.sort()
     
-    fringes_pos_list = gl.glob(directory + "fringes/*")
-    fringes_pos_list.sort()
+    fringes_list = gl.glob(directory + "fringes/*.fits")
+    fringes_list.sort()
 
-    if len(mflat_pos_list) != len(fringes_pos_list):
-        raise ValueError("The number of different positions is not \n the same for masterflats and fringes")
-    
+    mflat_pos_list = []
+    for mf in mflat_list:
+        temp_pos = extract_pos(mf)
+
+        if len(mflat_pos_list) == 0:
+            mflat_pos_list.append(temp_pos)
+
+        if temp_pos not in mflat_pos_list:
+            mflat_pos_list.append(temp_pos)
+
+    fringes_pos_list = []
+    for f in fringes_list:
+        temp_pos = extract_pos(f)
+
+        if len(fringes_pos_list) == 0:
+            fringes_pos_list.append(temp_pos)
+
+        if temp_pos not in fringes_pos_list:
+            fringes_pos_list.append(temp_pos)
+
+    pos_to_compute = []
+    for i in mflat_pos_list:
+        if i in fringes_pos_list:
+            pos_to_compute.append(i)
+            
+    print "Positions to compute are : "
+    print pos_to_compute
+
+    for p in pos_to_compute:
+        flats = gl.glob(directory + "flats/outs/" + p + "/master_flat_amp_*.fits")
+        flats.sort()
+        fringes = gl.glob(directory + "fringes/sorted_by_pos/" + p + "/*/*fits")
+        fringes.sort()
+        for f in flats:
+            ffile = pf.open(f)
+            
+            same_amp = []
+            for a in fringes:
+                if a[-11:] == f[-11:]:
+                    same_amp.append(a)
+
+            fdata = ffile[0].data
+            
+            skylev = ffile[0].header['SKYLEV']
+            norm_fdata = fdata/skylev
+
+            for s in same_amp:
+                sfile = pf.open(s)
+                sdata = sfile[0].data
+                flatfield_data = sdata/norm_fdata
+                pf.writeto(s[:-20] + "flatfield_" + s[-11:], flatfield_data)
+                sfile.close()
+
+            ffile.close()
+        
+    os.chdir(directory + "fringes/sorted_by_pos/")
+    step_two_pos = gl.glob("*/")
+    step_two_pos.sort()
+    for t in step_two_pos:
+        os.chdir(t)
+        frames = gl.glob("*/")
+        frames.sort()
+        for f in frames:
+            os.chdir(f)
+            for flat in flats:
+                os.system("ln -s ../../../../" + flat[flat.find("flats"):] + " " + flat[-23:])
+            os.chdir("../")
+        os.chdir("../")
+    os.chdir("../../")
+
+
 def sort_fringes_by_pos(directory = "./"):
     """
     To do in the fringes directory.
@@ -282,6 +335,7 @@ def sort_fringes_by_pos(directory = "./"):
         pos = extract_pos(f)
         unbiased_list = gl.glob(f[:-5] + "/unbiased_amp_*")
         unbiased_list.sort()
+        os.system("mkdir " + " sorted_by_pos/" + pos + "/" + f[-23:-5])
         for u in unbiased_list:
             os.system("mv " + u + " sorted_by_pos/" + pos + "/" + u)
     
