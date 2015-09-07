@@ -274,6 +274,17 @@ def flatfield(directory = "./"):
         
         nb_fringes = len(fringes)
         i_fringes = 1
+
+        ave_skylevs = 0
+        for f in flats:
+            ffile = pf.open(f)
+            ave_skylevs += ffile[0].header['SKYLEV']
+            ffile.close()
+        
+        ave_skylevs /= len(flats)
+        
+        print ave_skylevs
+
         for f in flats:
             ffile = pf.open(f)
             
@@ -284,8 +295,9 @@ def flatfield(directory = "./"):
 
             fdata = ffile[0].data
             
-            skylev = ffile[0].header['SKYLEV']
-            norm_fdata = fdata/skylev
+            #skylev = ffile[0].header['SKYLEV']
+            #norm_fdata = fdata/skylev
+            norm_fdata = fdata
 
             for s in same_amp:
                 print "Working on file : " + s[s.find("0x0020"):]
@@ -295,8 +307,9 @@ def flatfield(directory = "./"):
 
                 sfile = pf.open(s)
                 sdata = sfile[0].data
-                flatfield_data = sdata/norm_fdata
-                pf.writeto(s[:-20] + "flatfield_" + s[-11:], flatfield_data)
+                flatfield_data = sdata*ave_skylevs
+                flatfield_data/=norm_fdata
+                pf.writeto(s[:-20] + "flatfield_" + s[-11:], flatfield_data, header=sfile[0].header)
                 sfile.close()
                 i_fringes += 1
 
@@ -413,3 +426,26 @@ def launch_pipeline(valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
     
     for u in direc[1:]:
         do_unbias(directory = u)
+
+def make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits"):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Use this function to group all the image in one HDUList
+    """
+    frames = gl.glob("*/*/")
+    frames.sort()
+    print frames
+    for f in frames:
+        images = gl.glob(f + keyword + "_amp_*.fits")
+        images.sort()
+        pri = pf.PrimaryHDU()
+        hlist = pf.HDUList()
+        hlist.append(pri)
+        if len(images) != 0:
+            for i in images:
+                temp = pf.open(i)
+                a = pf.CompImageHDU(temp[0].data, header = temp[0].header)
+                hlist.append(a)
+                temp.close()
+    
+            hlist.writeto(f + output)
