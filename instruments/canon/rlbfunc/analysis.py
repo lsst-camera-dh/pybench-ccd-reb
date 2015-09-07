@@ -304,19 +304,39 @@ def flatfield(directory = "./"):
 
         i_pos += 1
 
-    print "Creating masterflats symbolic links"
-        
+def create_flat_slinks(directory = "./"):
+    """
+    To do in the same directory as bias, flats and fringes.
+    Makes symbolic links in order to compare raw and flatfield
+    data.
+    """
+    
+    print "Creating masterflats symbolic links..."
+    
     os.chdir(directory + "fringes/sorted_by_pos/")
-    step_two_pos = gl.glob("*/")
-    step_two_pos.sort()
+    fringes_pos = gl.glob("*/")
+    fringes_pos.sort()
+    os.chdir("../../flats/outs/")
+    flat_pos = gl.glob("*/")
+    flat_pos.sort()
+    os.chdir("../../")
+
+    step_two_pos = []
+    for i in fringes_pos:
+        if i in flat_pos:
+            step_two_pos.append(i[:-1])
+        
+    os.chdir("fringes/sorted_by_pos/")
     for t in step_two_pos:
         os.chdir(t)
         frames = gl.glob("*/")
         frames.sort()
+        flats2 = gl.glob("../../../flats/outs/" + t + "/master_flat_*.fits")
+        flats2.sort()
         for f in frames:
             os.chdir(f)
-            for flat in flats:
-                os.system("ln -s ../../../../" + flat[flat.find("flats"):] + " " + flat[-23:])
+            for flat in flats2:
+                os.system("ln -s ../" + flat + " " + flat[-23:])
             os.chdir("../")
         os.chdir("../")
     os.chdir("../../")
