@@ -434,8 +434,10 @@ def make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits"):
     """
     frames = gl.glob("*/*/")
     frames.sort()
-    print frames
+    length_f = len(frames)
+    i_f = 1
     for f in frames:
+        print "Computing frame : " i_f + "/" + length_f
         images = gl.glob(f + keyword + "_amp_*.fits")
         images.sort()
         pri = pf.PrimaryHDU()
@@ -449,3 +451,4 @@ def make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits"):
                 temp.close()
     
             hlist.writeto(f + output)
+        i_f +=1
