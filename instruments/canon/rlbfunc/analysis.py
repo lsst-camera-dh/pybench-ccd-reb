@@ -414,7 +414,6 @@ def do_flat_medianstack(directory = "./"):
     Work on unbiased_amp_*.fits files.
     Make the master flats for all valid channels.
     """
-<<<<<<< HEAD
     frames = gl.glob("*/*/")
     frames.sort()
     length_f = len(frames)
@@ -432,7 +431,6 @@ def do_flat_medianstack(directory = "./"):
                 a = pf.CompImageHDU(temp[0].data, header = temp[0].header)
                 hlist.append(a)
                 temp.close()
-=======
 
     amp_list = gl.glob(directory + "*/unbiased*.fits")
     fits_list = gl.glob(directory + "*.fits")
@@ -441,7 +439,6 @@ def do_flat_medianstack(directory = "./"):
 
     if len(amp_list) == 0:
         raise ValueError("Make sure you have run do_unbias")
->>>>>>> 242dc0752214b42fec71c83b2d04e90b592bff76
     
     nb_images = len(fits_list)
     nb_amp = len(amp_list)/nb_images
