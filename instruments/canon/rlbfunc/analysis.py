@@ -124,8 +124,289 @@ def do_unbias(directory = "./"):
             temp.writeto(out_name, clobber = True)
             temp.close()
             os.system("mv " + out_name + " " + dir_name)
-        
+
+def do_stacktwilights(directory = "./"):
+    """
+    To do in the flats/sorted_by_pos directory.
+    Work on unbiased_amp_*.fits files.
+    Make sure you have made sort_by_pos in the flats
+    directory.
+    Make the master flats for all valid channels.
+    """
     
+    pos = gl.glob("*")
+    pos.sort()
+
+    for p in pos:
+        flats = gl.glob(p + "/*/unbiased_amp_*")
+        flats.sort()
+        
+        flats_string = ""
+        for f in flats:
+            flats_string += f + " "
+
+        os.system("stacktwilights " + flats_string)
+        
+        outs = gl.glob("CCD_*data.fits")
+        outs.sort()
+        souts = gl.glob("CCD_*sigma.fits")
+        souts.sort()
+        
+        os.system("mkdir " + p + "/outs")
+        os.system("mkdir " + p + "/souts")
+
+        for o in outs:
+            out_temp = pf.open(o)
+            chan = (out_temp[0].header['EXTNAME'])
+            chan = str(int(chan[chan.find("_") + 1 :]) + 1)
+            if len(chan) == 1:
+                chan = "0" + chan
+            os.system("mv " + o + " " + p + "/outs/master_flat_amp_" + chan + ".fits")
+            out_temp.close()
+
+        for s in souts:
+            sout_temp = pf.open(s)
+            chan = (sout_temp[0].header['EXTNAME'])
+            chan = str(int(chan[chan.find("_") + 1 :]) + 1)
+            if len(chan) == 1:
+                chan = "0" + chan
+            os.system("mv " + s + " " + p + "/souts/sigma_master_flat_amp_" + chan + ".fits")
+            out_temp.close()
+    
+def sort_by_pos(directory = "./"):
+    """
+    To do in the fringes directory.
+    Sort image by pos and move unbiased data 
+    in the sorted_by_pos directory
+    """
+
+    image_list = gl.glob(directory + "*fits")
+    image_list.sort()
+
+    positions = []
+
+    for f in image_list:
+        temp_pos = extract_pos(f)
+
+        if len(positions) == 0:
+            positions.append(temp_pos)
+
+        if temp_pos not in positions:
+            positions.append(temp_pos)
+
+    os.system("mkdir sorted_by_pos")
+    
+    for p in positions:
+        os.system("mkdir sorted_by_pos/" + p)
+
+    for f in image_list:
+        pos = extract_pos(f)
+        unbiased_list = gl.glob(f[:-5] + "/unbiased_amp_*")
+        unbiased_list.sort()
+        os.system("mkdir " + " sorted_by_pos/" + pos + "/" + f[-23:-5])
+        for u in unbiased_list:
+            os.system("mv " + u + " sorted_by_pos/" + pos + "/" + u)
+
+def flatfield(directory = "./"):
+    """
+    To do in the same directory as bias, flats and fringes.
+    Flatfield the data images.
+    Make sure the fringes has been unbias.
+    Make sure sort_fringes_by_pos as been run.
+    """
+
+    os.chdir("flats/sorted_by_pos")
+    mflat_pos_list = gl.glob("*")
+    mflat_pos_list.sort()
+    os.chdir("../../")
+    
+    os.chdir("fringes/sorted_by_pos")
+    fringes_pos_list = gl.glob("*")
+    fringes_pos_list.sort()
+    os.chdir("../../")
+   
+
+    pos_to_compute = []
+    for i in mflat_pos_list:
+        if i in fringes_pos_list:
+            pos_to_compute.append(i)
+            
+    print "Positions to compute are : "
+    print pos_to_compute
+    print ""
+
+    nb_pos = len(pos_to_compute)
+    i_pos = 1
+
+    for p in pos_to_compute:
+        flats = gl.glob(directory + "flats/sorted_by_pos/" + p + "/outs/master_flat_amp_*.fits")
+        flats.sort()
+        fringes = gl.glob(directory + "fringes/sorted_by_pos/" + p + "/*/*fits")
+        fringes.sort()
+        
+        nb_fringes = len(fringes)
+        i_fringes = 1
+
+        #ave_skylevs = 0
+        #for f in flats:
+            #ffile = pf.open(f)
+            #ave_skylevs += ffile[0].header['SKYLEV']
+            #ffile.close()
+        
+        #ave_skylevs /= len(flats)
+        
+        #print ave_skylevs
+
+        for f in flats:
+            ffile = pf.open(f)
+            
+            same_amp = []
+            for a in fringes:
+                if a[-11:] == f[-11:]:
+                    same_amp.append(a)
+
+            fdata = ffile[0].data
+            
+            #skylev = ffile[0].header['SKYLEV']
+            #norm_fdata = fdata/skylev
+            norm_fdata = fdata
+
+            for s in same_amp:
+                print "Working on file : " + s[s.find("0x0020"):]
+                print "Flatfield of amplifier : " + str(i_fringes) + "/" + str(nb_fringes)
+                print "Position " + p + " : " + str(i_pos) + "/" + str(nb_pos)
+                print ""
+
+                sfile = pf.open(s)
+                sdata = sfile[0].data
+                flatfield_data = sdata #*ave_skylevs
+                flatfield_data/=norm_fdata
+                pf.writeto(s[:-20] + "flatfield_" + s[-11:], flatfield_data, header=sfile[0].header)
+                sfile.close()
+                i_fringes += 1
+
+            ffile.close()
+
+        i_pos += 1
+
+def create_flat_slinks(directory = "./"):
+    """
+    To do in the same directory as bias, flats and fringes.
+    Makes symbolic links in order to compare raw and flatfield
+    data.
+    """
+    
+    print "Creating masterflats symbolic links..."
+    
+    os.chdir(directory + "fringes/sorted_by_pos/")
+    fringes_pos = gl.glob("*/")
+    fringes_pos.sort()
+    os.chdir("../../flats/sorted_by_pos/")
+    flat_pos = gl.glob("*/")
+    flat_pos.sort()
+    os.chdir("../../")
+
+    step_two_pos = []
+    for i in fringes_pos:
+        if i in flat_pos:
+            step_two_pos.append(i[:-1])
+        
+    os.chdir("fringes/sorted_by_pos/")
+    for t in step_two_pos:
+        os.chdir(t)
+        frames = gl.glob("*/")
+        frames.sort()
+        flats2 = gl.glob("../../../flats/sorted_by_pos/" + t + "/outs/master_flat_*.fits")
+        flats2.sort()
+        for f in frames:
+            os.chdir(f)
+            for flat in flats2:
+                os.system("ln -s ../" + flat + " " + flat[-23:])
+            os.chdir("../")
+        os.chdir("../")
+    os.chdir("../../")
+
+def make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits"):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Use this function to group all the image in one HDUList
+    """
+    frames = gl.glob("*/*/")
+    frames.sort()
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        images = gl.glob(f + keyword + "_amp_*.fits")
+        images.sort()
+        pri = pf.PrimaryHDU()
+        hlist = pf.HDUList()
+        hlist.append(pri)
+        if len(images) != 0:
+            for i in images:
+                temp = pf.open(i)
+                a = pf.CompImageHDU(temp[0].data, header = temp[0].header)
+                hlist.append(a)
+                temp.close()
+    
+            hlist.writeto(f + output)
+        i_f +=1
+
+def make_hdulist_data_and_flats():
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Use this function to group all the image in one HDUList for
+    data and masterflats at the same time.
+    """
+    make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits")
+    make_hdulist(keyword = "master_flat", output = "full_masterflat_image.fits")
+    
+def extract_pos(fits, theta = False):
+    """
+    Read the position (XPOS, YPOS, ZPOS and THETAPOS
+    if asked) of a header non-merged fits files in 
+    the 'XYZ' extension.
+    """
+    
+    temp = pf.open(fits)
+    xpos = temp['XYZ'].header['XPOS']
+    ypos = temp['XYZ'].header['YPOS']
+    zpos = temp['XYZ'].header['ZPOS']
+    
+    if theta:
+        tpos = temp['XYZ'].header['THETAPOS']
+        temp_pos = str(xpos) + str(ypos) + str(zpos) + str(tpos)
+    else:
+        temp_pos = str(xpos) + str(ypos) + str(zpos)
+    
+    return temp_pos
+
+def launch_pipeline(valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
+    """
+    Launch the entire pipeline to obtain flatfielded images
+    To be done in the main directory (in the same directory
+    as bias/, flats/ and fringes/
+    """
+
+    direc = ["bias/", "flats/", "fringes/"]
+    
+    for d in direc:
+        merge_head_and_splice_frame(directory = d, valid_ampl = valid_ampl)
+
+    do_medianstack(directory = direc[0])
+    
+    for u in direc[1:]:
+        do_unbias(directory = u)
+
+    do_stacktwilights(directory = direc[1])
+    #do_flat_medianstack(directory = direc[1])
+    #put_masterflat_skylev_in_header(directory = direc[1] + "outs/")
+    
+    sort_fringes_by_pos(directory = direc[2])
+    flatfield()
+    create_flat_slinks()
+    make_hdulist(directory = direc[2] + "sorted_by_pos/")
+
 
 def do_flat_medianstack(directory = "./"):
     """
@@ -133,6 +414,25 @@ def do_flat_medianstack(directory = "./"):
     Work on unbiased_amp_*.fits files.
     Make the master flats for all valid channels.
     """
+<<<<<<< HEAD
+    frames = gl.glob("*/*/")
+    frames.sort()
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        images = gl.glob(f + keyword + "_amp_*.fits")
+        images.sort()
+        pri = pf.PrimaryHDU()
+        hlist = pf.HDUList()
+        hlist.append(pri)
+        if len(images) != 0:
+            for i in images:
+                temp = pf.open(i)
+                a = pf.CompImageHDU(temp[0].data, header = temp[0].header)
+                hlist.append(a)
+                temp.close()
+=======
 
     amp_list = gl.glob(directory + "*/unbiased*.fits")
     fits_list = gl.glob(directory + "*.fits")
@@ -141,6 +441,7 @@ def do_flat_medianstack(directory = "./"):
 
     if len(amp_list) == 0:
         raise ValueError("Make sure you have run do_unbias")
+>>>>>>> 242dc0752214b42fec71c83b2d04e90b592bff76
     
     nb_images = len(fits_list)
     nb_amp = len(amp_list)/nb_images
@@ -219,236 +520,3 @@ def put_masterflat_skylev_in_header(directory="./"):
             string_mflat_list += " " + i
         
         os.system("skylevinheader " + string_mflat_list)
-
-def flatfield(directory = "./"):
-    """
-    To do in the same directory as bias, flats and fringes.
-    Flatfield the data images.
-    Make sure the fringes has been unbias.
-    Make sure sort_fringes_by_pos as been run.
-    """
-
-    mflat_list = gl.glob(directory + "flats/*.fits")
-    mflat_list.sort()
-    
-    fringes_list = gl.glob(directory + "fringes/*.fits")
-    fringes_list.sort()
-
-    mflat_pos_list = []
-    for mf in mflat_list:
-        temp_pos = extract_pos(mf)
-
-        if len(mflat_pos_list) == 0:
-            mflat_pos_list.append(temp_pos)
-
-        if temp_pos not in mflat_pos_list:
-            mflat_pos_list.append(temp_pos)
-
-    fringes_pos_list = []
-    for f in fringes_list:
-        temp_pos = extract_pos(f)
-
-        if len(fringes_pos_list) == 0:
-            fringes_pos_list.append(temp_pos)
-
-        if temp_pos not in fringes_pos_list:
-            fringes_pos_list.append(temp_pos)
-
-    pos_to_compute = []
-    for i in mflat_pos_list:
-        if i in fringes_pos_list:
-            pos_to_compute.append(i)
-            
-    print "Positions to compute are : "
-    print pos_to_compute
-    print ""
-
-    nb_pos = len(pos_to_compute)
-    i_pos = 1
-
-    for p in pos_to_compute:
-        flats = gl.glob(directory + "flats/outs/" + p + "/master_flat_amp_*.fits")
-        flats.sort()
-        fringes = gl.glob(directory + "fringes/sorted_by_pos/" + p + "/*/*fits")
-        fringes.sort()
-        
-        nb_fringes = len(fringes)
-        i_fringes = 1
-
-        ave_skylevs = 0
-        for f in flats:
-            ffile = pf.open(f)
-            ave_skylevs += ffile[0].header['SKYLEV']
-            ffile.close()
-        
-        ave_skylevs /= len(flats)
-        
-        print ave_skylevs
-
-        for f in flats:
-            ffile = pf.open(f)
-            
-            same_amp = []
-            for a in fringes:
-                if a[-11:] == f[-11:]:
-                    same_amp.append(a)
-
-            fdata = ffile[0].data
-            
-            #skylev = ffile[0].header['SKYLEV']
-            #norm_fdata = fdata/skylev
-            norm_fdata = fdata
-
-            for s in same_amp:
-                print "Working on file : " + s[s.find("0x0020"):]
-                print "Flatfield of amplifier : " + str(i_fringes) + "/" + str(nb_fringes)
-                print "Position " + p + " : " + str(i_pos) + "/" + str(nb_pos)
-                print ""
-
-                sfile = pf.open(s)
-                sdata = sfile[0].data
-                flatfield_data = sdata*ave_skylevs
-                flatfield_data/=norm_fdata
-                pf.writeto(s[:-20] + "flatfield_" + s[-11:], flatfield_data, header=sfile[0].header)
-                sfile.close()
-                i_fringes += 1
-
-            ffile.close()
-
-        i_pos += 1
-
-def create_flat_slinks(directory = "./"):
-    """
-    To do in the same directory as bias, flats and fringes.
-    Makes symbolic links in order to compare raw and flatfield
-    data.
-    """
-    
-    print "Creating masterflats symbolic links..."
-    
-    os.chdir(directory + "fringes/sorted_by_pos/")
-    fringes_pos = gl.glob("*/")
-    fringes_pos.sort()
-    os.chdir("../../flats/outs/")
-    flat_pos = gl.glob("*/")
-    flat_pos.sort()
-    os.chdir("../../")
-
-    step_two_pos = []
-    for i in fringes_pos:
-        if i in flat_pos:
-            step_two_pos.append(i[:-1])
-        
-    os.chdir("fringes/sorted_by_pos/")
-    for t in step_two_pos:
-        os.chdir(t)
-        frames = gl.glob("*/")
-        frames.sort()
-        flats2 = gl.glob("../../../flats/outs/" + t + "/master_flat_*.fits")
-        flats2.sort()
-        for f in frames:
-            os.chdir(f)
-            for flat in flats2:
-                os.system("ln -s ../" + flat + " " + flat[-23:])
-            os.chdir("../")
-        os.chdir("../")
-    os.chdir("../../")
-
-
-def sort_fringes_by_pos(directory = "./"):
-    """
-    To do in the fringes directory.
-    Sort fringes by pos and move unbiased data 
-    in the sorted_by_pos directory
-    """
-
-    fringes_list = gl.glob(directory + "*fits")
-    fringes_list.sort()
-
-    positions = []
-
-    for f in fringes_list:
-        temp_pos = extract_pos(f)
-
-        if len(positions) == 0:
-            positions.append(temp_pos)
-
-        if temp_pos not in positions:
-            positions.append(temp_pos)
-
-    os.system("mkdir sorted_by_pos")
-    
-    for p in positions:
-        os.system("mkdir sorted_by_pos/" + p)
-
-    for f in fringes_list:
-        pos = extract_pos(f)
-        unbiased_list = gl.glob(f[:-5] + "/unbiased_amp_*")
-        unbiased_list.sort()
-        os.system("mkdir " + " sorted_by_pos/" + pos + "/" + f[-23:-5])
-        for u in unbiased_list:
-            os.system("mv " + u + " sorted_by_pos/" + pos + "/" + u)
-    
-    
-def extract_pos(fits, theta = False):
-    """
-    Read the position (XPOS, YPOS, ZPOS and THETAPOS
-    if asked) of a header non-merged fits files in 
-    the 'XYZ' extension.
-    """
-    
-    temp = pf.open(fits)
-    xpos = temp['XYZ'].header['XPOS']
-    ypos = temp['XYZ'].header['YPOS']
-    zpos = temp['XYZ'].header['ZPOS']
-    
-    if theta:
-        tpos = temp['XYZ'].header['THETAPOS']
-        temp_pos = str(xpos) + str(ypos) + str(zpos) + str(tpos)
-    else:
-        temp_pos = str(xpos) + str(ypos) + str(zpos)
-    
-    return temp_pos
-
-def launch_pipeline(valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
-    """
-    Launch the entire pipeline to obtain flatfielded images
-    To be done in the main directory (in the same directory
-    as bias/, flats/ and fringes/
-    """
-
-    direc = ["bias/", "flats/", "fringes/"]
-    
-    for d in direc:
-        merge_head_and_splice_frame(directory = d, valid_ampl = valid_ampl)
-
-    do_medianstack(directory = direc[0])
-    
-    for u in direc[1:]:
-        do_unbias(directory = u)
-
-def make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits"):
-    """
-    To do in the sorted_by_pos directory in the fringe directory
-    Use this function to group all the image in one HDUList
-    """
-    frames = gl.glob("*/*/")
-    frames.sort()
-    length_f = len(frames)
-    i_f = 1
-    for f in frames:
-        print "Computing frame : " + str(i_f) + "/" + str(length_f)
-        images = gl.glob(f + keyword + "_amp_*.fits")
-        images.sort()
-        pri = pf.PrimaryHDU()
-        hlist = pf.HDUList()
-        hlist.append(pri)
-        if len(images) != 0:
-            for i in images:
-                temp = pf.open(i)
-                a = pf.CompImageHDU(temp[0].data, header = temp[0].header)
-                hlist.append(a)
-                temp.close()
-    
-            hlist.writeto(f + output)
-        i_f +=1
