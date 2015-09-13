@@ -84,16 +84,20 @@ class XYZremote(object):
     def __init__(self,
                  ports = [ xyz.XYZ.default_x_port, 
                            xyz.XYZ.default_y_port, 
-                           xyz.XYZ.default_z_port ],
+                           xyz.XYZ.default_z_port,
+                           xyz.XYZ.default_a_port ],
                  x_serial = xyz.XYZ.default_x_serial,
                  y_serial = xyz.XYZ.default_y_serial,
                  z_serial = xyz.XYZ.default_z_serial,
+                 a_serial = xyz.XYZ.default_a_serial,
                  debug = True):
+
         self.state = 1
         self.XYZ = xyz.XYZ(ports = ports,
                            x_serial = x_serial,
                            y_serial = y_serial,
                            z_serial = z_serial,
+                           a_serial = a_serial,
                            debug = debug)
 
     # --------------------------------------------------------------
@@ -136,11 +140,14 @@ class XYZremote(object):
         logging.info("  XYZ : Y serial = %s" % y_serial)
         z_serial = self.XYZ.z_axis.get_serial()
         logging.info("  XYZ : Z serial = %s" % z_serial)
-        serials = [ x_serial, y_serial, z_serial ]
+        a_serial = self.XYZ.a_axis.get_serial()
+        logging.info("  XYZ : A serial = %s" % a_serial)
+        serials = [ x_serial, y_serial, z_serial, a_serial ]
         result = ( "Pollux XYZ: " + # should contain "XYZ"
                    " X: " + x_serial +
                    " Y: " + y_serial +
-                   " Z: " + z_serial )
+                   " Z: " + z_serial +
+                   " A: " + a_serial )
         logging.info("  XYZ : serials = %s" % result)
         logging.info("XYZ.checkConnection() done.")
         return result
@@ -180,8 +187,8 @@ class XYZremote(object):
         Move the XYZ to the given position (or offset).
         'moves' is a dictionary of the following format:
               {'x': 12.34, 'y': -23.1, 'dz' : -45.0 }
-        This function can do relative (dx,dy,dz) 
-        and absolute (x,y,z) movements.
+        This function can do relative (dx,dy,dz,da) 
+        and absolute (x,y,z,a) movements.
 
         By default, check is and *MUST* be left to True.
         """
@@ -195,7 +202,7 @@ class XYZremote(object):
 
     def get_position(self):
         """
-        Return the current position on the three motors 
+        Return the current position on the XYZ(A) motors 
         (as a dictionary).
         It is then possible to do move(**get_position())
         """

@@ -11,7 +11,8 @@ import lsst.instruments.pollux.xyz as ltpxyz
 
 def usage():
     print >>sys.stderr, "usage: xyz-position"
-    print >>sys.stderr, "Returns the current (x,y,z) position of the XYZ" 
+    print >>sys.stderr, "Returns the current (x,y,z(,a)) "
+    print >>sys.stderr, "position of the XYZ(A)" 
     print >>sys.stderr, "on the LSST instruments (in mm)."
 
 try:
@@ -47,7 +48,8 @@ xyz.close()
 
 # ---------------------------------------------------------
 
-print position.get('x'), position.get('y'), position.get('z')
+print position.get('x'), position.get('y'), position.get('z'), \
+    position.get('a', None), 
 
 # ---------------------------------------------------------
 
