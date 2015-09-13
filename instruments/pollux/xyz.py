@@ -23,37 +23,42 @@ class XYZ(object):
     """
     High level class representing the XYZ motorized support.
     """
-    # default_x_port = "/dev/ttyUSB9"
-    # default_y_port = "/dev/ttyUSB11"
-    # default_z_port = "/dev/ttyUSB10"
-    default_x_port = "/dev/ttyS16"
-    default_y_port = "/dev/ttyS17"
-    default_z_port = "/dev/ttyS18"
 
-    default_x_serial =  '9050719'
-    default_y_serial = '10050833'
-    default_z_serial =  '9050809'
+    # default_ports = { 'x': "/dev/ttyS16",
+    #                   'y': "/dev/ttyS17",
+    #                   'z': "/dev/ttyS18" }
+
+    default_ports =    { 'x': "/dev/ttyS16",
+                         'y': "/dev/ttyS16",
+                         'z': "/dev/ttyS16",
+                         'a': "/dev/ttyS16" }
+
+    default_serials =  { 'x':  '9050719',
+                         'y': '10050833',
+                         'z':  '9050809',
+                         'a': '15051379' }
+
+    default_axis_ids = { 'x': 1,
+                         'y': 2,
+                         'z': 3,
+                         'a': 4 }
 
     # ---------- Constructor ---------------------------------
 
     def __init__(self,
-                 ports = [ default_x_port, 
-                           default_y_port, 
-                           default_z_port ],
-                 x_serial = default_x_serial,
-                 y_serial = default_y_serial,
-                 z_serial = default_z_serial,
+                 ports = default_ports, 
+                 serials = default_serials,
+                 axis_ids = default_axis_ids,
                  debug = True):
 
         self.ports = ports
+        self.serials = serials
+        self.axis_ids = axis_ids
 
-        self.x_serial = x_serial
-        self.y_serial = y_serial
-        self.z_serial = z_serial
-
-        self.x_axis = None
-        self.y_axis = None
-        self.z_axis = None
+        self.axes = { 'x': None, 
+                      'y': None, 
+                      'z': None, 
+                      'a': None }
 
         self.homed = False
 
@@ -63,58 +68,74 @@ class XYZ(object):
 
     def open(self, check = True):
         """
-        Open the three devices, and checking serial numbers
-        to avoid errors.
+        Open all the connected devices, and checking serial numbers
+        and axis_id to avoid misidentification of axes.
+
+        Axis A (4) (angle) is optional. Everything should work
+        even if it is missing.
         """
 
-        for port in self.ports:
+        # -- Firt open X axis --------------------------------
+
+        for ax in ['x', 'y', 'z', 'a']:
+
+            if ( not(self.ports.has_key(ax)) or
+                 not(self.serials.has_key(ax)) or
+                 not(self.axis_ids.has_key(ax)) ): continue
 
             if self.debug: 
-                print >>sys.stderr, "Opening axis on port %s ..." % port 
+                print >>sys.stderr, ( "Opening '%s' axis on port %s ..." % 
+                                      (ax, self.ports[ax]) )
+            # Opening the Axis
 
-            axis = pollux.Pollux(port = port,
+            axis = pollux.Pollux(port = self.ports[ax],
+                                 axis_id = self.axis_ids[ax],
                                  debug = self.debug)
-            axis.open()
+            try: 
+                axis.open()
+            except IOError:
+                if self.debug: 
+                    print >>sys.stderr, ( "No axis '%s' on port %s." % 
+                                          ( ax, self.ports[ax] ) )
+                continue
+                    
+
             if self.debug: 
-                print >>sys.stderr, "Opening axis on port %s done." % port 
+                print >>sys.stderr, ( "Opening axis '%s' on port %s done." % 
+                                      ( ax, self.ports[ax] ) )
 
             motor_serial = axis.get_serial()
             # print repr(motor_serial)
 
-            if motor_serial == self.x_serial:
-                self.x_axis = axis
-            elif motor_serial == self.y_serial:
-                self.y_axis = axis
-            elif motor_serial == self.z_serial:
-                self.z_axis = axis
-            else:
-                raise IOError("Unknown Axis (unknown serial number)")
+            if motor_serial != self.serials[ax]:
+                raise IOError("Wrong Axis (wrong/unknown serial number)")
+
+            self.axes[ax] = axis
+
+        # --
 
         if check:
-            if self.x_axis == None:
+            if self.axes['x'] == None:
                 raise IOError("Missing X Axis")
 
-            if self.y_axis == None:
+            if self.axes['y'] == None:
                 raise IOError("Missing Y Axis")
 
-            if self.z_axis == None:
+            if self.axes['z'] == None:
                 raise IOError("Missing Z Axis")
 
+        # No check for optional A axis.
 
-    # ---------- Close the three devices --------------------- 
+
+    # ---------- Close the three/four devices ----------------
 
     def close(self):
         """
-        Close the three devices.
+        Close the three/four devices.
         """ 
-        if (self.x_axis != None):
-            self.x_axis.close()
-
-        if (self.y_axis != None):
-            self.y_axis.close()
-
-        if (self.z_axis != None):
-            self.z_axis.close()
+        for ax in ['x', 'y', 'z', 'a']:
+            if (self.axes[ax] != None):
+                self.axes[ax].close()
 
             
     # ---------- Setup the motors ----------------------------
@@ -123,23 +144,13 @@ class XYZ(object):
         """
         Initialize each connected motor (init strings).
         """
-        if (self.x_axis != None):
-            self.x_axis.setup()
-        else:
-            if self.debug: 
-                print >>sys.stderr,  "X axis disabled."
 
-        if (self.y_axis != None):
-            self.y_axis.setup()
-        else:
-            if self.debug: 
-                print >>sys.stderr,  "Y axis disabled."
-
-        if (self.z_axis != None):
-            self.z_axis.setup()
-        else:
-            if self.debug: 
-                print >>sys.stderr,  "Z axis disabled."
+        for ax in ['x', 'y', 'z', 'a']:
+            if (self.axes[ax] != None):
+                self.axes[ax].setup()
+            else:
+                if self.debug: 
+                    print >>sys.stderr,  "%s axis disabled." % ax
 
 
     # ---------- Home procedure for the motors ---------------
@@ -160,16 +171,20 @@ class XYZ(object):
         # last detect the forward end position on the z axis.
 
         # First send the Z motor backward
-        self.z_axis.find_limits(lower=True, upper=False)
+        self.axes['z'].find_limits(lower=True, upper=False)
 
         # Then find the limits for X and Y axes
         # and put the motor half range (critical)
-        self.x_axis.home()
-        self.y_axis.home()
+        self.axes['x'].home()
+        self.axes['y'].home()
 
         # at last init of z axis (find limits and put motor half range)
-        self.z_axis.home()
+        self.axes['z'].home()
 
+        # If axis A is present, homing (take a lot of time)
+        if (self.axes['a'] != None):
+            self.axes['a'].home()
+            
         # then park it
         if park: self.park()
 
@@ -181,74 +196,73 @@ class XYZ(object):
 
     def park(self):
         """
-        Park the XYZ out of the light beam.
+        Park the XYZ(A) out of the light beam.
         Even if no homing has been done, parking should work properly.
         """ 
 
         # Even if no homing has been done, parking is OK
 
-        if ( (self.x_axis == None) or 
-             (self.y_axis == None) or 
-             (self.z_axis == None) ):
+        if ( (self.axes['x'] == None) or 
+             (self.axes['y'] == None) or 
+             (self.axes['z'] == None) ):
             # cannot park safely
             raise pollux.MotorError("Some axes are missing (have you done a 'open' first): cannot park safely.")
 
         # min pos for z axis first
-        self.z_axis.find_limits(upper = False, lower = True)
+        self.axes['z'].find_limits(upper = False, lower = True)
         self.move(dz = +1.0) # to avoid blocking the motor
 
         # Then, max pos for x and y axes
-        self.x_axis.find_limits(upper = True, lower = False)
+        self.axes['x'].find_limits(upper = True, lower = False)
         self.move(dx = -1.0) # to avoid blocking the motor
 
-        self.y_axis.find_limits(upper = True, lower = False)
+        self.axes['y'].find_limits(upper = True, lower = False)
         self.move(dy = -1.0) # to avoid blocking the motor
 
-        # park_position = {
-        #     'x' : self.x_axis.get_limits()['up']   - 1.0,
-        #     'y' : self.y_axis.get_limits()['up']   - 1.0,
-        #     'z' : self.x_axis.get_limits()['down'] + 1.0 }
-
-        # # order is important !!
-        # self.move(z = park_position['z'])
-
-        # self.move(x = park_position['x'])
-        # self.move(y = park_position['y'])
+        # Then, zero pos for a axis
+        if (self.axes['a'] != None):
+            self.axes['a'].move_absolute(0.0)
 
 
     # ---------- Current motor position ---------------------- 
 
     def get_position(self):
         """
-        Return the current position on the three motors 
+        Return the current position on the XYZ(A) motors 
         (as a dictionary).
         It is then possible to do move(**get_position())
         """
 
         position = {}
 
-        if (self.x_axis != None):
-            position['x'] = self.x_axis.get_position()
+        if (self.axes['x'] != None):
+            position['x'] = self.axes['x'].get_position()
         else:
             if self.debug: 
                 print >>sys.stderr,  "X axis disabled."
 
-        if (self.y_axis != None):
-            position['y'] = self.y_axis.get_position()
+        if (self.axes['y'] != None):
+            position['y'] = self.axes['y'].get_position()
         else:
             if self.debug: 
                 print >>sys.stderr,  "Y axis disabled."
 
-        if (self.z_axis != None):
-            position['z'] = self.z_axis.get_position()
+        if (self.axes['z'] != None):
+            position['z'] = self.axes['z'].get_position()
         else:
             if self.debug: 
                 print >>sys.stderr,  "Z axis disabled."
 
+        if (self.axes['a'] != None):
+            position['a'] = self.axes['a'].get_position()
+        else:
+            if self.debug: 
+                print >>sys.stderr,  "A axis disabled."
+
         return dict(position)
 
 
-    position = property(get_position, doc = "XYZ current position")
+    position = property(get_position, doc = "XYZ(A) current position")
 
     # ---------- Compute the target position -----------------
 
@@ -321,10 +335,11 @@ class XYZ(object):
     # ---------- Move absolute and relative ------------------ 
 
     def move(self, 
-             x  = None, y  = None, z  = None,
-             dx = None, dy = None, dz = None, wait = True, check = True):
+             x  = None, y  = None, z  = None, a = None,
+             dx = None, dy = None, dz = None, da = None,
+             wait = True, check = True):
         """
-        Move the XYZ to the given position (or offset).
+        Move the XYZ(A) to the given position (or offset).
         This function can do relative and absolute movements.
         """
 
@@ -338,15 +353,15 @@ class XYZ(object):
 
         # -------- X axis ------------------------------------
 
-        if (self.x_axis != None):
+        if (self.axes['x'] != None):
 
             if x != None:
                 if check:
                     xt, yt, zt = self.compute_target(x=x)
                     self.check_target(xt, yt, zt)
 
-                self.x_axis.move_absolute(position = x,  
-                                          wait = wait, check = check)
+                self.axes['x'].move_absolute(position = x,  
+                                             wait = wait, check = check)
 
             if dx != None:
 
@@ -354,15 +369,15 @@ class XYZ(object):
                     xt, yt, zt = self.compute_target(dx=dx)
                     self.check_target(xt, yt, zt)
 
-                self.x_axis.move_relative(offset = dx, 
-                                          wait = wait, check = check)
+                self.axes['x'].move_relative(offset = dx, 
+                                             wait = wait, check = check)
         else:
             if self.debug: 
                 print >>sys.stderr,  "X axis disabled."
 
         # -------- Y axis ------------------------------------
 
-        if (self.y_axis != None):
+        if (self.axes['y'] != None):
 
             if y != None:
 
@@ -370,8 +385,8 @@ class XYZ(object):
                     xt, yt, zt = self.compute_target(y=y)
                     self.check_target(xt, yt, zt)
 
-                self.y_axis.move_absolute(position = y,  
-                                          wait = wait, check = check)
+                self.axes['y'].move_absolute(position = y,  
+                                             wait = wait, check = check)
 
             if dy != None:
 
@@ -379,8 +394,8 @@ class XYZ(object):
                     xt, yt, zt = self.compute_target(dy=dy)
                     self.check_target(xt, yt, zt)
 
-                self.y_axis.move_relative(offset = dy, 
-                                          wait = wait, check = check)
+                self.axes['y'].move_relative(offset = dy, 
+                                             wait = wait, check = check)
 
         else:
             if self.debug: 
@@ -389,7 +404,7 @@ class XYZ(object):
 
         # -------- Z axis ------------------------------------
 
-        if (self.z_axis != None):
+        if (self.axes['z'] != None):
 
             if z != None:
 
@@ -397,8 +412,8 @@ class XYZ(object):
                     xt, yt, zt = self.compute_target(z=z)
                     self.check_target(xt, yt, zt)
 
-                self.z_axis.move_absolute(position = z,  
-                                          wait = wait, check = check)
+                self.axes['z'].move_absolute(position = z,  
+                                             wait = wait, check = check)
 
             if dz != None:
 
@@ -406,11 +421,26 @@ class XYZ(object):
                     xt, yt, zt = self.compute_target(dz=dz)
                     self.check_target(xt, yt, zt)
 
-                self.z_axis.move_relative(offset = dz, 
-                                          wait = wait, check = check)
+                self.axes['z'].move_relative(offset = dz, 
+                                             wait = wait, check = check)
         else:
             if self.debug: 
                 print >>sys.stderr,  "Z axis disabled."
+
+        # -------- A axis ------------------------------------
+
+        if (self.axes['a'] != None):
+
+            if a != None:
+                self.axes['a'].move_absolute(position = a,  
+                                             wait = wait, check = check)
+
+            if da != None:
+                self.axes['a'].move_relative(offset = da, 
+                                             wait = wait, check = check)
+        else:
+            if self.debug: 
+                print >>sys.stderr,  "A axis disabled."
 
 
 # ==================================================================
