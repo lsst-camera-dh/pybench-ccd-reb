@@ -147,7 +147,7 @@ class Instrument(Driver):
 
     def get_position(self):
         """
-        Return the current position on the three motors 
+        Return the current position on the XYZ(A) motors 
         (as a dictionary).
         It is then possible to do move(**get_position())
         """
@@ -162,8 +162,8 @@ class Instrument(Driver):
         Move the XYZ to the given position (or offset).
         'moves' is a dictionary of the following format:
               {'x': 12.34, 'y': -23.1, 'dz' : -45.0 }
-        This function can do relative (dx,dy,dz) 
-        and absolute (x,y,z) movements.
+        This function can do relative (dx,dy,dz(,da)) 
+        and absolute (x,y,z(,a)) movements.
 
         By default, check is and *MUST* be left to True.
         """
@@ -197,17 +197,29 @@ class Instrument(Driver):
             }
 
         values = {
-            'MODEL'  : 'Pollux XYZ mount',
+            'MODEL'  : 'Pollux XYZ(A) mount',
             'DRIVER' : 'xyz-server / pyBench' 
             }
 
         pos = self.get_position()
 
-        for axis in ['x', 'y', 'z']:
-            key = '%sPOS' % axis.upper()
-            comment = ( '[mm] Current %s position of the XYZ mount in mm' 
-                        % axis.upper() )
-            value = pos[axis]
+        # linear motors ('x', 'y', 'z')
+
+        for ax in ['x', 'y', 'z']:
+            key = '%sPOS' % ax.upper()
+            comment = ( '[mm] Current %s position of the XYZ(A) mount in mm' 
+                        % ax.upper() )
+            value = pos.get(ax, None)
+            keys.append(key)
+            values[key] = value
+            comments[key] = comment
+
+        # angular position ('a') [if available]
+
+        if pos.has_key('a'):
+            key = 'APOS'
+            comment = '[deg] Current A position of the XYZ(A) mount in degrees' 
+            value = pos.get('a', None)
             keys.append(key)
             values[key] = value
             comments[key] = comment
