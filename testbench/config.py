@@ -222,13 +222,17 @@ config = {
     #  Optical bench motors
     # =====================================================================
     #
-    # XYZ pollux (8201) /dev/ttyS16, /dev/ttyS17, /dev/ttyS18
+    # XYZ pollux (8201) /dev/ttyS16
     # xyz-server -d
     #
     'xyz' : {
         # 'host'        : 'lpnlsstbench',
         'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
-        'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
+        # 'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
+        'devices'     : ['/dev/ttyS16', 
+                         '/dev/ttyS16', 
+                         '/dev/ttyS16', 
+                         '/dev/ttyS16'],
         'driver'      : 'xyz_pollux',
         'port'        : 8201,
         'commandline' : 'xyz-server -d'
