@@ -37,12 +37,6 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer, list_public_methods
 
 # ==================================================================
 
-from exceptions import Exception
-
-class MotorError(Exception): pass
-
-# ==================================================================
-
 # DEFAULT_HOSTNAME = "lpnlsst"
 # DEFAULT_HOSTNAME = "lpnlsstbench.in2p3.fr"
 DEFAULT_HOSTNAME = "134.158.155.98"
@@ -82,22 +76,15 @@ class XYZremote(object):
         return cls.instance
     
     def __init__(self,
-                 ports = [ xyz.XYZ.default_x_port, 
-                           xyz.XYZ.default_y_port, 
-                           xyz.XYZ.default_z_port,
-                           xyz.XYZ.default_a_port ],
-                 x_serial = xyz.XYZ.default_x_serial,
-                 y_serial = xyz.XYZ.default_y_serial,
-                 z_serial = xyz.XYZ.default_z_serial,
-                 a_serial = xyz.XYZ.default_a_serial,
+                 ports = xyz.XYZ.default_ports, 
+                 serials = xyz.XYZ.default_serials,
+                 axis_ids = xyz.XYZ.default_axis_ids,
                  debug = True):
 
         self.state = 1
         self.XYZ = xyz.XYZ(ports = ports,
-                           x_serial = x_serial,
-                           y_serial = y_serial,
-                           z_serial = z_serial,
-                           a_serial = a_serial,
+                           serials = serials,
+                           axis_ids = axis_ids,
                            debug = debug)
 
     # --------------------------------------------------------------
@@ -143,7 +130,7 @@ class XYZremote(object):
         a_serial = self.XYZ.a_axis.get_serial()
         logging.info("  XYZ : A serial = %s" % a_serial)
         serials = [ x_serial, y_serial, z_serial, a_serial ]
-        result = ( "Pollux XYZ: " + # should contain "XYZ"
+        result = ( "Pollux XYZ(A): " + # should contain "XYZ"
                    " X: " + x_serial +
                    " Y: " + y_serial +
                    " Z: " + z_serial +
