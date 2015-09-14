@@ -126,8 +126,11 @@ class XYZremote(object):
         result = "Pollux XYZ(A): " # should contain "XYZ"
 
         for ax in ['x','y','z','a']:
-            if not(XYZ.has_key(ax)): continue
-            ax_serial = self.XYZ.axis[ax].get_serial()
+            logging.info('ax = %s' % ax)
+            if not(self.XYZ.axes.has_key(ax)): continue
+            if self.XYZ.axes[ax] == None: continue
+            #
+            ax_serial = self.XYZ.axes[ax].get_serial()
             logging.info( "  XYZ : %s serial = %s" % 
                           ( ax.upper(), ax_serial ) )
             serials.append(ax_serial)
