@@ -15,6 +15,11 @@ import os, os.path
 import time
 import serial
 
+# ==================================================================
+
+from exceptions import Exception
+
+class MotorError(Exception): pass
 
 # ============ Class Pollux controller ==============================
 
