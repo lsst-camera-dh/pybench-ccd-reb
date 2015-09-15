@@ -432,6 +432,40 @@ def make_full_image_all():
     print "Making image for raw data images..."
     make_full_image(keyword = "unbiased", output = "single_unbiased_image.fits")  
 
+def make_dead_line(fact=3.):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Make a boolean mask for data, masking line pattern. 
+    To work on single_masterflat_image.fits.
+    """
+    frames = gl.glob("*/*/")
+    frames.sort()
+    
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        image = gl.glob(f + "single_masterflat_image.fits")
+        if len(image) == 1:
+            temp_flat = pf.open(image[0])
+            d = temp_flat[0].data
+            x_step = 143
+            x_div = np.linspace(0,4004,29).astype(int)
+            mask = np.zeros((4004,4096))
+            mask[d<0.00001] = 1
+            d = np.ma.array(d,mask=mask)
+            for x in x_div[:-1]:
+                median = np.median(d[x:x+x_step,:])
+                std = np.std(d[x:x+x_step,:])
+                for i in range(4096):
+                    col_median = np.median(d[x:x+x_step,i])
+                    if np.fabs(col_median - median) > fact*std:
+                        mask[x:x+x_step,i] = 1
+            pf.writeto("mask.fits", mask, clobber = True)
+            os.system("mv mask.fits " + f)
+            temp_flat.close()
+        i_f +=1
+    
 
 def extract_pos(fits, theta = False):
     """
@@ -477,6 +511,9 @@ def launch_pipeline(valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
     sort_fringes_by_pos(directory = direc[2])
     flatfield()
     create_flat_slinks()
+
+#-------------------------------------------------------------
+# Old functions
 
 def do_flat_medianstack(directory = "./"):
     """
@@ -587,3 +624,34 @@ def put_masterflat_skylev_in_header(directory="./"):
             string_mflat_list += " " + i
         
         os.system("skylevinheader " + string_mflat_list)
+
+def make_dead(fact=5.):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Make a boolean mask for data. To work on single_masterflat_image.fits.
+    """
+    frames = gl.glob("*/*/")
+    frames.sort()
+    
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        image = gl.glob(f + "single_masterflat_image.fits")
+        if len(image) == 1:
+            temp_flat = pf.open(image[0])
+            d = temp_flat[0].data
+            x_step = 143
+            y_step = 128
+            x_div = np.linspace(0,4004,29).astype(int)
+            y_div = np.linspace(0,4096,33).astype(int)
+            mask = np.zeros((4004,4096))
+            for x in x_div[:-1]:
+                for y in y_div[:-1]:
+                    median = np.median(d[x:x+x_step,y:y+y_step])
+                    std = np.std(d[x:x+x_step,y:y+y_step])
+                    mask[x:x+x_step,y:y+y_step][np.fabs(d[x:x+x_step,y:y+y_step] - median) > fact*std] = 1
+            pf.writeto("mask.fits", mask, clobber = True)
+            os.system("mv mask.fits " + f)
+            temp_flat.close()
+        i_f +=1
