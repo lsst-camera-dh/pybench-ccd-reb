@@ -7,13 +7,12 @@
 from lsst.camera.generic.fpga import *
 import time
 
-import cabac
 import lsst.camera.generic.aspic as aspic
 
 
 # # -----------------------------------------------------------------------
 
-class FPGA1(FPGA):
+class FPGA2(FPGA):
     # ctrl_host = "lpnws4122"
     # reb_id = 2
 
@@ -21,19 +20,28 @@ class FPGA1(FPGA):
     bias_conv = 0.00725  # conversion for alternative biases
     od_conv = 0.0195  # placeholder for alternative OD
     og_conv = 0.00122  # placeholder for alternative OG
-    VddOD = 14  # high voltage power supply to CABAC if used for biases
+    # TODO: replace with REB3 values
+
+    # list of acceptable parameters for REB DACs
+    params = ["OD", "GD", "RD", "OG", 'OG_S', 'CS',
+              "SL", "SU", "RGL", "RGU", "PL", "PU",
+              "SL_S", "SU_S", "RGL_S", "RGU_S", "PL_S", "PU_S"]
+    groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU",
+              "SL_S", "SU_S", "RGL_S", "RGU_S", "PL_S", "PU_S"],
+              'BIASES': ["OD", "GD", "RD", "OG", 'OG_S']}
 
     # --------------------------------------------------------------------
 
     def __init__(self, ctrl_host=None, reb_id=2):
         FPGA.__init__(self, ctrl_host, reb_id)
-        # declare two CABACs and two ASPICs for each stripe even if they will not be used
-        # (at least we will want to initialize to 0)
-        self.cabac_top = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
-        self.cabac_bottom = [cabac.CABAC(), cabac.CABAC(), cabac.CABAC()]
-        self.aspic_top = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
-        self.aspic_bottom = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
+        # declare two ASPICs for each stripe even if they will not be used
+        self.aspics = {}
+        self.aspics['top'] = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
+        self.aspics['bottom'] = [aspic.ASPIC(), aspic.ASPIC(), aspic.ASPIC()]
+
         self.dacs = {}
+        for param in self.params:
+            self.dacs[param] = 0
 
     # --------------------------------------------------------------------
 
@@ -210,26 +218,6 @@ class FPGA1(FPGA):
         # activates DAC outputs
         self.write(0x400011, 1)
 
-    # ----------------------------------------------------------
-    def cabac_power(self, enable):
-        """
-        Enables/disables power to CABAC low voltage VEE and power supplies, powered in that order for CABAC safety.
-        VddOD needs to be powered on before / shut down after.
-        The clock rails need to be done after power-on/ before power-down, in the higher level function.
-        :param enable: bool
-        :return:
-        """
-        if enable:
-            # enable VEE and then all low voltages
-            self.write(0xD00001, 0x4)  # VEE (CABAC substrate) set to V_CLK_L (low clock power supply) if connected
-            time.sleep(0.2)
-            self.write(0xD00001, 0x1F)
-        else:
-            # reverse order
-            self.write(0xD00001, 0x4)
-            time.sleep(0.2)
-            self.write(0xD00001, 0)
-
     def check_location(self, s, loc=3):
         if s not in [0, 1, 2]:
             raise ValueError("Invalid REB stripe (%d)" % s)
@@ -237,96 +225,15 @@ class FPGA1(FPGA):
             raise ValueError("Invalid Location code (%d)" % loc)
         return True
 
-    def get_cabac_config(self, s, check=True):  # stripe 's'
+    def get_dacs_config(self, s, check=True):  # stripe 's'
         """
-        read CABAC configuration for stripe <s>,
-        store it in the CABAC objects and the header dict.
+        Output for header.
         """
-
-        self.check_location(s)
-
-        topconfig = {}
-        bottomconfig = {}
-
-        for address in range(22):
-            regaddress = address << 16
-            # send for reading top CABAC
-            self.write_spi(0x500000, s, 2, regaddress)
-            # read answer to dict
-            #time.sleep(0.05)
-            topconfig[address] = self.read(0x500010 + s, 1)[0x500010 + s]
-            # send for reading bottom CABAC
-            self.write_spi(0x500000, s, 1, regaddress)
-            # read answer to dict
-            #time.sleep(0.05)
-            bottomconfig[address] = self.read(0x500010 + s, 1)[0x500010 + s]
-
-        self.cabac_top[s].read_all_registers(topconfig, check)
-        self.cabac_bottom[s].read_all_registers(bottomconfig, check)
-
-        keyst, configt, comt = self.cabac_top[s].get_header("%dT" % s)
-        keysb, configb, comb = self.cabac_bottom[s].get_header("%dB" % s)
-
+        #TODO
         config = MetaData(keyst, configt, comt, 'CABACS')
         config.update_ordered(keysb, configb, comb)
 
         return config
-
-    # ----------------------------------------------------------
-
-    def get_cabac_value(self, reg, s, loc):  # stripe 's'
-        """
-        Low-level readback of CABAC configuration for a single register.
-        """
-        self.check_location(s, loc)
-
-        self.write_spi(0x500000, s, loc, reg, False)
-        value = self.read(0x500010 + s, 1)[0x500010 + s]
-
-        return value
-
-    def set_cabac_value(self, param, value, s=0, loc=3, check=True):
-        """
-        Sets the CABAC parameter at the appropriate stripe and location (1 for bottom, 2 for top, 3 for both).
-        Default values for retro-compatibility.
-        :return: bool
-        """
-        self.check_location(s, loc)
-
-        if loc == 1 or loc == 3:
-            # bottom CABAC
-            if self.cabac_bottom[s].check_bias_safety(param, value):
-                regs = self.cabac_bottom[s].set_cabac_fromstring(param, value)
-                for reg in regs:
-                    self.write_spi(0x500000, s, 1, reg, True)
-                    if check:
-                        value_int = self.get_cabac_value(reg, s, 1)
-                        self.cabac_bottom[s].set_from_register(address=(reg >> 16), reg=value_int, check=True)
-            else:
-                return False
-
-        if loc == 2 or loc == 3:
-            # top CABAC
-            if self.cabac_top[s].check_bias_safety(param, value):
-                regs = self.cabac_top[s].set_cabac_fromstring(param, value)
-                for reg in regs:
-                    self.write_spi(0x500000, s, 2, reg, True)
-                    if check:
-                        value_int = self.get_cabac_value(reg, s, 2)
-                        self.cabac_top[s].set_from_register(address=(reg >> 16), reg=value_int, check=True)
-            else:
-                return False
-        return True
-
-    # ----------------------------------------------------------
-
-    def reset_cabac(self, s=0):  # stripe 's'
-        """
-        Use CABAC reset for stripe s
-        """
-        self.check_location(s)
-
-        self.write(0x500001, s)  # starts the CABAC reset
 
     # ----------------------------------------------------------
 
@@ -351,11 +258,11 @@ class FPGA1(FPGA):
             # read answer
             bottomconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
 
-        self.aspic_top[s].read_all_registers(topconfig, True)
-        self.aspic_bottom[s].read_all_registers(bottomconfig, True)
+        self.aspics['top'][s].read_all_registers(topconfig, True)
+        self.aspics['bottom'][s].read_all_registers(bottomconfig, True)
 
-        keyst, configt, comt = self.aspic_top[s].get_header("%dT" % s)
-        keysb, configb, comb = self.aspic_bottom[s].get_header("%dB" % s)
+        keyst, configt, comt = self.aspics['top'][s].get_header("%dT" % s)
+        keysb, configb, comb = self.aspics['bottom'][s].get_header("%dB" % s)
 
         config = MetaData(keyst, configt, comt, 'ASPICS')
         config.update_ordered(keysb, configb, comb)
@@ -371,11 +278,11 @@ class FPGA1(FPGA):
 
         if loc == 1 or loc == 3:
             # bottom ASPIC
-            reg = self.aspic_bottom[s].set_aspic_fromstring(param, value)
+            reg = self.aspics['bottom'][s].set_aspic_fromstring(param, value)
             self.write_spi(0xB00000, s, 1, reg, True)
         if loc == 2 or loc == 3:
             # top ASPIC
-            reg = self.aspic_top[s].set_aspic_fromstring(param, value)
+            reg = self.aspics['top'][s].set_aspic_fromstring(param, value)
             self.write_spi(0xB00000, s, 2, reg, True)
 
     def apply_aspic_config(self, s=0, loc=3):
@@ -387,12 +294,12 @@ class FPGA1(FPGA):
 
         if loc == 1 or loc == 3:
             # bottom ASPIC
-            AspicData = self.aspic_bottom[s].write_all_registers()
+            AspicData = self.aspics['bottom'][s].write_all_registers()
             for address in range(2):
                 self.write_spi(0xB00000, s, 1, AspicData[address], True)
         if loc == 2 or loc == 3:
             # top ASPIC
-            AspicData = self.aspic_top[s].write_all_registers()
+            AspicData = self.aspics['top'][s].write_all_registers()
             for address in range(2):
                 self.write_spi(0xB00000, s, 2, AspicData[address], True)
 
