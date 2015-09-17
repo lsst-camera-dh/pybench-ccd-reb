@@ -136,8 +136,12 @@ def do_stacktwilights(directory = "./"):
     
     pos = gl.glob("*")
     pos.sort()
+    
+    print pos
+    print ""
 
     for p in pos:
+        print "Computing position : " + p
         flats = gl.glob(p + "/*/unbiased_amp_*")
         flats.sort()
         
@@ -356,11 +360,113 @@ def make_hdulist_data_and_flats():
     """
     To do in the sorted_by_pos directory in the fringe directory
     Use this function to group all the image in one HDUList for
-    data and masterflats at the same time.
+    raw and flatfield data and masterflats at the same time.
     """
+    print "Making hdu list for flatfield images..."
     make_hdulist(keyword = "flatfield", output = "full_flatfield_image.fits")
+    print "Making hdu list for master_flat images..."
     make_hdulist(keyword = "master_flat", output = "full_masterflat_image.fits")
+    print "Making hdu list for raw data images..."
+    make_hdulist(keyword = "unbiased", output = "full_unbiased_image.fits")
+
+def make_full_image(keyword = "flatfield", output = "single_flatfield_image.fits"):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Use this function to group all the image in one fits image.
+    """
     
+    frames = gl.glob("*/*/")
+    frames.sort()
+    
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        images = gl.glob(f + keyword + "_amp_*.fits")
+        images.sort()
+
+        if len(images) != 0:
+            temp = pf.open(images[0])
+            detsize = (temp[0]).header['DETSIZE']
+            ytot, xtot = detsize.split(",")
+            xtot = xtot.replace("]","")
+            ytot = ytot.replace("[","")
+            x1 = int(xtot.split(":")[1])
+            y1 = int(ytot.split(":")[1])
+            
+            temp.close()
+            
+            total = np.zeros((x1,y1))
+            for i in images:
+                temp = pf.open(i)
+                
+                detsec = temp[0].header['DETSEC']
+                ylen, xlen = detsec.split(",")
+                xlen = xlen.replace("]","")
+                ylen = ylen.replace("[","")
+                x0, x1 = xlen.split(":")
+                y0, y1 = ylen.split(":")
+                if int(x0) < int(x1) and int(y0) > int(y1):
+                    x0, x1 = int(x0) - 1, int(x1)
+                    y0, y1 = int(y1) - 1, int(y0)
+                    total[x0:x1,y0:y1] = temp[0].data[::,::-1]
+                elif int(x0) > int(x1) and int(y0) < int(y1):
+                    x0, x1 = int(x1) - 1, int(x0)
+                    y0, y1 = int(y0) - 1, int(y1)
+                    total[x0:x1,y0:y1] = temp[0].data[::-1,::]
+
+                temp.close()
+            pf.writeto(f + output, data = total[::,::-1], clobber = True)
+        i_f +=1
+        
+def make_full_image_all():
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Use this function to group all the image in one fits image
+    raw and flatfield data and masterflats at the same time.
+    """
+    print "Making image for flatfield images..."
+    make_full_image(keyword = "flatfield", output = "single_flatfield_image.fits")
+    print "Making image for master_flat images..."
+    make_full_image(keyword = "master_flat", output = "single_masterflat_image.fits")
+    print "Making image for raw data images..."
+    make_full_image(keyword = "unbiased", output = "single_unbiased_image.fits")  
+
+def make_dead_line(fact=3.):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Make a boolean mask for data, masking line pattern. 
+    To work on single_masterflat_image.fits.
+    """
+    frames = gl.glob("*/*/")
+    frames.sort()
+    
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        image = gl.glob(f + "single_masterflat_image.fits")
+        if len(image) == 1:
+            temp_flat = pf.open(image[0])
+            d = temp_flat[0].data
+            x_step = 143
+            x_div = np.linspace(0,4004,29).astype(int)
+            mask = np.zeros((4004,4096))
+            mask[d<0.00001] = 1
+            d = np.ma.array(d,mask=mask)
+            for x in x_div[:-1]:
+                median = np.median(d[x:x+x_step,:])
+                std = np.std(d[x:x+x_step,:])
+                for i in range(4096):
+                    col_median = np.median(d[x:x+x_step,i])
+                    if np.fabs(col_median - median) > fact*std:
+                        mask[x:x+x_step,i] = 1
+            pf.writeto("mask.fits", mask, clobber = True)
+            os.system("mv mask.fits " + f)
+            temp_flat.close()
+        i_f +=1
+    
+
 def extract_pos(fits, theta = False):
     """
     Read the position (XPOS, YPOS, ZPOS and THETAPOS
@@ -405,8 +511,9 @@ def launch_pipeline(valid_ampl = [3,4,5,6,7,12,13,14,15,16]):
     sort_fringes_by_pos(directory = direc[2])
     flatfield()
     create_flat_slinks()
-    make_hdulist(directory = direc[2] + "sorted_by_pos/")
 
+#-------------------------------------------------------------
+# Old functions
 
 def do_flat_medianstack(directory = "./"):
     """
@@ -517,3 +624,34 @@ def put_masterflat_skylev_in_header(directory="./"):
             string_mflat_list += " " + i
         
         os.system("skylevinheader " + string_mflat_list)
+
+def make_dead(fact=5.):
+    """
+    To do in the sorted_by_pos directory in the fringe directory
+    Make a boolean mask for data. To work on single_masterflat_image.fits.
+    """
+    frames = gl.glob("*/*/")
+    frames.sort()
+    
+    length_f = len(frames)
+    i_f = 1
+    for f in frames:
+        print "Computing frame : " + str(i_f) + "/" + str(length_f)
+        image = gl.glob(f + "single_masterflat_image.fits")
+        if len(image) == 1:
+            temp_flat = pf.open(image[0])
+            d = temp_flat[0].data
+            x_step = 143
+            y_step = 128
+            x_div = np.linspace(0,4004,29).astype(int)
+            y_div = np.linspace(0,4096,33).astype(int)
+            mask = np.zeros((4004,4096))
+            for x in x_div[:-1]:
+                for y in y_div[:-1]:
+                    median = np.median(d[x:x+x_step,y:y+y_step])
+                    std = np.std(d[x:x+x_step,y:y+y_step])
+                    mask[x:x+x_step,y:y+y_step][np.fabs(d[x:x+x_step,y:y+y_step] - median) > fact*std] = 1
+            pf.writeto("mask.fits", mask, clobber = True)
+            os.system("mv mask.fits " + f)
+            temp_flat.close()
+        i_f +=1

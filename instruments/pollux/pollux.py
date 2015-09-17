@@ -15,6 +15,11 @@ import os, os.path
 import time
 import serial
 
+# ==================================================================
+
+from exceptions import Exception
+
+class MotorError(Exception): pass
 
 # ============ Class Pollux controller ==============================
 
@@ -27,9 +32,12 @@ class Pollux(object):
 
     def __init__(self,
                  port = '/dev/ttyUSB0',
+                 axis_id = 1,
+                 serial_port = None, # to provide if serial port already created
                  debug = True):
 
         self.port = port
+        self.serial_port = serial_port
         self.baudrate = 19200
         # self.timeout = 1.0 # Non-blocking & non waiting mode
         self.timeout = 0.5 # Non-blocking & non waiting mode
@@ -47,7 +55,7 @@ class Pollux(object):
         self.action_timeout = 10
 
         # ---- default axis
-        self.axis = 1
+        self.axis_id = axis_id
 
         # ---- limits (range)
         self.__limits = None
@@ -58,22 +66,29 @@ class Pollux(object):
 
     def open(self):
         """
-        Open the Pollux device.
+        Open the Pollux device. 
         Check if there's something connected (echotest).
         """
 
-        if self.debug: print >>sys.stderr,  "Opening port %s ..." % self.port
+        # if serial port has already been created
+        # do not open it again
+
+        if self.serial_port == None:
+            if self.debug: print >>sys.stderr, \
+               "Opening port %s ..." % self.port
      
-        self.serial_port = serial.Serial(port = self.port, 
-                                         baudrate = self.baudrate,
-                                         bytesize = self.bytesize, 
-                                         parity = self.parity,
-                                         stopbits = self.stopbits, 
-                                         timeout = self.timeout)
+            self.serial_port = serial.Serial(port = self.port, 
+                                             baudrate = self.baudrate,
+                                             bytesize = self.bytesize, 
+                                             parity = self.parity,
+                                             stopbits = self.stopbits, 
+                                             timeout = self.timeout)
         
-        if ( (self.serial_port == None) or
-             not(self.serial_port.isOpen()) ):
-            raise IOError("Failed to open serial port %s" % self.port)
+            if ( (self.serial_port == None) or
+                 not(self.serial_port.isOpen()) ):
+                raise IOError("Failed to open serial port %s" % self.port)
+
+        # then the serial port is open (or was already open)
         
         self.serial_port.flushOutput()
         
@@ -155,7 +170,7 @@ class Pollux(object):
     # ---------- Echo test ---------------------------------- 
 
     def echotest(self):
-        self.write(("%d" % self.axis) + " getserialno")
+        self.write(("%d" % self.axis_id) + " getserialno")
         answer = self.read()
 
         if len(answer) < 1:
@@ -211,10 +226,10 @@ class Pollux(object):
         """
         Return the current axis position.
         """
-        answer = self.send(("%d" % self.axis) + " getserialno")
+        answer = self.send(("%d" % self.axis_id) + " getserialno")
 
         if len(answer) < 1:
-            raise IOError(("Not responding to " + ("%d" % self.axis) + 
+            raise IOError(("Not responding to " + ("%d" % self.axis_id) + 
                            " getserialno on serial port %s") % 
                           self.port)
         
@@ -230,16 +245,18 @@ class Pollux(object):
         """
         Initialize the controller. 
         Setup the speed and accelerations.
+        Be careful: setup should be different for XYZ (linear)
+        and for A (rotation) !!!
         """
 
         pass
 
-        # self.send('1.0 '   + ("%d" % self.axis) + ' snv')
-        # self.send('1.0 '   + ("%d" % self.axis) + ' sna')
-        # self.send('500.0 ' + ("%d" % self.axis) + ' setnstopdecel')
-        # # self.send('1.0 '   + ("%d" % self.axis) + ' setcalvel')
-        # # self.send('1.0 '   + ("%d" % self.axis) + ' setnrmvel')
-        # self.send('1.0 '   + ("%d" % self.axis) + ' setnrefvel')
+        # self.send('1.0 '   + ("%d" % self.axis_id) + ' snv')
+        # self.send('1.0 '   + ("%d" % self.axis_id) + ' sna')
+        # self.send('500.0 ' + ("%d" % self.axis_id) + ' setnstopdecel')
+        # # self.send('1.0 '   + ("%d" % self.axis_id) + ' setcalvel')
+        # # self.send('1.0 '   + ("%d" % self.axis_id) + ' setnrmvel')
+        # self.send('1.0 '   + ("%d" % self.axis_id) + ' setnrefvel')
 
 
     # ---------- Current motor position ---------------------- 
@@ -248,10 +265,10 @@ class Pollux(object):
         """
         Return the current axis position.
         """
-        answer = self.send(("%d" % self.axis) + " np")
+        answer = self.send(("%d" % self.axis_id) + " np")
 
         if len(answer) < 1:
-            raise IOError(("Not responding to " + ("%d" % self.axis) + " np on serial port %s") % 
+            raise IOError(("Not responding to " + ("%d" % self.axis_id) + " np on serial port %s") % 
                           self.port)
         
         position = float(answer[0])
@@ -262,7 +279,7 @@ class Pollux(object):
     # ---------- Move absolute and relative ------------------ 
 
     def is_moving(self):
-        answer = self.send(("%d" % self.axis) + " nst")
+        answer = self.send(("%d" % self.axis_id) + " nst")
         if len(answer) < 1:
             raise IOError(("Not responding to 1 nst on serial port %s") % 
                           self.port)
@@ -287,7 +304,7 @@ class Pollux(object):
                  (position > self.__limits['up']) ):
                 raise ValueError("Invalid position (out of range)")
 
-        command = ("%f" % position) + " " + ("%d" % self.axis) + " nm"
+        command = ("%f" % position) + " " + ("%d" % self.axis_id) + " nm"
         answer = self.send(command)
         # in ECHO=1 no answer []
 
@@ -311,7 +328,7 @@ class Pollux(object):
                  (target > self.__limits['up']) ):
                 raise ValueError("Invalid position (out of range)")
 
-        command = ("%f" % offset) + " " + ("%d" % self.axis) + " nr"
+        command = ("%f" % offset) + " " + ("%d" % self.axis_id) + " nr"
         answer = self.send(command)
         # in ECHO=1 no answer []
 
@@ -345,7 +362,7 @@ class Pollux(object):
         # first look for the lower limit (and set that position to zero)
 
         if lower:
-            command = ("%d" % self.axis) + " ncal"
+            command = ("%d" % self.axis_id) + " ncal"
             answer = self.send(command)
             while (self.is_moving()): 
                 pass
@@ -355,7 +372,7 @@ class Pollux(object):
         # then look for the upper limit 
 
         if upper:
-            command = ("%d" % self.axis) + " nrm"
+            command = ("%d" % self.axis_id) + " nrm"
             answer = self.send(command)
             while (self.is_moving()): 
                 pass
@@ -377,7 +394,8 @@ class Pollux(object):
         @param position: new value for the current position.
         """
        
-        command = ("%f" % float(position)) + " " + ("%d" % self.axis) + " setnpos" 
+        command = ( ("%f" % float(position)) + " " + 
+                    ("%d" % self.axis_id) + " setnpos" )
         answer = self.send(command)
 
     # ---------- Home : find_limits and set zeros ------------ 
