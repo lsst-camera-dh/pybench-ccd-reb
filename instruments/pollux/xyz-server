@@ -118,23 +118,24 @@ class XYZremote(object):
     def checkConnection(self):
         """
         Check the connection.
-        Returns a string with the serial numbers of the 3 motors.
+        Returns a string with the serial numbers of the 3(4) motors.
         """
         logging.info("XYZ.checkConnection() called.")
-        x_serial = self.XYZ.x_axis.get_serial()
-        logging.info("  XYZ : X serial = %s" % x_serial)
-        y_serial = self.XYZ.y_axis.get_serial()
-        logging.info("  XYZ : Y serial = %s" % y_serial)
-        z_serial = self.XYZ.z_axis.get_serial()
-        logging.info("  XYZ : Z serial = %s" % z_serial)
-        a_serial = self.XYZ.a_axis.get_serial()
-        logging.info("  XYZ : A serial = %s" % a_serial)
-        serials = [ x_serial, y_serial, z_serial, a_serial ]
-        result = ( "Pollux XYZ(A): " + # should contain "XYZ"
-                   " X: " + x_serial +
-                   " Y: " + y_serial +
-                   " Z: " + z_serial +
-                   " A: " + a_serial )
+
+        serials = []
+        result = "Pollux XYZ(A): " # should contain "XYZ"
+
+        for ax in ['x','y','z','a']:
+            logging.info('ax = %s' % ax)
+            if not(self.XYZ.axes.has_key(ax)): continue
+            if self.XYZ.axes[ax] == None: continue
+            #
+            ax_serial = self.XYZ.axes[ax].get_serial()
+            logging.info( "  XYZ : %s serial = %s" % 
+                          ( ax.upper(), ax_serial ) )
+            serials.append(ax_serial)
+            result += ( (" %s: " % ax.upper()) + ax_serial )
+
         logging.info("  XYZ : serials = %s" % result)
         logging.info("XYZ.checkConnection() done.")
         return result
