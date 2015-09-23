@@ -1,6 +1,6 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst-camera-wreb'
+APPNAME = 'lsst-camera-reb3'
 VERSION = '0.0.1'
 top = '.'
 build = 'build'
@@ -20,9 +20,8 @@ def build(ctx):
     ctx(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['__init__.py',
-                  'wreb.py',
-                  'fpga.py',
-                  'cabac.py'
+                  'reb3.py',
+                  'fpga.py'
                   ],
         install_path = '${PYTHONDIR}/lsst/camera/wreb')
 

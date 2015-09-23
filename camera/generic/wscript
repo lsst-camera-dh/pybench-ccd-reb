@@ -22,6 +22,7 @@ def build(ctx):
         source = ['__init__.py',
                   'reb.py',
                   'fpga.py',
+                  'aspic.py',
                   'rebxml.py',
                   'bidi.py'],
         install_path = '${PYTHONDIR}/lsst/camera/generic')
