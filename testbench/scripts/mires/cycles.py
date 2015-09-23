@@ -10,6 +10,7 @@ import os
 import time
 import logging
 import datetime
+import numpy as np
 
 import lsst.testbench.bench as bench
 
@@ -24,14 +25,14 @@ B.load('ccd.functions')
 
 # focus min Canon
 
+# program with movements 
+
 positions = {
     'A': {'x': 45.0, 'y': 45.0, 'z': 65.5},
     'B': {'x': 45.0, 'y': 36.0, 'z': 65.5},
     'C': {'x': 57.5, 'y': 40.0, 'z': 65.5},
     'D': {'x': 67.5, 'y': 16.0, 'z': 65.5}
     }
-
-#---------------------------------------------------------------------------------
 
 def mire_cycles(self, angle = 0.0, exptime = 0.75, images = 20, cycles = 2, view=False):
     """
@@ -92,6 +93,25 @@ bench.Bench.mire_biases = mire_biases
 
 #---------------------------------------------------------------------------------
 
+def mire_flats(self, images = 20, exptime = 0.75):
+
+    print "Pensez a eteindre la lumiere car il n'y a pas d'obturateur... et il y a des fuites... (wait 5s)"
+    time.sleep(5)
+
+    for i in xrange(images): 
+        meta = self.execute_reb_sequence('Acquisition', exptime=exptime)
+        meta['reb']['values']['TESTTYPE'] = 'FLATS'
+        img = self.conv_to_fits()
+        self.save_to_fits(img, meta)    
+
+        # tentative pour limiter les fuites de memoire...
+        for hdu in img: del hdu
+        del img
+
+bench.Bench.mire_flats = mire_flats
+
+#---------------------------------------------------------------------------------
+
 def mire_program(self, angle = 0.0, exptime = 0.75, images = 20, cycles = 2, 
                  laserchannel = 2, lasercurrent = 50.0,
                  view=False):
@@ -121,3 +141,39 @@ bench.Bench.mire_program = mire_program
 
 #---------------------------------------------------------------------------------
 
+def mire_angles(self, position = {'x': 47.5, 'y': 36.0, 'z': 85.1},
+                angle_min = 0.0, angle_max = np.pi, angles = 11, 
+                exptime = 0.75, images = 10, view=False):
+    """
+    Prend des images de la mire sous differents angles dans une position donnee.
+    """
+
+    print "Pensez a eteindre la lumiere car il n'y a pas d'obturateur... et il y a des fuites... (wait 5s)"
+
+    if view:
+        import pyds9
+        myds9 = pyds9.DS9("zorglub")
+
+    for angle in np.linspace(angle_min, angle_max, angles):
+        angle_degrees = float(np.degrees(angle))
+        self.log("Moving to angle %f" % angle_degrees)
+        self.xyz.move({'a': angle_degrees})
+            
+        for i in xrange(images):
+            meta = self.execute_reb_sequence('Acquisition', exptime=exptime)
+            img = self.conv_to_fits()
+            self.save_to_fits(img, meta)    
+
+            if view:
+                filename = os.path.join('/data/frames', 
+                                        datetime.datetime.utcnow().date().isoformat().replace('-',''),
+                                        img[0].header['FILENAME'])
+                myds9.set("file mosaicimage iraf %s" % filename)
+
+            # tentative pour limiter les fuites de memoire...
+            for hdu in img: del hdu
+            del img
+
+bench.Bench.mire_angles = mire_angles
+
+#---------------------------------------------------------------------------------
