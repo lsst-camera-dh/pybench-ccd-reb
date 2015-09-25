@@ -183,6 +183,7 @@ class FPGA2(FPGA):
 
     def set_current_source(self, current, s=0):
         """
+        Obsolete.
         Sets current source DAC value for the given stripe.
         The same FPGA registers are also used to write OD and other biases, see set_bias_voltages()
         :type s: int
@@ -191,36 +192,13 @@ class FPGA2(FPGA):
         :param s: stripe
         :return:
         """
-        self.check_location(s)
-        dacaddress = 0x400100 + (s << 4)
-        key = "I_OS"
-        dackey = key + '%s' % s
-        outputnum = 5
-
-        self.dacs[dackey] = current & 0xfff
-        self.write(dacaddress, self.dacs[dackey] + (outputnum << 12))
-
-        #activates DAC output
-        self.write(0x400001 + (s << 4), 1)
+        pass
 
     def get_current_source(self, s):
         """
-        No readback available, using values stored in fpga object.
+        Not in REB3 anymore.
         """
-
-        self.check_location(s)
-        key = "I_OS"
-        dackey = "I_OS" + '%s' % s
-
-        orderkeys = [key]
-        dictvalues = {}
-        dictcomments = {}
-
-        dictvalues[key] = self.dacs[dackey]
-        dictcomments[key] = '[ADU] %s CS gate current setting' % key
-
-        return MetaData(orderkeys, dictvalues, dictcomments)
-
+        pass
     # ----------------------------------------------------------
 
     def enable_bss(self, connect):
@@ -311,7 +289,7 @@ class FPGA2(FPGA):
 
     # ----------------------------------------------------------
 
-    def get_dacs_config(self, s, check=True):  # stripe 's'
+    def get_fpga_config(self, s):  # stripe 's'
         """
         Output for header.
         """
@@ -319,7 +297,7 @@ class FPGA2(FPGA):
         config = self.get_input_voltages_currents()
         config.update(self.get_clock_voltages())
         config.update(self.get_bias_voltages(s))
-        config.update(self.get_current_source(s))
+        #config.update(self.get_current_source(s))
         config.update(self.slow_adc_stripe(s))
 
         return config
