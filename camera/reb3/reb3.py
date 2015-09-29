@@ -74,7 +74,7 @@ class REB3(reb.REB):
         :param value:
         :return:
         """
-        if param in self.fpga.aspics['top'].params:
+        if param in ["GAIN", "RC", "AF1", "TM", "CLS"]:
             self.fpga.set_aspic_value(param, value, stripe, location)
             time.sleep(0.1)
             self.fpga.get_aspic_config(stripe, check=True)
@@ -233,7 +233,7 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         hdulist.append(exthdu)
         headermeta = R.fpga.get_fpga_config(0)
         for key in headermeta.keys:
-            exthdu.header[key] = (headermeta.dictvalues[key], headermeta.dictcomments[key])
+            exthdu.header[key] = (headermeta.values[key], headermeta.comments[key])
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
                                                          array=reb.get_sequencer_string(R.seq),
