@@ -38,7 +38,7 @@ class FPGA2(FPGA):
     dacparams = ["OD0", "GD0", "RD0", "OG0", 'OG_S0', 'CS0',
                  "OD1", "GD1", "RD1", "OG1", 'OG_S1', 'CS1',
                  "OD2", "GD2", "RD2", "OG2", 'OG_S2', 'CS2',
-                 "SL", 'SL_S', "SU", "RGL", 'RG_S', "RGU", "PL", 'PL_S', "PU"]
+                 "SL", 'SL_S', "SU", "RGL", 'RGL_S', "RGU", "PL", 'PL_S', "PU"]
 
     # mapping of slow ADC (mux8chan, adcmux)
     # last digit of parameter name is always the stripe

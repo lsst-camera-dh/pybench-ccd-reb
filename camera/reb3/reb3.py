@@ -2,7 +2,7 @@
 #
 # LSST / LPNHE
 #
-# Testing WREB with CABAC2
+# Testing REB3
 
 __author__ = 'juramy'
 
@@ -232,7 +232,7 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         #    exthdu.header[keyword] = headerdict[keyword]
         hdulist.append(exthdu)
         headermeta = R.fpga.get_fpga_config(0)
-        for key in headermeta.orderkeys:
+        for key in headermeta.keys:
             exthdu.header[key] = (headermeta.dictvalues[key], headermeta.dictcomments[key])
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     logging.basicConfig(filename = logfile,
                         level = logging.DEBUG,
                         format = '%(asctime)s: %(message)s')
-    r = REB3(rriaddress=0xFF, stripe_id=[0])
+    r = REB3(rriaddress=0x2, stripe_id=[1])
 
     # here power on power supplies
     r.REBpowerup()
@@ -264,7 +264,4 @@ if __name__ == "__main__":
     #r.config_sequence("Bias")
     #r.execute_sequence()
     #save_to_fits(r)
-    #r.fpga.set_cabac_value("MUX", ("P0", "P1"), 0, 2)  # to check these clocks on top CABAC of stripe 0
-    #r.fpga.set_cabac_value("OFMUX", 140, 0, 2)  # required offset to the clock mux
-    # TO BE CHECKED: only one of each mux outputs should be active at any time over all CABACs ?!?!
     

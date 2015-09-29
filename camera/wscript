@@ -6,7 +6,7 @@ top = '.'
 build = 'build'
 
 # submodules = ['reb','reb1','wreb'] # just for tests (LLG)
-submodules = ['generic', 'reb1', 'wreb']
+submodules = ['generic', 'reb1', 'wreb', 'reb3']
 
 def options(ctx):
     ctx.load('python')        
