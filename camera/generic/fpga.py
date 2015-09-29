@@ -1096,13 +1096,13 @@ class FPGA(object):
         """
         Send the command STOP.
         """
-        self.write(0x310000, 1)
+        self.write(0x320000, 1)
 
     def step(self):
         """
         Send the command STEP.
         """
-        self.write(0x320000, 1)
+        self.write(0x310000, 1)
 
     # ----------------------------------------------------------
 
@@ -1139,10 +1139,10 @@ class FPGA(object):
         dictcomments = {}
 
         for i,v in enumerate(self.supplies):
-            if v in ['24V', '40V']:  # TODO: add for WREB
+            if v in ['24V', '40V', 'VDDOD', 'VDDCLK']:
                 conv_i = 80e-6  # 8 uA (80 uA in reality ?)
             else:
-                conv_i = 250e-6  # 25 uA (250 uA in reality ?)
+                conv_i = 250e-6  # 25 uA  in doc, 250 uA in reality
             voltages[v] = ((raw[0x600000 + i * 2] & 0xfff0) >> 4) * 0.025  # 25 mV
             currents[v] = ((raw[0x600001 + i * 2] & 0xfff0) >> 4) * conv_i
             vstr = 'V_%s' % v
@@ -1153,7 +1153,7 @@ class FPGA(object):
             dictvalues[vstr] = voltages[v]
             dictvalues[istr] = currents[v]
 
-            dictcomments[vstr] = '%s power supply voltage' % v
-            dictcomments[istr] = '%s power supply current' % v
+            dictcomments[vstr] = '[V] %s power supply voltage' % v
+            dictcomments[istr] = '[A] %s power supply current' % v
 
         return MetaData(orderkeys, dictvalues, dictcomments)

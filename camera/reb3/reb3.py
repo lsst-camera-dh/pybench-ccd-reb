@@ -23,16 +23,8 @@ class REB3(reb.REB):
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.fpga = fpga.FPGA2(ctrl_host, rriaddress)
-        self.fpga.n_sensors_boardtemp = 6  # fewer board temperature sensors than on a full REB
-        # self.fpga.supplies = ['DREB', 'CLK_H', 'DPHI', 'HTR', 'ANA', 'OD']
-        # currently power supplies readback has been removed from the board
-        self.fpga.supplies = []
-        self.fpga.stop_clock()  # stops the clocks to use as image tag
-        self.fpga.write(0x400006, 0)  # pattern generator off
         self.config = {"VSUB": 0}  # depends on power supply values and board configuration
         self.xmlfile = "sequencer-wreb.xml"
-        # load 0 on default state to prep for REB start-up
-        self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
      # --------------------------------------------------------------------
 
@@ -68,9 +60,9 @@ class REB3(reb.REB):
         :param params: dict
         :return:
         """
-
         # simultaneous activation works fine if all new values are valid (not checked here)
-        self.fpga.set_bias_voltages(params)
+        for s in self.stripes:
+            self.fpga.set_bias_voltages(params, s)
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
@@ -82,7 +74,7 @@ class REB3(reb.REB):
         :param value:
         :return:
         """
-        if param in self.fpga.aspic.params:
+        if param in self.fpga.aspics['top'].params:
             self.fpga.set_aspic_value(param, value, stripe, location)
             time.sleep(0.1)
             self.fpga.get_aspic_config(stripe, check=True)
@@ -90,8 +82,11 @@ class REB3(reb.REB):
         elif param in self.fpga.groups['CLOCKS']:
             self.fpga.set_clock_voltages({param: value})
 
+        elif param in self.fpga.groups['BIASES']:
+            self.fpga.set_bias_voltages({param: value}, stripe)
+
         elif param == "I_OS":
-            self.fpga.set_current_source({param: value}, stripe)
+            self.fpga.set_current_source(value, stripe)
 
         else:
             print("Warning: unidentified parameter for the REB: %s" % param)
@@ -100,24 +95,15 @@ class REB3(reb.REB):
 
     def REBpowerup(self):
         """
-        To be executed at power-up to safeguard CABAC2.
+        Old: to be executed at power-up.
         :return:
         """
-        # VddOD must be powered on before, followed by the 6.5V regulator supply.
-        # power-up the CABAC Vsub and low voltages
-        self.fpga.cabac_power(True)
-        # power-up the clock rails (in V)
-        print("Power on clock rails supplies here")
-        time.sleep(2)
-        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
-        self.fpga.set_clock_voltages(rails)
-        self.config.update(rails)
+        self.fpga.write(0x400006, 0)  # pattern generator off
+        # stops the clocks to use as image tag
+        self.fpga.stop_clock()
+        # load 0 on default state to prep for REB start-up
+        self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
-        # put all CABAC biases at board GND (must know Vsub), including spare
-        Vsuboffset = - self.config["VSUB"]
-        self.send_cabac_config({"OD": Vsuboffset, "GD": Vsuboffset, "RD": Vsuboffset})
-        # staged for CCD safety
-        self.send_cabac_config({"OG": Vsuboffset, "SPA": Vsuboffset})
 
     def CCDpowerup(self):
         """
@@ -125,11 +111,8 @@ class REB3(reb.REB):
         """
 
         # starting drain voltages
-        # staged steps for CCD safety
-        self.set_biases({'OD': 16})
-        self.set_biases({'RD': 14, 'GD': 14})
-        self.set_biases({'OD': 28})
-        self.set_biases({'RD': 18, 'GD': 24})
+
+        self.set_biases({'OD': 28, 'RD': 18, 'GD': 24})
 
         time.sleep(0.5)
 
@@ -139,17 +122,9 @@ class REB3(reb.REB):
 
         time.sleep(0.5)
 
-        #sets clock currents on CABAC
-        iclock = {"ISR": 220, 'ISF': 190, 'IPR': 170, 'IPF': 205, 'RGR': 200, 'RGF': 190}
-        # should give 80 ns rise/fall on serial, 60 ns on RG, 1 us on parallel
-        self.send_cabac_config(iclock)
-        #time.sleep(1)
-
-        #puts current on CS gate
-        dacOS = {"I_OS": 0xfff}
-        for s in self.stripes:
-            self.fpga.set_current_source(dacOS, s)
-        self.config.update(dacOS)
+        #settings clock rails
+        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
+        self.fpga.set_clock_voltages(rails)
 
         #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
         if self.seq:
@@ -168,18 +143,12 @@ class REB3(reb.REB):
         time.sleep(5)
         self.fpga.enable_bss(False)
 
+        # clock rails first (in V)
+        rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
+        self.fpga.set_clock_voltages(rails)
+
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
-
-        #shuts current on CS gate
-        dacOS = {"I_OS": 0}
-        for s in self.stripes:
-            self.fpga.set_current_source(dacOS, s)
-        self.config.update(dacOS)
-
-        #shuts clock currents on CABAC
-        iclock = {"IC": 0}
-        self.send_cabac_config(iclock)
 
         time.sleep(0.1)
 
@@ -189,29 +158,18 @@ class REB3(reb.REB):
 
         time.sleep(0.5)
 
-        #shutting drain voltages (staged for CCD extra safety)
-        self.set_biases({'RD': 14, 'GD': 14})        
-        self.set_biases({'OD': 16})
-        self.set_biases({'RD': 0, 'GD': 0})
-        self.set_biases({'OD': 0})
+        #shutting drain voltages
+        self.set_biases({'OD': 0, 'RD': 0, 'GD': 0})
 
         time.sleep(0.5)
-        print('CCD shutdown complete on WREB.')
+        print('CCD shutdown complete on REB3.')
 
     def REBshutdown(self):
         """
-        To be executed when shutting down the WREB to safeguard CABAC1.
+        Old: to be executed when shutting down the REB3.
         :return:
         """
-        # clock rails first (in V)
-        rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
-        self.fpga.set_clock_voltages(rails)
-        self.config.update(rails)
-        # shutdown the CABAC low voltages and Vsub
-        self.fpga.cabac_power(False)
-        # need to shutdown 6.5V, then VddOD right here on power supply
-        #sets the default sequencer clock states to 0
-        self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        pass
 
     # --------------------------------------------------------------------
 
@@ -241,7 +199,7 @@ class REB3(reb.REB):
 def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be part of REB class, will call other instruments
     """
     Managing FITS creation from img file and adding other header information.
-    :param R: lsst.camera.wreb.wreb.WREB
+    :type R: lsst.camera.reb3.reb3.REB3
     :param channels: list of channels
     :param fitsname: name if not using default structure.
     :return:
@@ -260,20 +218,22 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         # else: using LSST scheme for directory and image name, already built in fitsname
         primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
         primaryhdu.header["DATE-OBS"] = R.tstamp
-        primaryhdu.header["TESTTYPE"] = 'WREB test'
+        primaryhdu.header["TESTTYPE"] = 'REB3 test'
         primaryhdu.header["IMGTYPE"] = R.seqname
         localheader = pyfits.Header.fromtextfile("localheader.txt")
         primaryhdu.header.update(localheader)
         # for more meta, use the driver
         # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
-        #exthdu = pyfits.ImageHDU(name="CCD_COND")
-        #headerdict = R.config
+        exthdu = pyfits.ImageHDU(name="CCD_COND")
+
         #headerdict.update(R.get_cabac_config())
         #headerdict.update(R.get_aspic_config())
         #for keyword in headerdict:
         #    exthdu.header[keyword] = headerdict[keyword]
-        #hdulist.append(exthdu)
-
+        hdulist.append(exthdu)
+        headermeta = R.fpga.get_fpga_config(0)
+        for key in headermeta.orderkeys:
+            exthdu.header[key] = (headermeta.dictvalues[key], headermeta.dictcomments[key])
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
                                                          array=reb.get_sequencer_string(R.seq),
