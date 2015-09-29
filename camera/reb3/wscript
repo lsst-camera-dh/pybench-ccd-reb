@@ -23,7 +23,7 @@ def build(ctx):
                   'reb3.py',
                   'fpga.py'
                   ],
-        install_path = '${PYTHONDIR}/lsst/camera/wreb')
+        install_path = '${PYTHONDIR}/lsst/camera/reb3')
 
     # ctx.recurse(submodules)
 

@@ -1,1 +1,1 @@
-__all__ = ['bidi', 'rebxml', 'fpga', 'reb']
+__all__ = ['bidi', 'rebxml', 'fpga', 'reb', 'aspic']
