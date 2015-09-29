@@ -389,7 +389,7 @@ class REB(object):
         if displayborders:
             detstring = '[1:%d,1:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines)
         else:
-            detstring = '[1:4096,1:4004]'
+            detstring = '[1:%d,1:4004]' % (len(self.stripes) * 4096)
         return detstring
 
     def get_extension_header(self, CCDchan, fitshdu, displayborders=False):
@@ -417,14 +417,16 @@ class REB(object):
             colwidth = 512
             extheader['DATASEC'] = '[11:522,1:2002]'
 
-        if CCDchan < 8:
+        numCCD = CCDchan / 16
+        chan = CCDchan - numCCD * 16
+        if chan < 8:
             pdet = parstringlow
-            si = colwidth*(CCDchan+1)
-            sf = colwidth*CCDchan+1
+            si = colwidth * (CCDchan - 8 * numCCD + 1)
+            sf = colwidth * (CCDchan - 8 * numCCD) + 1
         else:
             pdet = parstringhigh
-            si = colwidth*(CCDchan-8)+1
-            sf = colwidth*(CCDchan-8+1)
+            si = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
+            sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
 
         extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 
