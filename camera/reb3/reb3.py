@@ -126,6 +126,11 @@ class REB3(reb.REB):
         rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
         self.fpga.set_clock_voltages(rails)
 
+        #puts current on CS gate
+        dacOS = 0xfff
+        for s in self.stripes:
+            self.fpga.set_current_source(dacOS, s)
+
         #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
         if self.seq:
             self.fpga.send_function(0, self.seq.get_function(0))
@@ -149,6 +154,12 @@ class REB3(reb.REB):
 
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+
+        #shuts current on CS gate
+        dacOS = 0
+        for s in self.stripes:
+            self.fpga.set_current_source(dacOS, s)
+
 
         time.sleep(0.1)
 

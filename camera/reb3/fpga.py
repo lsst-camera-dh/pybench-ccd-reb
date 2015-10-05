@@ -192,13 +192,36 @@ class FPGA2(FPGA):
         :param s: stripe
         :return:
         """
-        pass
+        self.check_location(s)
+        dacaddress = 0x400100 + (s << 4)
+        key = "CS"
+        dackey = key + '%s' % s
+        outputnum = 5
+
+        self.dacs[dackey] = current & 0xfff
+        self.write(dacaddress, self.dacs[dackey] + (outputnum << 12))
+
+        #activates DAC output
+        self.write(0x400001 + (s << 4), 1)
 
     def get_current_source(self, s):
         """
-        Not in REB3 anymore.
+        In REB3, we should also be able to read from the slow ADC+mux.
         """
-        pass
+
+        self.check_location(s)
+        key = "CS"
+        dackey = "CS" + '%s' % s
+
+        orderkeys = [key]
+        dictvalues = {}
+        dictcomments = {}
+
+        dictvalues[key] = self.dacs[dackey]
+        dictcomments[key] = '[ADU] %s CS gate current setting' % key
+
+        return MetaData(orderkeys, dictvalues, dictcomments)
+
     # ----------------------------------------------------------
 
     def enable_bss(self, connect):
@@ -255,7 +278,7 @@ class FPGA2(FPGA):
 
     def get_bias_voltages(self, s):
         """
-        No readback, using values stored in fpga object.
+        In REB3, we should also be able to read from the slow ADC+mux (with limitations).
         :type s: int
         :param s: stripe
         """
@@ -296,7 +319,7 @@ class FPGA2(FPGA):
         config = self.get_input_voltages_currents()
         config.update(self.get_clock_voltages())
         config.update(self.get_bias_voltages(s))
-        #config.update(self.get_current_source(s))
+        config.update(self.get_current_source(s))
         config.update(self.slow_adc_stripe(s))
 
         return config
