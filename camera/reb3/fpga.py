@@ -17,11 +17,13 @@ class FPGA2(FPGA):
     # reb_id = 2
 
     supplies = ['DREB', '7V', 'VDDCLK', 'VDDOD']
-    clock_conv = 0.00357  # conversion for DAC (V/LSB)
-    bias_conv = 0.00725  # conversion for alternative biases
-    od_conv = 0.0195  # placeholder for alternative OD
-    og_conv = 0.00122  # placeholder for alternative OG
-    # TODO: replace with REB3 values
+    # conversion factors for DAC (V/LSB):
+    clock_conv = 0.00357  # TODO: replace with REB3 values
+    bias_conv = 0.0088501  
+    od_conv = 0.0088501  
+    rd_conv = 0.0061035
+    og_conv = 0.0012207  
+    
     n_sensors_boardtemp = 10
 
     # mapping of clock rail settings
@@ -30,6 +32,9 @@ class FPGA2(FPGA):
     # list of acceptable parameters for REB commands
     params = ["OD", "GD", "RD", "OG", 'CS',
               "SL", "SU", "RGL", "RGU", "PL", "PU"]
+    # mapping for conversion
+    convbiases = {"OD": self.od_conv, "GD": self.bias_conv, "RD": self.rd_conv, "OG": self.og_conv}
+    
     groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU"],
               'CLK_L': ["SL", "RGL", "PL"],
               'CLK_U': ["SU", "RGU", "PU"],
@@ -254,11 +259,8 @@ class FPGA2(FPGA):
 
         for key in biases:
             dackey = key + '%s' % s
-            if key in ["GD", "RD"]:
-                self.dacs[dackey] = int(biases[key] / self.bias_conv) & 0xfff
-                self.write(dacaddress, self.dacs[dackey] + (outputnum[key] << 12))
-            elif key == "OD":
-                self.dacs[dackey] = int(biases[key] / self.od_conv) & 0xfff
+            if key in ["GD", "RD", "OD"]:
+                self.dacs[dackey] = int(biases[key] / self.convbiases[key]) & 0xfff
                 self.write(dacaddress, self.dacs[dackey] + (outputnum[key] << 12))
             elif key == "OG":
                 dackeyshift = "OG_S" + '%s' % s
@@ -292,12 +294,9 @@ class FPGA2(FPGA):
             if key == 'OG':
                 dackeyshift = "OG_S" + '%s' % s
                 dictvalues[key] = (self.dacs[dackey] - self.dacs[dackeyshift]) * self.og_conv
-
             #TODO: check appropriate factor for shift
-            if key == 'OD':
-                dictvalues[key] = self.dacs[dackey] * self.od_conv
             else:
-                dictvalues[key] = self.dacs[dackey] * self.bias_conv
+                dictvalues[key] = self.dacs[dackey] * self.convbiases[key]
             dictcomments[key] = '[V] %s voltage setting' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
