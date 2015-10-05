@@ -22,7 +22,7 @@ class FPGA2(FPGA):
     od_conv = 0.0195  # placeholder for alternative OD
     og_conv = 0.00122  # placeholder for alternative OG
     # TODO: replace with REB3 values
-    n_sensors_boardtemp = 9  # 10 in REB2, only 9 in REB3 ?
+    n_sensors_boardtemp = 10
 
     # mapping of clock rail settings
     clockmap = {"SL": 2, "SL_S": 1, "SU": 0, "PL": 5, "PL_S": 4, "PU": 3, "RGL": 0x12, "RGU": 0x11,"RGL_S": 0x10}
@@ -69,12 +69,12 @@ class FPGA2(FPGA):
               'CS_T5_2': (5, 8), 'CS_B5_2': (5, 9),
               'CS_T6_2': (6, 8), 'CS_B6_2': (6, 9),
               'CS_T7_2': (7, 8), 'CS_B7_2': (7, 9),
-              'OD_0': (12, 0), 'OD_1': (12, 5), 'OD_2': (13, 3),
-              'OG_0': (12, 1), 'OG_1': (12, 6), 'OG_2': (13, 4),
-              'RD_0': (12, 2), 'RD_1': (12, 7), 'RD_2': (13, 5),
-              'GD_0': (12, 3), 'GD_1': (13, 0), 'GD_2': (13, 6),
-              'ADC5V_0': (12, 4), 'ADC5V_1': (13, 1), 'ADC5V_2': (13, 7),
-              'REF2V5_1': (13, 2)
+              'OD_0': (0, 12), 'OD_1': (5, 12), 'OD_2': (3, 13),
+              'OG_0': (1, 12), 'OG_1': (6, 12), 'OG_2': (4, 13),
+              'RD_0': (2, 12), 'RD_1': (7, 12), 'RD_2': (5, 13),
+              'GD_0': (3, 12), 'GD_1': (0, 13), 'GD_2': (6, 13),
+              'ADC5V_0': (4, 12), 'ADC5V_1': (1, 13), 'ADC5V_2': (7, 13),
+              'REF2V5_1': (2, 13)
               }
 
     # --------------------------------------------------------------------
@@ -272,13 +272,12 @@ class FPGA2(FPGA):
 
             #TODO: check appropriate factor for shift
             if key == 'OD':
-                dictvalues[key] = self.dacs[dackey]* self.od_conv
+                dictvalues[key] = self.dacs[dackey] * self.od_conv
             else:
-                dictvalues[key] = self.dacs[dackey]* self.bias_conv
+                dictvalues[key] = self.dacs[dackey] * self.bias_conv
             dictcomments[key] = '[V] %s voltage setting' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
-
 
     def check_location(self, s, loc=3):
         if s not in [0, 1, 2]:
@@ -312,7 +311,8 @@ class FPGA2(FPGA):
         :return: int
         """
         # includes enable bit on 8-channel mux
-        self.write(0x600101, ((8 + (extmux & 7)) << 16) + (adcmux & 0xf))
+        self.write(0x600101, (((extmux & 7)) << 17) + (1 << 16) + (adcmux & 0xf))
+        # TODO: check it has not changed again
 
         raw = self.read(0x601010, 1)[0x601010]
         value = raw & 0xfff
