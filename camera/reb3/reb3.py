@@ -264,7 +264,7 @@ if __name__ == "__main__":
     logging.basicConfig(filename = logfile,
                         level = logging.DEBUG,
                         format = '%(asctime)s: %(message)s')
-    r = REB3(rriaddress=0x2, stripe_id=[1])
+    #r = reb3.REB3(rriaddress=0x2, stripe_id=[1])
 
     # here power on power supplies
     r.REBpowerup()
@@ -274,5 +274,5 @@ if __name__ == "__main__":
     #r.load_sequencer(r.xmlfile)
     #r.config_sequence("Bias")
     #r.execute_sequence()
-    #save_to_fits(r)
+    #reb3.save_to_fits(r)
     

@@ -518,7 +518,7 @@
                         <value>1110000001</value>
                     </timeslice>
                     <timeslice id="slice10">
-                        <duration>50 ns</duration>
+                        <duration>250 ns</duration>
                         <value>1010000010</value>
                     </timeslice>
                 </slicelist>

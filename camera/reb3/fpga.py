@@ -22,7 +22,7 @@ class FPGA2(FPGA):
     bias_conv = 0.0088501  
     od_conv = 0.0088501  
     rd_conv = 0.0061035
-    og_conv = 0.0012207  
+    og_conv = 0.0024414  # TODO: check again without diode
     
     n_sensors_boardtemp = 10
 
@@ -33,7 +33,7 @@ class FPGA2(FPGA):
     params = ["OD", "GD", "RD", "OG", 'CS',
               "SL", "SU", "RGL", "RGU", "PL", "PU"]
     # mapping for conversion
-    convbiases = {"OD": self.od_conv, "GD": self.bias_conv, "RD": self.rd_conv, "OG": self.og_conv}
+    convbiases = {"OD": od_conv, "GD": bias_conv, "RD": rd_conv, "OG": og_conv}
     
     groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU"],
               'CLK_L': ["SL", "RGL", "PL"],
@@ -145,7 +145,7 @@ class FPGA2(FPGA):
         # shift: L output will follow positive dac minus (factor tbc) shift dac
         for key in voltages:
             if key in self.groups['CLK_L']:
-                keyshift = key+'_L'
+                keyshift = key+'_S'
                 if voltages[key] > 0:
                     self.dacs[key] = int(voltages[key] / self.clock_conv) & 0xfff
                     self.dacs[keyshift] = 0
@@ -207,7 +207,7 @@ class FPGA2(FPGA):
         self.write(dacaddress, self.dacs[dackey] + (outputnum << 12))
 
         #activates DAC output
-        self.write(0x400001 + (s << 4), 1)
+        self.write(0x400101 + (s << 4), 1)
 
     def get_current_source(self, s):
         """
@@ -276,7 +276,7 @@ class FPGA2(FPGA):
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
 
         # activates DAC outputs
-        self.write(0x400001 + (s << 4), 1)
+        self.write(0x400101 + (s << 4), 1)
 
     def get_bias_voltages(self, s):
         """
