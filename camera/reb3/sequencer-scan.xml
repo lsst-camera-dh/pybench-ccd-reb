@@ -12,7 +12,7 @@
             </parameter>
             <parameter id="StartLine">
                 <fullname>Starting line for windowed readout</fullname>
-                <value>1000</value>
+                <value>0</value>
             </parameter>
             <parameter id="StartColumn">
                 <fullname>Starting column for windowed readout</fullname>
@@ -20,7 +20,7 @@
             </parameter>
             <parameter id="WindowLines">
                 <fullname>Number of lines of the window</fullname>
-                <value>20</value>
+                <value>2000</value>
             </parameter>
             <parameter id="WindowColumns">
                 <fullname>Number of columns of the window</fullname>
@@ -28,7 +28,7 @@
             </parameter>
             <parameter id="EndLine">
                 <fullname>Number of lines after window</fullname>
-                <value>1000</value>
+                <value>20</value>
             </parameter>
             <parameter id="EndColumn">
                 <fullname>Number of columns after window</fullname>
@@ -250,7 +250,7 @@
                         <value>001000001</value>
                     </timeslice>
                     <timeslice id="slice11">
-                        <duration>500 ns</duration>
+                        <duration>30 ns</duration>
                         <value>001000000</value>
                     </timeslice>
                 </slicelist>
@@ -376,24 +376,14 @@
                     </call>
                 </call>
             </subroutine>
-            <subroutine id="CloseShutter">
-                <fullname>Gives time to warm up ADCs</fullname>
-                <call ref="ReadPixel">
-                    <repeat>5000</repeat>
-                </call>
-            </subroutine>
             <subroutine id="ReadFrame">
                 <fullname>Readout and acquisition of a CCD frame</fullname>
-                <call ref="CloseShutter"/>
                 <call ref="StartOfImage"/>
                 <call ref="BaseFrame"/>
                 <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="ReadWindow">
                 <fullname>Readout of a windowed frame</fullname>
-                <call ref="FlushLine">
-                    <repeat>StartLine</repeat>
-                </call>
                 <call>
                     <repeat>WindowLines</repeat>
                     <call ref="TransferLine"/>
@@ -407,9 +397,6 @@
                         <repeat>EndColumn</repeat>
                     </call>
                 </call>
-                <call ref="FlushLine">
-                    <repeat>EndLine</repeat>
-                </call>
             </subroutine>
             <subroutine id="FlushLine">
                 <fullname>Transfer line and flush it</fullname>
@@ -420,19 +407,16 @@
             </subroutine>
             <subroutine id="FullPseudoAcquisition">
                 <fullname>Replicates AcquireBias without acquiring</fullname>
-                <call ref="CloseShutter"/>
                 <call ref="BaseFrame"/>
             </subroutine>
             <subroutine id="AcquireBias">
                 <fullname>One acquisition without exposure</fullname>
-                <call ref="CloseShutter"/>
                 <call ref="StartOfImage"/>
                 <call ref="BaseFrame"/>
                 <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="WindowAcquisition">
                 <fullname>One acquisition of a window</fullname>
-                <call ref="CloseShutter"/>
                 <call ref="StartOfImage"/>
                 <call ref="ReadWindow"/>
                 <call ref="EndOfImage"/>
