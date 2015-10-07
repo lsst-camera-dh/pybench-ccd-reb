@@ -141,7 +141,7 @@ bench.Bench.mire_program = mire_program
 
 #---------------------------------------------------------------------------------
 
-def mire_angles(self, position = {'x': 47.5, 'y': 36.0, 'z': 85.1},
+def mire_angles(self, position = {'x': 47.5, 'y': 36.0, 'z': 84.8},
                 angle_min = 0.0, angle_max = np.pi, angles = 11, 
                 exptime = 0.75, images = 10, view=False):
     """

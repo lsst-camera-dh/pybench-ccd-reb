@@ -207,7 +207,7 @@ class Instrument(Driver):
 
         for ax in ['x', 'y', 'z']:
             key = '%sPOS' % ax.upper()
-            comment = ( '[mm] Current %s position of the XYZ(A) mount in mm' 
+            comment = ( '[mm] %s position of the XYZ(A) mount' 
                         % ax.upper() )
             value = pos.get(ax, None)
             keys.append(key)
@@ -218,7 +218,7 @@ class Instrument(Driver):
 
         if pos.has_key('a'):
             key = 'APOS'
-            comment = '[deg] Current A position of the XYZ(A) mount in degrees' 
+            comment = '[deg] A position of the XYZ(A) mount' 
             value = pos.get('a', None)
             keys.append(key)
             values[key] = value
