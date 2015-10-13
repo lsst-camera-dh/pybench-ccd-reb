@@ -3,6 +3,9 @@
 # LSST / LPNHE
 #
 # Testing REB3
+#
+# Usage:
+# import lsst.camera.reb3.reb3 as reb3
 
 __author__ = 'juramy'
 
@@ -51,7 +54,7 @@ class REB3(reb.REB):
         return config
 
     def config_aspic(self):
-        settings = {"GAIN": 0b1000, "RC": 0b11, "AF1": False, "TM": False, "CLS": 0}
+        settings = {"GAIN": 0b1, "RC": 0b101, "AF1": False, "TM": False, "CLS": 0}
         self.send_aspic_config(settings)
 
     def set_biases(self, params):
@@ -85,7 +88,7 @@ class REB3(reb.REB):
         elif param in self.fpga.groups['BIASES']:
             self.fpga.set_bias_voltages({param: value}, stripe)
 
-        elif param == "I_OS":
+        elif param == "CS":
             self.fpga.set_current_source(value, stripe)
 
         else:
@@ -220,7 +223,7 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
     else:
         imgname = R.make_img_name()
     if os.path.isfile(imgname):
-        hdulist = R.conv_to_fits(imgname, channels, displayborders=False)
+        hdulist = R.conv_to_fits(imgname, channels, displayborders=True)
         primaryhdu = hdulist[0]
         imgstr = os.path.splitext(os.path.basename(imgname))[0]
         primaryhdu.header["IMAGETAG"] = imgstr
@@ -271,8 +274,16 @@ if __name__ == "__main__":
     time.sleep(0.1)
     r.CCDpowerup()
     r.config_aspic()
-    #r.load_sequencer(r.xmlfile)
+    #r.load_sequencer('sequencer-scan.xml')
     #r.config_sequence("Bias")
     #r.execute_sequence()
     #reb3.save_to_fits(r)
+    
+    #recovery from FPGA power down (no CCD)
+    #r.set_stripes([0,1,2])
+    #r.read_sequencer_file('sequencer-scan.xml')
+    #r.imglines = 1000
+    #r.config_sequence("Bias")
+    #r.config_aspic()
+    
     
