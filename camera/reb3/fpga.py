@@ -333,12 +333,12 @@ class FPGA2(FPGA):
         :return: int
         """
         # includes enable bit on 8-channel mux
-        self.write(0x600101, (((extmux & 7)) << 17) + (1 << 16) + (adcmux & 0xf))
+        self.write(0x600101, ((extmux & 7) << 5) + (1 << 4) + (adcmux & 0xf))
         # TODO: check it has not changed again
 
         raw = self.read(0x601010, 1)[0x601010]
         value = raw & 0xfff
-        checkextmux = (raw >> 20) & 7
+        checkextmux = (raw >> 21) & 7
         checkadcmux = (raw >> 12) & 0xf
         if (checkextmux != extmux) or (checkadcmux != adcmux):
             print('Warning: mismatch in slow ADC read %d, %d' % (checkextmux, checkadcmux))

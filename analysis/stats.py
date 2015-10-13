@@ -7,12 +7,12 @@
 import sys
 import time
 import numpy as np
-import pyfits
+import astropy.io.fits as pyfits
 
 
 def basic_stats(hdulist):
     out = ''
-    for ichan in range(16):
+    for ichan in range(48):
         name = "CHAN_%d" % ichan
         try:
             img = hdulist[name].data
@@ -20,16 +20,15 @@ def basic_stats(hdulist):
             continue
         imgcols = 512
         colstart = 10
-        imglines = 2002
-        light = img[:imglines, colstart:colstart+imgcols].flatten()
-        dark = np.concatenate((img[:imglines, :colstart].flatten(),
-                               img[:imglines, colstart+imgcols:].flatten(),
+        imglines = 900
+        linestart = 50
+        light = img[linestart:imglines, colstart:colstart+imgcols].flatten()
+        dark = np.concatenate((img[linestart:imglines, :colstart].flatten(),
+                               img[linestart:imglines, colstart+imgcols:].flatten(),
                               img[imglines:].flatten()))
-        over = img[imglines+2:, colstart:] ## why +2 ?
-        out.join("{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f}\n".format(name,
-                                                                                 light.mean(), light.std(),
-                                                                                 dark.mean(), dark.std(),
-                                                                                 over.mean(), over.std()))
+        over = img[imglines+2:, colstart:] # +2 to avoid bad CTE effects
+        out += "{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f}\n".format(
+        name, light.mean(), light.std(), dark.mean(), dark.std(), over.mean(), over.std()) 
 
     return out
 

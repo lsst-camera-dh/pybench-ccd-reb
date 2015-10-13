@@ -446,3 +446,4 @@ class REB(object):
         fitsname = os.path.join(fitsdir, rootname + '.fits')
 
         return fitsname
+        

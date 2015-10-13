@@ -4,7 +4,7 @@
         <parameters>
             <parameter id="ReadLines">
                 <fullname>Number of lines for full readout</fullname>
-                <value>2020</value>
+                <value>1000</value>
             </parameter>
             <parameter id="ReadColumns">
                 <fullname>Number of columns for full readout</fullname>
@@ -20,7 +20,7 @@
             </parameter>
             <parameter id="WindowLines">
                 <fullname>Number of lines of the window</fullname>
-                <value>2000</value>
+                <value>1000</value>
             </parameter>
             <parameter id="WindowColumns">
                 <fullname>Number of columns of the window</fullname>
