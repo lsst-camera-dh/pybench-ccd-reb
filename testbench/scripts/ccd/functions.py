@@ -169,7 +169,7 @@ def append_kvc(exthdu, keys, values, comments):
 def conv_to_fits(self, channels=None, borders=False, imgname=None):
     """
     Converts the given raw image to FITS data.
-    :return: pyfits.HDUlist
+    :rtype: pyfits.HDUlist
     """
     if imgname:
         rawfile = imgname
@@ -184,6 +184,54 @@ def conv_to_fits(self, channels=None, borders=False, imgname=None):
     return hdulist
 
 bench.Bench.conv_to_fits = conv_to_fits
+
+
+def eotest_header(hdulist):
+    """
+    FITS headers: add specific parameters to primary, 'CCD_COND' and 'TEST_COND'.
+    :param self:
+    :param hdulist:
+    :rtype: pyfits.ImageHDU
+    """
+    # Test conditions (instruments other than REB)
+    testhdu = pyfits.ImageHDU(name='TEST_COND')
+    primaryhdu = hdulist[0]
+
+    if 'BSS' in hdulist:
+        if hdulist['BSS'].header['VOLTSRC']:  # if it is activated
+            hdulist['CCD_COND'].header['V_BSS'] = (hdulist['BSS'].header['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
+        else:
+            hdulist['CCD_COND'].header['V_BSS'] = (0.0, '[V] Keithley Back-Substrate voltage')
+        hdulist['CCD_COND'].header['I_BSS'] = (hdulist['BSS'].header['CURRENT'], '[A] Keithley Back-Substrate current')
+    if 'TRIAX' in hdulist:  # TODO: to be updated with Newport
+        primaryhdu.header['MONOWL'] = (hdulist['TRIAX'].header['WVLGTH'], '[nm] Monochromator wavelength')
+        # add to testhdu
+        # replace with laser wavelength if laser is connected
+    if 'LAKESHORE0' in hdulist:
+        primaryhdu.header['CCDTEMP'] = (hdulist['LAKESHORE0'].header['TEMPA'], '[C] CCD temperature')
+    elif 'LAKESHORE1' in hdulist:
+        primaryhdu.header['CCDTEMP'] = (hdulist['LAKESHORE1'].header['TEMPA'], '[C] CCD temperature')
+        # also need 'TEMP_SET' for primaryhdu, not yet available in thermal_lakeshore
+    if 'TTL' in hdulist:
+        primaryhdu.header['FILTER'] = (hdulist['TTL'].header['LMPFILT'], 'Filter wheel position')
+        # TODO: add conversion to filter reference
+    for extname in ['QTH', 'XEHG']:
+        if extname in hdulist:
+            testhdu.header['SRCTYPE'] = (extname, 'Source type')
+            if hdulist[extname].header['ON']:
+                testhdu.header['SRCPWR'] = (hdulist[extname].header['POWER'], '[W] Lamp power')
+            else:
+                testhdu.header['SRCPWR'] = (0, '[W] Lamp power')
+    if 'LASER' in hdulist:
+        # currently no parameter to know which channels are enabled
+        testhdu.header['SRCTYPE'] = ('LASER', 'Source type')
+        for chan in range(1,5):
+            keylaser = 'POW_CH%d' % chan
+            testhdu.header[keylaser] = hdulist['LASER'].header[keylaser]
+    if 'PHD' in hdulist:
+        testhdu.header['MONDIODE'] = (hdulist['PHD'].header['CURRENT'], '[A] Monitoring photodiode current')
+
+    return testhdu
 
 
 def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
@@ -211,45 +259,9 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
             append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
             hdulist.append(exthdu)
 
-    # if LSSTstyle, add specific parameters to primary, 'CCD_COND' and 'TEST_COND'
+    # if LSSTstyle,
     if LSSTstyle and meta:
-        # Test conditions (instruments other than REB)
-        testhdu = pyfits.ImageHDU(name='TEST_COND')
-
-        if 'BSS' in hdulist:
-            if hdulist['BSS'].header['VOLTSRC']:  # if it is activated
-                hdulist['CCD_COND'].header['V_BSS'] = (hdulist['BSS'].header['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
-            else:
-                hdulist['CCD_COND'].header['V_BSS'] = (0.0, '[V] Keithley Back-Substrate voltage')
-            hdulist['CCD_COND'].header['I_BSS'] = (hdulist['BSS'].header['CURRENT'], '[A] Keithley Back-Substrate current')
-        if 'TRIAX' in hdulist:  # TODO: to be updated with Newport
-            primaryhdu.header['MONOWL'] = (hdulist['TRIAX'].header['WVLGTH'], '[nm] Monochromator wavelength')
-            # add to testhdu
-            # replace with laser wavelength if laser is connected
-        if 'LAKESHORE0' in hdulist:
-            primaryhdu.header['CCDTEMP'] = (hdulist['LAKESHORE0'].header['TEMPA'], '[C] CCD temperature')
-        elif 'LAKESHORE1' in hdulist:
-            primaryhdu.header['CCDTEMP'] = (hdulist['LAKESHORE1'].header['TEMPA'], '[C] CCD temperature')
-            # also need 'TEMP_SET' for primaryhdu, not yet available in thermal_lakeshore
-        if 'TTL' in hdulist:
-            primaryhdu.header['FILTER'] = (hdulist['TTL'].header['LMPFILT'], 'Filter wheel position')
-            # TODO: add conversion to filter reference
-        for extname in ['QTH', 'XEHG']:
-            if extname in hdulist:
-                testhdu.header['SRCTYPE'] = (extname, 'Source type')
-                if hdulist[extname].header['ON']:
-                    testhdu.header['SRCPWR'] = (hdulist[extname].header['POWER'], '[W] Lamp power')
-                else:
-                    testhdu.header['SRCPWR'] = (0, '[W] Lamp power')
-        if 'LASER' in hdulist:
-            # currently no parameter to know which channels are enabled
-            testhdu.header['SRCTYPE'] = ('LASER', 'Source type')
-            for chan in range(1,5):
-                keylaser = 'POW_CH%d' % chan
-                testhdu.header[keylaser] = hdulist['LASER'].header[keylaser]
-        if 'PHD' in hdulist:
-            testhdu.header['MONDIODE'] = (hdulist['PHD'].header['CURRENT'], '[A] Monitoring photodiode current')
-
+        testhdu = eotest_header(hdulist)
         hdulist.append(testhdu)
 
     # Sequencer content

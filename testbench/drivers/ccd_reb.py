@@ -8,6 +8,7 @@ Testbench driver for REB (through direct calls to rriClient)
 
 import lsst.camera.reb1.reb1 as reb1
 import lsst.camera.wreb.wreb as wreb
+import lsst.camera.reb3.reb3 as reb3
 from lsst.camera.generic.reb import get_sequencer_string
 
 from driver import Driver
@@ -53,8 +54,16 @@ class Instrument(Driver):
 
         if identifier == 'reb':
             self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
-        else:
+            self.useCABAC = True
+        elif identifier == 'wreb':
             self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
+            self.useCABAC = True
+            self.reb.useCABACbias = True
+        elif identifier  == 'reb':
+            self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
+            self.useCABAC = False
+        else:
+            raise ValueError('Unknown identifier for ccd_reb: %s' % identifier)
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
@@ -329,21 +338,30 @@ class Instrument(Driver):
         """
         Reads CABAC configuration.
         """
-        return self.reb.get_cabac_config()
+        if self.useCABAC:
+            return self.reb.get_cabac_config()
+        else:
+            return self.reb.get_biases()
 
     def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
         """
-        self.reb.send_cabac_config(params)
-        logging.info("REB: sent CABAC values")
+        if self.useCABAC:
+            self.reb.send_cabac_config(params)
+            logging.info("REB: sent CABAC values")
+        else:
+            logging.info("REB: attempting to send CABAC values, not in use")
 
     def cabac_reset(self):
         """
         Puts all CABAC values at 0, then checks the readback into the params dictionay.
         """
-        self.reb.cabac_reset()
-        logging.info("REB: sent CABAC resets")
+        if self.useCABAC:
+            self.reb.cabac_reset()
+            logging.info("REB: sent CABAC resets")
+        else:
+            logging.info("REB: attempting to send CABAC reset, not in use")
 
     # --------------------------------------------------------------------
 
@@ -355,10 +373,10 @@ class Instrument(Driver):
 
     def send_aspic_config(self, params):
         """
-        Sets ASPIC parameters defined in the params dictionay and writes to ASPIC, then checks the readback.
+        Sets ASPIC parameters defined in the params dictionary and writes to ASPIC, then checks the readback.
         If it is programmable (not REB1 / ASPIC2).
         """
-        self.reb.send_cabac_config(params)
+        self.reb.send_aspic_config(params)
         logging.info("REB: sent ASPIC values")
 
     def config_aspic(self):
@@ -507,16 +525,8 @@ class Instrument(Driver):
         More meta data for operating parameters (CABACs, ASPICs, various REB DACs).
         :return:
         """
-
-        # power supplies measured on board
-        header = self.reb.get_input_voltages_currents()
-        # cabacs
-        header.update(self.get_cabac_config())
-        # aspics
-        # BUG BUG LLG 2015-06-24 header.update(self.get_aspic_config())
-        # clock rail voltages and current source
-        # BUG BUG LLG 2015-06-24 header.update(self.reb.fpga.get_dacs())
-        # TODO: add board temperature
+        # in REB3:
+        header = self.reb.get_meta_operating()
 
         return header.keys, header.values, header.comments
 
