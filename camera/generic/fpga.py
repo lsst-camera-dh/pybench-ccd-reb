@@ -1157,3 +1157,14 @@ class FPGA(object):
             dictcomments[istr] = '[A] %s power supply current' % v
 
         return MetaData(orderkeys, dictvalues, dictcomments)
+
+    # ----------------------------------------------------------
+
+    def get_fpga_config(self, s):  # stripe 's'
+        """
+        Output for header.
+        """
+        config = self.get_input_voltages_currents()
+        # TODO: add board temperatures ?
+
+        return config

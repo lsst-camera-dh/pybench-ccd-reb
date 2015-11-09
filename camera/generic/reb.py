@@ -447,3 +447,18 @@ class REB(object):
 
         return fitsname
         
+    # --------------------------------------------------------------------
+
+    def get_meta_operating(self):
+        """
+        Gets all REB operating parameters. For headers and checks.
+        :return:
+        """
+
+        config = self.fpga.get_fpga_config(self.stripes[0])
+        if len(self.stripes) > 1:
+            for stripe in self.stripes[1:]:
+                config.update(self.fpga.get_fpga_config(stripe))
+
+        return config
+

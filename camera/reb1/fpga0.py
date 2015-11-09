@@ -261,3 +261,17 @@ class FPGA0(FPGA):
 
         return config
 
+    # ----------------------------------------------------------
+
+    def get_fpga_config(self, s):  # stripe 's'
+        """
+        Output for header.
+        """
+
+        config = self.get_input_voltages_currents()
+        config.update(self.get_aspic_config(s))
+        config.update(self.get_cabac_config(s))
+        config.update(self.get_dacs())
+
+        return config
+

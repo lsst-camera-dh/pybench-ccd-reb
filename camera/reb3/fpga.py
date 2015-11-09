@@ -12,7 +12,7 @@ import lsst.camera.generic.aspic as aspic
 
 # # -----------------------------------------------------------------------
 
-class FPGA2(FPGA):
+class FPGA3(FPGA):
     # ctrl_host = "lpnws4122"
     # reb_id = 2
 
@@ -188,7 +188,6 @@ class FPGA2(FPGA):
 
     def set_current_source(self, current, s=0):
         """
-        Obsolete.
         Sets current source DAC value for the given stripe.
         The same FPGA registers are also used to write OD and other biases, see set_bias_voltages()
         :type s: int
@@ -308,22 +307,7 @@ class FPGA2(FPGA):
             raise ValueError("Invalid Location code (%d)" % loc)
         return True
 
-    # ----------------------------------------------------------
-
-    def get_fpga_config(self, s):  # stripe 's'
-        """
-        Output for header.
-        """
-        #TODO: add any missing data
-        config = self.get_input_voltages_currents()
-        config.update(self.get_clock_voltages())
-        config.update(self.get_bias_voltages(s))
-        config.update(self.get_current_source(s))
-        config.update(self.slow_adc_stripe(s))
-
-        return config
-
-    # ----------------------------------------------------------
+   # ----------------------------------------------------------
 
     def slow_adc_readmux(self, extmux, adcmux):
         """
@@ -476,3 +460,18 @@ class FPGA2(FPGA):
         self.check_location(s)
 
         self.write(0xB00001, s)
+    # ----------------------------------------------------------
+
+    def get_fpga_config(self, s):  # stripe 's'
+        """
+        Output for header.
+        """
+        config = self.get_input_voltages_currents()
+        config.update(self.get_clock_voltages())
+        config.update(self.get_bias_voltages(s))
+        config.update(self.get_current_source(s))
+        config.update(self.slow_adc_stripe(s))
+        config.update(self.get_aspic_config(s, check=False))
+
+        return config
+
