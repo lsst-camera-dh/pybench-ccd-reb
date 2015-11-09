@@ -109,6 +109,7 @@ class FPGA1(FPGA):
     def get_clock_voltages(self):
         """
         No readback available, using values stored in fpga object.
+        :rtype: dict
         """
         fitsheader = {}
         for key in ["SL", "SU", "RGL", "RGU", "PL", "PU"]:
@@ -210,7 +211,60 @@ class FPGA1(FPGA):
         # activates DAC outputs
         self.write(0x400011, 1)
 
+    def get_bias_voltages(self, s):
+        """
+        Reads from stored values.
+        :return:
+        """
+        self.check_location(s)
+        orderkeys = []
+        dictvalues = {}
+        dictcomments = {}
+
+        for dackey in ["OD", "GD", "RD", "OG", "OD_CTRL"]:
+            if dackey in self.dacs:
+                orderkeys.append(dackey)
+                if dackey == 'OG':
+                    dackeyshift = "OGS"
+                    dictvalues[dackey] = (self.dacs[dackey] - self.dacs[dackeyshift]) * self.og_conv
+                #TODO: check appropriate factor for shift
+                elif dackey in ["GD", "RD"]:
+                    dictvalues[dackey] = self.dacs[dackey] * self.bias_conv
+                elif dackey in ["OD", "OD_CTRL"]:
+                    dictvalues[dackey] = self.dacs[dackey] * self.od_conv
+                dictcomments[dackey] = '[V] %s voltage setting' % dackey
+
+        return MetaData(orderkeys, dictvalues, dictcomments)
+
     # ----------------------------------------------------------
+
+    def get_dacs(self):
+        """
+        All DACs settings into MetaData format.
+        No readback available, using values stored in fpga object.
+        :return: MetaData
+        """
+        keys = ["SL", "SU", "RGL", "RGU", "PL", "PU", 'I_OS']
+        fitsheader = self.get_clock_voltages()
+        fitsheader.update(self.get_current_source())
+
+        comments = {
+            'SL': 'Serial clocks low voltage',
+            'SU': 'Serial clocks high voltage',
+            'RGL': 'Reset Gate clock low voltage',
+            'RGU': 'Reset Gate clock high voltage',
+            'PL': 'Parallel clocks low voltage',
+            'PU': 'Parallel clocks high voltage',
+            'I_OS': 'Current sources setting'
+        }
+
+        config = MetaData(keys, fitsheader, comments, 'REB DACS')
+        config.update(self.get_bias_voltages())
+
+        return config
+
+    # ----------------------------------------------------------
+
     def cabac_power(self, enable):
         """
         Enables/disables power to CABAC low voltage VEE and power supplies, powered in that order for CABAC safety.
@@ -406,4 +460,18 @@ class FPGA1(FPGA):
         self.write(0xB00001, s)
 
 # TODO: ASIC temperature readouts
+
+    # ----------------------------------------------------------
+
+    def get_fpga_config(self, s):  # stripe 's'
+        """
+        Output for header.
+        """
+
+        config = self.get_input_voltages_currents()
+        config.update(self.get_dacs())
+        config.update(self.get_aspic_config(s))
+        config.update(self.get_cabac_config(s))
+
+        return config
 

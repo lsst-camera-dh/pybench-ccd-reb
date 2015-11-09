@@ -25,7 +25,7 @@ class REB3(reb.REB):
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
-        self.fpga = fpga.FPGA2(ctrl_host, rriaddress)
+        self.fpga = fpga.FPGA3(ctrl_host, rriaddress)
         self.config = {"VSUB": 0}  # depends on power supply values and board configuration
         self.xmlfile = "sequencer-wreb.xml"
 
@@ -67,6 +67,16 @@ class REB3(reb.REB):
         for s in self.stripes:
             self.fpga.set_bias_voltages(params, s)
 
+    def get_biases(self):
+        """
+        Reads configuration of biases (replaces CABAC readback).
+        :return:
+        """
+        config = self.fpga.get_bias_voltages(self.stripes[0])
+        if len(self.stripes) > 1:
+            for s in self.stripes[1:]:
+                config.update(self.fpga.get_bias_voltages(s))
+
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
         Generic interface to set any single parameter of the REB, and check the readback if possible.
@@ -106,6 +116,8 @@ class REB3(reb.REB):
         self.fpga.stop_clock()
         # load 0 on default state to prep for REB start-up
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+        # configure ASPIC with default values
+        self.config_aspic()
 
 
     def CCDpowerup(self):
@@ -143,11 +155,13 @@ class REB3(reb.REB):
         self.fpga.enable_bss(True)
         print('BSS can be powered on now.')
 
+
     def CCDshutdown(self):
         """
         Sequence to shutdown power to the CCD.
         """
         print('BSS must be shutdown at this time.')
+        # TODO: add BSS disable
         time.sleep(5)
         self.fpga.enable_bss(False)
 
@@ -207,7 +221,7 @@ class REB3(reb.REB):
         self.imgcols = 550  # TODO: get it from XML
         self.imglines = 2020
 
-# --------------------------------------------------------------------
+ # --------------------------------------------------------------------
 
 
 def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be part of REB class, will call other instruments
@@ -245,7 +259,7 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         #for keyword in headerdict:
         #    exthdu.header[keyword] = headerdict[keyword]
         hdulist.append(exthdu)
-        headermeta = R.fpga.get_fpga_config(0)
+        headermeta = R.get_meta_operating()
         for key in headermeta.keys:
             exthdu.header[key] = (headermeta.values[key], headermeta.comments[key])
         # Sequencer content (no actual readback, get it from the seq object)
@@ -268,7 +282,7 @@ if __name__ == "__main__":
                         level = logging.DEBUG,
                         format = '%(asctime)s: %(message)s')
     #r = reb3.REB3(rriaddress=0x2, stripe_id=[1])
-
+    r = REB3(rriaddress=0x2, stripe_id=[1])
     # here power on power supplies
     r.REBpowerup()
     time.sleep(0.1)
