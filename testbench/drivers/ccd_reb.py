@@ -67,6 +67,7 @@ class Instrument(Driver):
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
+        # TODO: add version check
         self.version = self.reb.fpga.get_version()
         self.testtype = 'TEST'
 
