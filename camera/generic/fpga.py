@@ -516,13 +516,15 @@ class Sequencer(object):
                  channels_desc=default_channels_desc,
                  functions={},
                  functions_desc={},
-                 program=Program()):
+                 program=Program(),
+                 parameters={}):
         #
         self.channels = channels
         self.channels_desc = channels_desc
         self.functions = functions  # max 16 functions (#0 is special)
         self.functions_desc = functions_desc
         self.program = program  # empty program
+        self.parameters = parameters  # memory of the parameter values set in XML
 
     def get_function(self, func):
         if func in range(16):

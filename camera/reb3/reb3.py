@@ -155,7 +155,6 @@ class REB3(reb.REB):
         self.fpga.enable_bss(True)
         print('BSS can be powered on now.')
 
-
     def CCDshutdown(self):
         """
         Sequence to shutdown power to the CCD.
@@ -209,8 +208,8 @@ class REB3(reb.REB):
         """
         self.fpga.increment(offset)
         self.select_subroutine('Window')
-        self.imgcols = 256  # TODO: get it from XML
-        self.imglines = 2020
+        self.imgcols = self.seq.parameters['WindowColumns']
+        self.imglines = self.seq.parameters['WindowLines']
 
     def stop_increment(self, offset=0):
         """
@@ -218,8 +217,8 @@ class REB3(reb.REB):
         """
         self.fpga.stop_increment()
         self.select_subroutine('Acquisition')
-        self.imgcols = 550  # TODO: get it from XML
-        self.imglines = 2020
+        self.imgcols = self.seq.parameters['ReadColumns']
+        self.imglines = self.seq.parameters['ReadLines']
 
  # --------------------------------------------------------------------
 
