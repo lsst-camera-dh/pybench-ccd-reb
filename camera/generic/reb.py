@@ -91,7 +91,7 @@ class REB(object):
     xmldir = "/home/lsst/lsst/py/camera/generic/"
     full18bits = True  # TODO: check from version of the firmware
     # compression = True
-    # TODO: load from XML later
+    # will be reloaded from XML later
     imglines = 2020
     imgcols = 550
     exposuresub = "Exposure"
@@ -130,7 +130,6 @@ class REB(object):
             print("Warning: no stripe selected.")
         if self.full18bits and len(self.stripes) > 2:
             print("Warning: attempting to read 18-bit data for 3 stripes, full image will not fit")
-            self.imglines = 1000
 
         self.nchannels = 16*len(self.stripes)
 
@@ -187,6 +186,10 @@ class REB(object):
 
         self.wait_end_sequencer()
         self.fpga.send_sequencer(self.seq)
+
+        self.imglines = self.seq.parameters['ReadLines']
+        self.imgcols = self.seq.parameters['ReadColumns']
+
         try:
             self.exptime = self.get_exposure_time()
         except:

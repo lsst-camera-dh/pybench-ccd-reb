@@ -419,6 +419,7 @@ def fromxmlfile(xmlfile):
     channels_desc = {}
     functions = {}
     functions_desc = {}
+    parameters = {}
 
     parser = XMLParser()
     ( prg,
@@ -436,11 +437,19 @@ def fromxmlfile(xmlfile):
     for k, v in functions_desc.iteritems():
         functions[v['idfunc']] = v['function']
 
+    for k in parameters_desc:
+        parameter_string = parameters_desc[k]['value']
+        try:
+            parameters[k] = int(parameter_string)
+        except:
+            parameters[k] = parameter_string
+
     seq = Sequencer(channels=channels,
                     channels_desc=channels_desc,
                     functions=functions,
                     functions_desc=functions_desc,
-                    program=program)
+                    program=program,
+                    parameters=parameters)
 
     return seq
 
