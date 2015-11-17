@@ -59,7 +59,7 @@ class Instrument(Driver):
             self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = True
             self.reb.useCABACbias = True
-        elif identifier  == 'reb':
+        elif identifier  == 'reb3':
             self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = False
         else:
@@ -251,22 +251,22 @@ class Instrument(Driver):
         :param offset: int
         :return:
         """
-        if self.identifier == 'wreb':
+        if self.identifier == 'reb':
+            logging.info("ADC increment not implemented in this version")
+        else:
             logging.info("Starting ADC increment at %d" % offset)
             self.reb.increment(offset)
-        else:
-            logging.info("ADC increment not implemented in this version")
 
     def stop_adc_increment(self):
         """
         Stops the counter that increments the ADC convert offset and resets the offset.
         :return:
         """
-        if self.identifier == 'wreb':
+        if self.identifier == 'reb':
+            logging.info("ADC increment not implemented in this version")
+        else:
             logging.info("Stopping ADC increment")
             self.reb.stop_increment()
-        else:
-            logging.info("ADC increment not implemented in this version")
 
     # --------------------------------------------------------------------
     # Operating the board electronics

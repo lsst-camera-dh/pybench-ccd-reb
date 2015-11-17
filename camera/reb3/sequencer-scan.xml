@@ -427,6 +427,10 @@
                <fullname>One acquisition without exposure</fullname>
                 <call ref="AcquireBias"/>
             </main>
+            <main id="Acquisition">
+               <fullname>Copy of bias</fullname>
+                <call ref="AcquireBias"/>
+            </main>
             <main id="PseudoBias">
                 <fullname>Simulates bias without storing image</fullname>
                 <call ref="FullPseudoAcquisition"/>
