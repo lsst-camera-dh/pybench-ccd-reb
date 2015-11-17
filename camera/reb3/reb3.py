@@ -160,7 +160,7 @@ class REB3(reb.REB):
         Sequence to shutdown power to the CCD.
         """
         print('BSS must be shutdown at this time.')
-        # TODO: add BSS disable
+        # TODO: check that this works
         time.sleep(5)
         self.fpga.enable_bss(False)
 
@@ -288,15 +288,19 @@ if __name__ == "__main__":
     r.CCDpowerup()
     r.config_aspic()
     #r.load_sequencer('sequencer-scan.xml')
-    #r.config_sequence("Bias")
+    #r.select_subroutine("Bias")
     #r.execute_sequence()
     #reb3.save_to_fits(r)
+
+    #r.increment()
+    #r.execute_sequence()
+    #reb3.save_to_fits(r)
+    #r.stop_increment()
     
     #recovery from FPGA power down (no CCD)
     #r.set_stripes([0,1,2])
     #r.read_sequencer_file('sequencer-scan.xml')
-    #r.imglines = 1000
-    #r.config_sequence("Bias")
+    #r.select_subroutine("Bias")
     #r.config_aspic()
     
     
