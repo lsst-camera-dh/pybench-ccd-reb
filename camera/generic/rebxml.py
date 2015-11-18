@@ -178,6 +178,8 @@ class XMLParser(object):
                 duration, unit = self.process_value(lduration)
                 if unit == 'ns':
                     duration /= 10.0  # TODO: improve this
+                if unit == 'us':
+                    duration *= 100.0
 
                 if islice == 0:
                     timelengths[islice] = int(duration) - 1  # FPGA adds one to duration of first slice
