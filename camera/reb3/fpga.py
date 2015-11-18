@@ -234,11 +234,11 @@ class FPGA3(FPGA):
         :param connect: bool
         :return:
         """
-        # TODO: check if the same register is used for REB3
+        # TODO: put back if correction is done in FPGA/hardware
         if connect:
-            self.write(0xD00000, 1)
-        else:
             self.write(0xD00000, 0)
+        else:
+            self.write(0xD00000, 1)
 
     # ----------------------------------------------------------
 
