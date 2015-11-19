@@ -116,6 +116,7 @@ class REB(object):
         self.shutdelay = 0
         self.tstamp = 0
         self.seqname = ""  # there is actually no way to access that from self.seq, filled when called by name
+        self.memorized_sequence = 'Bias'  # used when switching to a peculiar sequence
 
     def set_stripes(self, liststripes):
         self.stripes = []
@@ -313,19 +314,22 @@ class REB(object):
         #freeze until image output (do not send commands while the COB is acquiring)
         #time.sleep(self.exptime+3)
 
-    def waiting_sequence(self, name="Wait"):
+    def waiting_sequence(self, name="InfiniteWait", start=True):
         """
-        Lets CCD wait by clearing periodically until keyboard interrupt is sent.
-
+        Lets CCD wait by clearing infinitely until stop is sent.
+        When stopping, sends the stop command to the infinite loop and replaces it with the named sequence,
+        or the memorized sequence if None.
         """
-        self.select_subroutine(name)
-        keepwaiting = True
-        while keepwaiting:
-            try:
-                self.execute_sequence()
-                time.sleep(60)
-            except KeyboardInterrupt:
-                keepwaiting = False
+        if start:
+            self.memorized_sequence = self.seqname
+            self.select_subroutine(name)
+            self.execute_sequence()
+        else:
+            self.fpga.stop()
+            if name:
+                self.select_subroutine(name)
+            else:
+                self.select_subroutine(self.memorized_sequence)
 
     # --------------------------------------------------------------------
 

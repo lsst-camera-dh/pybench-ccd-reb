@@ -52,6 +52,7 @@ class Instrument(Driver):
         if 'xmlfile' not in kargs:
             raise ValueError("XML sequencer file is requested")
 
+        # TO BE CHANGED: identifier should always be 'reb' so the same scripts can be used
         if identifier == 'reb':
             self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = True
@@ -228,22 +229,20 @@ class Instrument(Driver):
         """
         self.reb.wait_end_sequencer()
 
-    def start_waiting_sequence(self, name="Wait"):
+    def start_waiting_sequence(self, name="InfiniteWait"):
         """
-        Launches a CCD waiting sequence as a subprocess.
+        Lets CCD wait by clearing infinitely until stop command is sent.
         """
-        logging.info("REB: starting wait sequence subprocess")
-        self.reb.config_sequence(name, 0)
-        command = '/home/lsst/lsst/py/testbench/scripts/ccd/repeat_sequence.sh'
-        proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return proc
+        logging.info("REB: starting wait sequence")
+        self.reb.waiting_sequence(name, True)
 
-    def stop_waiting_sequence(self, proc):
+    def stop_waiting_sequence(self, name=None):
         """
-        Lets CCD wait by clearing periodically until keyboard interrupt is sent.
+        New: sends the stop command to the infinite loop, and replaces with the named sequence,
+        or the memorized sequence if None.
         """
-        proc.terminate()
-        logging.info("REB: end wait sequence subprocess")
+        self.reb.waiting_sequence(name, False)
+        logging.info("REB: end wait sequence infinite loop")
 
     def start_adc_increment(self, offset=0):
         """
@@ -394,8 +393,8 @@ class Instrument(Driver):
         """
         Generic interface to set any single parameter of the REB, and check the readback if possible.
         Acceptable parameters depend on the REB version.
-        Location value can be 3 for top and bottom of the stripe, 2 for top only, 1 for bottom only.
-        It applies only to CABAC and ASPIC parameters.
+        Location value can be 3 for top and bottom of the stripe, 2 for top only, 1 for bottom only (applies
+        only to CABAC and ASPIC parameters).
         :param param: string
         :param value:
         :param location: int
