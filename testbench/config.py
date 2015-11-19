@@ -36,33 +36,35 @@ config = {
     # REB (version 1)
     # 
     #
-    'reb': {
-       # 'host'        : 'lpnlsstacq',
-        'driver'      : 'ccd_reb',
-        'reb_id'      : 2,
-        'stripe'      : 0,
-        'xmlfile'     : 'sequencer-soi.xml'
-        },
+    #'reb': {
+    #    'driver'      : 'ccd_reb',
+    #    'hardware'    : 'REB1',
+    #    'reb_id'      : 2,
+    #    'stripe'      : 0,
+    #    'xmlfile'     : 'sequencer-soi.xml',
+    #    'version'     : 0xb0200101  # TODO: read it from the board
+    #    },
     #
     # ---------------------------------------------------------------------
-    # REB (version 2)
+    # WREB (version 1)
     # 
     #
-    'wreb': {
-      #  'host'        : 'lpnlsstacq',
-        'driver'      : 'ccd_reb',
-        'reb_id'      : 0xFF,
-        'stripe'      : 0,
-        'xmlfile'     : 'sequencer-wreb.xml'
-        },
+    # 'reb': {
+    #     'driver'      : 'ccd_reb',
+    #     'hardware'    : 'WREB1',
+    #     'reb_id'      : 0xFF,
+    #     'stripe'      : 0,
+    #     'xmlfile'     : 'sequencer-wreb.xml',
+    #     'version'     : 0xb0200101   # TODO: read it from the board
+    #     },
     #
     # ---------------------------------------------------------------------
     # REB (version 3)
     #
     #
-    'reb3': {
-      #  'host'        : 'lpnlsstacq',
+    'reb': {
         'driver'      : 'ccd_reb',
+        'hardware'    : 'REB3',
         'reb_id'      : 0x2,
         'stripe'      : 1,
         'xmlfile'     : 'sequencer-wreb.xml',

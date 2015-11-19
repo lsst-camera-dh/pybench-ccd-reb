@@ -18,7 +18,7 @@ class FPGA3(FPGA):
 
     supplies = ['DREB', '7V', 'VDDCLK', 'VDDOD']
     # conversion factors for DAC (V/LSB):
-    clock_conv = 0.00357  # TODO: replace with REB3 values
+    clock_conv = 0.00425
     bias_conv = 0.0088501  
     od_conv = 0.0088501  
     rd_conv = 0.0061035
@@ -27,13 +27,23 @@ class FPGA3(FPGA):
     n_sensors_boardtemp = 10
 
     # mapping of clock rail settings
-    clockmap = {"SL": 2, "SL_S": 1, "SU": 0, "PL": 5, "PL_S": 4, "PU": 3, "RGL": 0x12, "RGU": 0x11,"RGL_S": 0x10}
+    clockmap = {"SL": 2, "SL_S": 1, "SU": 0, "PL": 5, "PL_S": 4, "PU": 3, "RGL": 0x12, "RGL_S": 0x11,"RGU": 0x10}
+    # mapping for conversion
+    convertclocks = {"SL": clock_conv,
+                     "SL_S": clock_conv,
+                     "SU": 0.00426758,
+                     "PL": clock_conv,
+                     "PL_S": clock_conv,
+                     "PU": 0.00421875,
+                     "RGL": clock_conv,
+                     "RGL_S": clock_conv,
+                     "RGU": 0.00425293}
 
     # list of acceptable parameters for REB commands
     params = ["OD", "GD", "RD", "OG", 'CS',
               "SL", "SU", "RGL", "RGU", "PL", "PU"]
     # mapping for conversion
-    convbiases = {"OD": od_conv, "GD": bias_conv, "RD": rd_conv, "OG": og_conv}
+    convertbiases = {"OD": od_conv, "GD": bias_conv, "RD": rd_conv, "OG": og_conv}
     
     groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU"],
               'CLK_L': ["SL", "RGL", "PL"],
@@ -147,17 +157,17 @@ class FPGA3(FPGA):
             if key in self.groups['CLK_L']:
                 keyshift = key+'_S'
                 if voltages[key] > 0:
-                    self.dacs[key] = int(voltages[key] / self.clock_conv) & 0xfff
+                    self.dacs[key] = int(voltages[key] / self.convertclocks[key]) & 0xfff
                     self.dacs[keyshift] = 0
                 else:
                     self.dacs[key] = 0
-                    self.dacs[keyshift] = int(-voltages[key] / self.clock_conv) & 0xfff
+                    self.dacs[keyshift] = int(-voltages[key] / self.convertclocks[keyshift]) & 0xfff
                     # TODO: check factor for shift (should be 1 on REB3)
 
                 self.write(0x400000, self.dacs[key] + (self.clockmap[key] << 12))
                 self.write(0x400000, self.dacs[keyshift] + (self.clockmap[keyshift] << 12))
             elif key in self.groups['CLK_U']:
-                self.dacs[key] = int(voltages[key] / self.clock_conv) & 0xfff
+                self.dacs[key] = int(voltages[key] / self.convertclocks[key]) & 0xfff
                 self.write(0x400000, self.dacs[key] + (self.clockmap[key] << 12))
             else:
                 raise ValueError("Unknown voltage key: %s, could not be set" % key)
@@ -259,7 +269,7 @@ class FPGA3(FPGA):
         for key in biases:
             dackey = key + '%s' % s
             if key in ["GD", "RD", "OD"]:
-                self.dacs[dackey] = int(biases[key] / self.convbiases[key]) & 0xfff
+                self.dacs[dackey] = int(biases[key] / self.convertbiases[key]) & 0xfff
                 self.write(dacaddress, self.dacs[dackey] + (outputnum[key] << 12))
             elif key == "OG":
                 dackeyshift = "OG_S" + '%s' % s
@@ -295,7 +305,7 @@ class FPGA3(FPGA):
                 dictvalues[key] = (self.dacs[dackey] - self.dacs[dackeyshift]) * self.og_conv
             #TODO: check appropriate factor for shift
             else:
-                dictvalues[key] = self.dacs[dackey] * self.convbiases[key]
+                dictvalues[key] = self.dacs[dackey] * self.convertbiases[key]
             dictcomments[key] = '[V] %s voltage setting' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
