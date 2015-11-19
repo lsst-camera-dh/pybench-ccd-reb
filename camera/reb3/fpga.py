@@ -19,11 +19,7 @@ class FPGA3(FPGA):
     supplies = ['DREB', '7V', 'VDDCLK', 'VDDOD']
     # conversion factors for DAC (V/LSB):
     clock_conv = 0.00425
-    bias_conv = 0.0088501  
-    od_conv = 0.0088501  
-    rd_conv = 0.0061035
-    og_conv = 0.0024414  # TODO: check again without diode
-    
+
     n_sensors_boardtemp = 10
 
     # mapping of clock rail settings
@@ -33,17 +29,21 @@ class FPGA3(FPGA):
                      "SL_S": clock_conv,
                      "SU": 0.00426758,
                      "PL": clock_conv,
-                     "PL_S": clock_conv,
+                     "PL_S": 0.00306,
                      "PU": 0.00421875,
                      "RGL": clock_conv,
-                     "RGL_S": clock_conv,
+                     "RGL_S": 0.00268,
                      "RGU": 0.00425293}
 
     # list of acceptable parameters for REB commands
     params = ["OD", "GD", "RD", "OG", 'CS',
               "SL", "SU", "RGL", "RGU", "PL", "PU"]
     # mapping for conversion
-    convertbiases = {"OD": od_conv, "GD": bias_conv, "RD": rd_conv, "OG": og_conv}
+    convertbiases = {"OD": 0.00880585,
+                     "GD": 0.0088833,
+                     "RD": 0.0061035,
+                     "OG": 0.00240885,
+                     'OG_S': 0.0012561}
     
     groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU"],
               'CLK_L': ["SL", "RGL", "PL"],
@@ -162,7 +162,6 @@ class FPGA3(FPGA):
                 else:
                     self.dacs[key] = 0
                     self.dacs[keyshift] = int(-voltages[key] / self.convertclocks[keyshift]) & 0xfff
-                    # TODO: check factor for shift (should be 1 on REB3)
 
                 self.write(0x400000, self.dacs[key] + (self.clockmap[key] << 12))
                 self.write(0x400000, self.dacs[keyshift] + (self.clockmap[keyshift] << 12))
@@ -185,11 +184,12 @@ class FPGA3(FPGA):
 
         for key in self.groups['CLK_L']:
             # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
-            dictvalues[key] = (self.dacs[key] - self.dacs[key + "_S"]) * self.clock_conv
+            dictvalues[key] = self.dacs[key] * self.convertclocks[key] \
+                              - self.dacs[key + "_S"] * self.convertclocks[key + "_S"]
             dictcomments[key] = '[V] %s low clock rail voltage' % key
-            #TODO: check appropriate factor for shift
+
         for key in self.groups['CLK_U']:
-            dictvalues[key] = self.dacs[key]* self.clock_conv
+            dictvalues[key] = self.dacs[key]* self.convertclocks[key]
             dictcomments[key] = '[V] %s high clock rail voltage' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
@@ -260,6 +260,8 @@ class FPGA3(FPGA):
         :param s: stripe
         :return:
         """
+        # TODO (again): safety tests
+
         outputnum = {"GD": 0, "OD": 1, "OG": 3, "OG_S": 2, "RD": 4}
         # OG seen by CCD will be the difference OG-OGS (factor to be checked)
 
@@ -274,11 +276,11 @@ class FPGA3(FPGA):
             elif key == "OG":
                 dackeyshift = "OG_S" + '%s' % s
                 if biases[key] > 0:
-                    self.dacs[dackey] = int(biases[key] / self.og_conv) & 0xfff
+                    self.dacs[dackey] = int(biases[key] / self.convertbiases[key]) & 0xfff
                     self.dacs[dackeyshift] = 0
                 else:
                     self.dacs[dackey] = 0
-                    self.dacs[dackeyshift] = int(-biases[key] / self.og_conv) & 0xfff
+                    self.dacs[dackeyshift] = int(-biases[key] / self.convertbiases["OG_S"]) & 0xfff
                 self.write(dacaddress, self.dacs[dackey] + (outputnum[key] << 12))
                 self.write(dacaddress, self.dacs[dackeyshift] + (outputnum["OG_S"] << 12))
             else:
@@ -302,8 +304,8 @@ class FPGA3(FPGA):
             dackey = key + '%s' % s
             if key == 'OG':
                 dackeyshift = "OG_S" + '%s' % s
-                dictvalues[key] = (self.dacs[dackey] - self.dacs[dackeyshift]) * self.og_conv
-            #TODO: check appropriate factor for shift
+                dictvalues[key] = self.dacs[dackey] * self.convertbiases[key] \
+                                  - self.dacs[dackeyshift] * self.convertbiases["OG_S"]
             else:
                 dictvalues[key] = self.dacs[dackey] * self.convertbiases[key]
             dictcomments[key] = '[V] %s voltage setting' % key
