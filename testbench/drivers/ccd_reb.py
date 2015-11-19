@@ -52,24 +52,26 @@ class Instrument(Driver):
         if 'xmlfile' not in kargs:
             raise ValueError("XML sequencer file is requested")
 
-        # TO BE CHANGED: identifier should always be 'reb' so the same scripts can be used
-        if identifier == 'reb':
+        if self.hardware == 'REB1':
             self.reb = reb1.REB1(reb_id=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = True
-        elif identifier == 'wreb':
+        elif self.hardware == 'WREB1':
             self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = True
             self.reb.useCABACbias = True
-        elif identifier  == 'reb3':
+        elif self.hardware == 'REB3':
             self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = False
-        else:
-            raise ValueError('Unknown identifier for ccd_reb: %s' % identifier)
+
+        # then check FPGA version after connecting
+        checkversion = self.reb.fpga.get_version()
+        if self.version != checkversion:
+            raise ValueError('Wrong version of the FPGA firmware: reading %x instead of %x' % (checkversion,
+                                                                                               self.version))
+
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
-        # TODO: add version check
-        self.version = self.reb.fpga.get_version()
         self.testtype = 'TEST'
 
     def open(self):
