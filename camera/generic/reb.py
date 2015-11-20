@@ -96,8 +96,6 @@ class REB(object):
     imgcols = 550
     exposuresub = "Exposure"
     darksub = "DarkExposure"
-    exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
-    min_exposure = int(0.1 / exposure_unit)  # minimal shutter opening time (not used for darks)
 
     # ===================================================================
 
@@ -110,6 +108,8 @@ class REB(object):
         #self.recover_filetag()  # in case we are recovering from software reboot
         self.update_filetag()
         self.xmlfile = "sequencer-soi.xml"
+        self.exposure_unit = 0.020  # duration of the elementary exposure subroutine in s
+        self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
         # initialize parameters for frames
         self.seq = None  # will be filled when loading the sequencer
         self.exptime = 0
@@ -195,6 +195,9 @@ class REB(object):
             self.exptime = self.get_exposure_time()
         except:
             print("Warning: could not find exposure subroutine in %s" % xmlfile)
+
+        # select a subroutine to fill self.seqname
+        self.select_subroutine('Bias')
 
     def select_subroutine(self, subname, repeat=1):
         """

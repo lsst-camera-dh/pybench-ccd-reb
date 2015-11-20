@@ -20,14 +20,14 @@ import astropy.io.fits as pyfits
 class REB3(reb.REB):
 
     xmldir = "/home/lsst/lsst/py/camera/reb3/"
-    exposure_unit = 0.026  # duration of the elementary exposure subroutine in s
-    min_exposure = int(0.1 / exposure_unit)  # minimal shutter opening time (not used for darks)
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.fpga = fpga.FPGA3(ctrl_host, rriaddress)
         self.config = {"VSUB": 0}  # depends on power supply values and board configuration
-        self.xmlfile = "sequencer-wreb.xml"
+        self.xmlfile = "sequencer-reb3.xml"
+        self.exposure_unit = 0.025  # duration of the elementary exposure subroutine in s
+        self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
 
      # --------------------------------------------------------------------
 
@@ -108,14 +108,18 @@ class REB3(reb.REB):
 
     def REBpowerup(self):
         """
-        Old: to be executed at power-up.
+        To be executed at power-up.
         :return:
         """
         self.fpga.write(0x400006, 0)  # pattern generator off
         # stops the clocks to use as image tag
         self.fpga.stop_clock()
-        # load 0 on default state to prep for REB start-up
+
+        #load sequencer (from compiled self.seq or from self.xmlfile if not compiled)
+        self.load_sequencer()
+        # load 0 on default state to prep for CCD start-up
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
+
         # configure ASPIC with default values
         self.config_aspic()
 
@@ -127,7 +131,7 @@ class REB3(reb.REB):
 
         # starting drain voltages
 
-        self.set_biases({'OD': 28, 'RD': 18, 'GD': 24})
+        self.set_biases({'OD': 29, 'RD': 18, 'GD': 24})
 
         time.sleep(0.5)
 
@@ -138,7 +142,7 @@ class REB3(reb.REB):
         time.sleep(0.5)
 
         #settings clock rails
-        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 10, "PL": 0, "PU": 9.0}
+        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 12, "PL": 0, "PU": 9.0}
         self.fpga.set_clock_voltages(rails)
 
         #puts current on CS gate

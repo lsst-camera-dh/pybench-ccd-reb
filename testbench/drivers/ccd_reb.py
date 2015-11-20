@@ -68,7 +68,6 @@ class Instrument(Driver):
         if self.version != checkversion:
             raise ValueError('Wrong version of the FPGA firmware: reading %x instead of %x' % (checkversion,
                                                                                                self.version))
-
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
