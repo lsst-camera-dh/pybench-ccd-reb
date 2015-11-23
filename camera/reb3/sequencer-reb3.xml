@@ -551,14 +551,18 @@
                     </call>
                 </call>
             </subroutine>
+            <subroutine id="WarmUp">
+                <fullname>Warms up ADCs</fullname>
+                <call ref="ReadPixel">
+                    <repeat>5000</repeat>
+                </call>
+            </subroutine>
             <subroutine id="CloseShutter">
                 <fullname>Gives time for shutter to close and warms up ADCs</fullname>
                 <call ref="FlushSerial">
                     <repeat>50000</repeat>
                 </call>
-                <call ref="ReadPixel">
-                    <repeat>5000</repeat>
-                </call>
+                <call ref="WarmUp"/>
             </subroutine>
             <subroutine id="ReadFrame">
                 <fullname>Readout and acquisition of a CCD frame</fullname>
@@ -657,7 +661,7 @@
                 <call ref="BaseFrame"/>
             </subroutine>
             <subroutine id="AcquireBias">
-                <fullname>One acquisition without exposition or warm-up</fullname>
+                <fullname>One acquisition without exposition</fullname>
                 <call ref="StartOfImage"/>
                 <call ref="BaseFrame"/>
                 <call ref="EndOfImage"/>
@@ -707,10 +711,11 @@
                 </call>
             </main>
             <main id="Bias">
-                <fullname>Bias after clearing</fullname>
+                <fullname>Bias after clearing and warm-up</fullname>
                 <call ref="ClearCCD">
-                    <repeat>10</repeat>
+                    <repeat>2</repeat>
                 </call>
+                <call ref="WarmUp"/>
                 <call ref="AcquireBias"/>
             </main>
             <main id="PseudoAcquisition">
