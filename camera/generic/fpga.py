@@ -651,7 +651,7 @@ class MetaData(object):
         :param dictcomments: dict
         :return:
         """
-        for k, v in dictvalues:
+        for k in dictvalues:
             if k not in self.keys:
                 self.keys.append(k)
             if k in dictcomments:
