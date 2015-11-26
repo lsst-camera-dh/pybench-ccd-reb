@@ -383,38 +383,47 @@ class REB(object):
             exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
             #else:
                 #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            self.get_extension_header(num, exthdu, displayborders)
+            self.get_extension_header(num, exthdu, channels, displayborders)
             avchan = N.mean(y[11:self.imgcols-50, 2:self.imglines-20])
             exthdu.header["AVERAGE"] = avchan
             hdulist.append(exthdu)
 
         return hdulist
 
-    def get_detsize(self, displayborders=False):
+    def get_detsize(self, channels=None, displayborders=False):
         """
         Builds detector size information for the FITS header.
         If borders is True, includes all read pixels in DETSIZE.
+        If only some channels are selected, puts them side by side.
         :return: string
         """
-        if displayborders:
-            detstring = '[1:%d,1:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines)
+        if channels:
+            if displayborders:
+                detstring = '[1:%d,1:%d]' % (self.imgcols * len(channels), self.imglines)
+            else:
+                detstring = '[1:%d,1:2002]' % (len(self.stripes) * 512 * len(channels))
         else:
-            detstring = '[1:%d,1:4004]' % (len(self.stripes) * 4096)
+            if displayborders:
+                detstring = '[1:%d,1:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines)
+            else:
+                detstring = '[1:%d,1:4004]' % (len(self.stripes) * 4096)
+
         return detstring
 
-    def get_extension_header(self, CCDchan, fitshdu, displayborders=False):
+    def get_extension_header(self, CCDchan, fitshdu, channels=None, displayborders=False):
         """
         Builds FITS extension header with position information for each channel.
         If displayborders is True, includes all read pixels in DATASEC display.
-        :param CCDchan: int
-        :param fitshdu: pyfits.HDUList
-        :param borders: bool
+        :type CCDchan: int
+        :type fitshdu: pyfits.HDU
+        :type channels: list
+        :type displayborders: bool
         :return:
         """
         extheader = fitshdu.header
         extheader["NAXIS1"] = self.imgcols
         extheader["NAXIS2"] = self.imglines
-        extheader['DETSIZE'] = self.get_detsize(displayborders)
+        extheader['DETSIZE'] = self.get_detsize(channels, displayborders)
 
         if displayborders:
             parstringlow = '1:%d' % self.imglines
@@ -427,16 +436,21 @@ class REB(object):
             colwidth = 512
             extheader['DATASEC'] = '[11:522,1:2002]'
 
-        numCCD = CCDchan / 16
-        chan = CCDchan - numCCD * 16
-        if chan < 8:
+        if channels:  # put them in a row
             pdet = parstringlow
-            si = colwidth * (CCDchan - 8 * numCCD + 1)
-            sf = colwidth * (CCDchan - 8 * numCCD) + 1
+            si = colwidth * CCDchan +1
+            sf = colwidth * (CCDchan + 1)
         else:
-            pdet = parstringhigh
-            si = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
-            sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
+            numCCD = CCDchan / 16
+            chan = CCDchan - numCCD * 16
+            if chan < 8:
+                pdet = parstringlow
+                si = colwidth * (CCDchan - 8 * numCCD + 1)
+                sf = colwidth * (CCDchan - 8 * numCCD) + 1
+            else:
+                pdet = parstringhigh
+                si = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
+                sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
 
         extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 

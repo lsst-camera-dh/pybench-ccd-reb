@@ -14,12 +14,13 @@ B.register('lakeshore1')
 #B.register('reb')  # connect to the REB
 #B.register('bss')  # connect (remotely) to the BackSubstrate Power
 
-import lsst.testbench.scripts.ccd.functions
+#this should be done in higher level script
+#import lsst.testbench.scripts.ccd.functions
 B.PhD.setup_current_measurements(2e-8)
 
 
 print """
-CCD output scanning for an acquisition sequence.
+Acquisition sequence for CCD output scanning with REB3/WREB.
 --------------------
      
 B.scanning_acquisition(waittime=4, exptime=0.2, laserchannel = 2, lasercurrent=45.0)
@@ -62,7 +63,7 @@ def scanning_acquisition(self, waittime=4 , exptime=0.2, laserchannel = 2, laser
 
     # Then put into scanning mode and change image size
     self.reb.start_adc_increment()
-    self.reb.set_amplifier_size(self, cols=256, lines=2020)
+
     for numpair in [1, 2]:
         self.log("Taking scanning frame %d" % numpair)
         m = self.execute_reb_sequence(True, 'Window', exptime, waittime)
@@ -70,7 +71,7 @@ def scanning_acquisition(self, waittime=4 , exptime=0.2, laserchannel = 2, laser
         i = self.conv_to_fits(channels=validamps, borders=True)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
     self.reb.stop_adc_increment()
-    self.reb.set_amplifier_size(self, cols=550, lines=2020)
+
 
     # p = self.reb.start_waiting_sequence()
 
