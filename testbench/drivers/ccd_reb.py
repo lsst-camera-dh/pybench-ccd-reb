@@ -14,6 +14,7 @@ from lsst.camera.generic.reb import get_sequencer_string
 from driver import Driver
 import logging
 import os.path
+import time
 import subprocess
 
 # =======================================================================
@@ -72,6 +73,10 @@ class Instrument(Driver):
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
         self.testtype = 'TEST'
+
+        logging.basicConfig(filename='REB-'+ time.strftime('%Y%m%d', time.gmtime()) + '.log',
+                            level=logging.DEBUG, format='%(asctime)s: %(message)s')
+        # in keithley-server, at this point we deactivate the sys.std<> pipes
 
     def open(self):
         """
@@ -251,7 +256,7 @@ class Instrument(Driver):
         :param offset: int
         :return:
         """
-        if self.identifier == 'reb':
+        if self.hardware == 'REB1':
             logging.info("ADC increment not implemented in this version")
         else:
             logging.info("Starting ADC increment at %d" % offset)
@@ -262,7 +267,7 @@ class Instrument(Driver):
         Stops the counter that increments the ADC convert offset and resets the offset.
         :return:
         """
-        if self.identifier == 'reb':
+        if self.hardware == 'REB1':
             logging.info("ADC increment not implemented in this version")
         else:
             logging.info("Stopping ADC increment")
