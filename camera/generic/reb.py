@@ -454,11 +454,12 @@ class REB(object):
 
         extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 
-    def make_fits_name(self, imgstr):
+    def make_fits_name(self, imgstr, compressed=True):
         """
         Builds a complete FITS file path.
         Takes the root name of imgstr as FITS name.
-        :param imgstr: string
+        :type imgstr: string
+        :type compressed: bool
         :return: string
         """
         fitsdir = os.path.join(self.fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
@@ -467,7 +468,7 @@ class REB(object):
 
         rootname = os.path.splitext(os.path.basename(imgstr))[0]
 
-        fitsname = os.path.join(fitsdir, rootname + '.fits')
+        fitsname = os.path.join(fitsdir, rootname + (compressed and '.fz' or '.fits'))
 
         return fitsname
         
