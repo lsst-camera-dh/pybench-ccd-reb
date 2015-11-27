@@ -3,20 +3,23 @@
 # ds9display.py : operate a ds9 window to display images
 # original class by Peter Doherty
 
+# TODO: move to a driver
+
 import pyds9
 import logging
-import os
+import astropy.io.fits as pyfits
 
+import lsst.testbench.bench as bench
 
-class ds9display(object):
+class DS9display(object):
     def __init__(self, name):
         self.__name = name
         self.__disp = pyds9.DS9(start=True, wait=100, verify=True)
-        self.cmap = 'grey'
-        self.__disp.set("cmap %s" % self.cmap)
-        self.__disp.set("view object no")
-        self.__disp.set("zoom to fit")
-        self.__disp.set("view wcs no")
+        self.colormap('grey')
+        self.set("view object no")
+        self.set("view wcs no")
+        self.horizontal_graph()
+        self.vertical_graph()
 
     def get(self, param_string):
         value_string = self.__disp.get(param_string)
@@ -43,9 +46,22 @@ class ds9display(object):
         if cmap in ['grey', 'a', 'b', 'bb', 'he', 'i8', 'aips0', 'heat', 'cool', 'rainbow']:
             err = self.set("cmap %s" % cmap, verbose=False)
 
+    def scale(self, type):
+        if type in ['linear', 'log', 'power', 'sqrt', 'squared', 'asinh', 'histogram', 'minmax', 'zscale']:
+            err = self.set("scale %s" % type, verbose=False)
+
+    # loading image data to display
+
     def load_file(self, file):
-        if (os.path.isfile(file) == True):
-            err = self.set("file mosaicimage iraf %s" % file, verbose=False)
+        #if (os.path.isfile(file) == True):
+        #    err = self.set("file mosaicimage iraf %s" % file, verbose=False)
+        #    self.set("zoom to fit")
+
+        # to bypass bug in vertical and horizontal graphs
+        f = pyfits.open(file)
+        # TODO: recreate array
+
+        f.close()
 
     def load_array(self, a, verbose=False):
         err = self.__disp.set_np2arr(a)
@@ -54,6 +70,7 @@ class ds9display(object):
         else:
             if (verbose == True):
                 logging.info("IMDISP: loaded from array")
+            self.set("zoom to fit")
         return err
 
     def load_hdulist(self, h, verbose=False):
@@ -63,8 +80,40 @@ class ds9display(object):
         else:
             if (verbose == True):
                 logging.info("IMDISP: loaded from HDU list")
+            self.set("zoom to fit")
         return err
 
-    def scale(self, type):
-        if type in ['linear', 'log', 'power', 'sqrt', 'squared', 'asinh', 'histogram', 'minmax', 'zscale']:
-            err = self.set("scale %s" % type, verbose=False)
+    # getting image data from display
+
+    def get_array(self):
+        return self.__disp.get_arr2np()
+
+    def get_hdulist(self):
+        return self.__disp.get_pyfits()
+
+    # other display manipulations
+
+    def set_crosshair(self, x, y):
+        return self.set('crosshair %d %d physical' % (x, y))
+
+    def get_crosshair(self):
+        return self.get('crosshair')
+
+    def horizontal_graph(self, on=True):
+        return self.set('view graph horizontal %s' % (on and 'yes' or 'no'))
+
+    def vertical_graph(self, on=True):
+        return self.set('view graph vertical %s' % (on and 'yes' or 'no'))
+
+
+# could also attach functions for fits files and arrays
+
+def display_hdu(self, hdulist)
+
+    d = DS9display('DS9')
+    d.load_hdulist(hdulist)
+    d.set_crosshair(100, 100)
+    d.scale('minmax')
+
+bench.Bench.display_hdu = display_hdu
+
