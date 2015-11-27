@@ -9,6 +9,7 @@ import os
 import time
 import logging
 import astropy.io.fits as pyfits
+#import lsst.testbench.scripts.ccd.ds9display
 
 #reload(lsst.testbench.scripts.ccd.functions)
 
@@ -239,7 +240,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
     Saves the given FITS HDUlist to a file with auxiliary headers for instruments parameters.
     """
     if not fitsname:
-        fitsname = self.reb.make_fits_name(self.reb.make_img_name())
+        fitsname = self.reb.make_fits_name(self.reb.make_img_name(), compressed=True)
 
     primaryhdu = hdulist[0]
 
