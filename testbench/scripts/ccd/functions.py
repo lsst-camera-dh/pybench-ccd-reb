@@ -20,6 +20,7 @@ B = bench.Bench()  # singleton
 B.register('reb')  # connect to the REB
 B.register('bss')  # connect (remotely) to the BackSubstrate Power
 # B.register('PhD')
+B.register('ds9')
 
 
 def load_sequencer(self, filename=None):
@@ -318,6 +319,19 @@ def basic_stats(self, hdulist, logtofile=False):
     #return out
 
 bench.Bench.basic_stats = basic_stats
+
+
+# could also attach functions for fits files and arrays
+
+def display_hdu(self, hdulist):
+
+    self.ds9.load_hdulist(hdulist)
+    self.ds9.set_crosshair(100, 100)
+    self.ds9.scale('minmax')
+
+bench.Bench.display_hdu = display_hdu
+
+
 
 # def wait_for_action(action):
 #     """
