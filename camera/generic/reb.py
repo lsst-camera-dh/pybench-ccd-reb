@@ -102,7 +102,7 @@ class REB(object):
     def __init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0]):
         self.fpga = fpga.FPGA(ctrl_host, reb_id)
         self.stripes = []
-        self.nchannels = 0
+        self.nchannels = 0  # total number of channels acquired
         self.set_stripes(stripe_id)  # stripe in use
         #self.imgtag = 0  # this is now a string, filled in update_filetag
         #self.recover_filetag()  # in case we are recovering from software reboot
@@ -401,7 +401,7 @@ class REB(object):
             if displayborders:
                 detstring = '[1:%d,1:%d]' % (self.imgcols * len(channels), self.imglines)
             else:
-                detstring = '[1:%d,1:2002]' % (len(self.stripes) * 512 * len(channels))
+                detstring = '[1:%d,1:2002]' % (512 * len(channels))
         else:
             if displayborders:
                 detstring = '[1:%d,1:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines)
