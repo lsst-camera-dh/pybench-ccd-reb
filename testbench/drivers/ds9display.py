@@ -3,23 +3,75 @@
 # ds9display.py : operate a ds9 window to display images
 # original class by Peter Doherty
 
-# TODO: move to a driver
-
+from driver import Driver
 import pyds9
 import logging
 import astropy.io.fits as pyfits
 
-import lsst.testbench.bench as bench
+class DS9display(Driver):
 
-class DS9display(object):
-    def __init__(self, name):
-        self.__name = name
-        self.__disp = pyds9.DS9(start=True, wait=100, verify=True)
-        self.colormap('grey')
-        self.set("view object no")
-        self.set("view wcs no")
-        self.horizontal_graph()
-        self.vertical_graph()
+    # ===================================================================
+    # Generic methods (init, open, etc)
+    # ===================================================================
+
+    def __init__(self, identifier, **kargs):
+        Driver.__init__(self, identifier, **kargs)
+
+    def open(self):
+        """
+        Connects to the display.
+        """
+        if self.display:
+            self.__disp = pyds9.DS9(self.display)
+        else:
+            self.__disp = pyds9.DS9(start=True, wait=100, verify=True)
+
+    def is_connected(self):
+        """
+        Check if the connection is established with the hardware.
+        Returns True if the hardware answers, False otherwise.
+        """
+        answer = self.checkConnection()
+
+        if answer is None:
+            return False
+
+        if answer != 'ds9':
+            return False
+
+        return True
+
+    def checkConnection(self):
+        """
+        Get the REB id from the REB itself.
+        Return it or None.
+        """
+        try:
+            return self.get('version')[:3]
+        except ValueError:
+            return None
+
+    def register(self, bench):
+        self.open()
+        connected = self.is_connected()
+        if not connected:
+            raise IOError("DS9 display could not be reached")
+
+        self.default_config()
+
+        Driver.register(self, bench)
+
+    def close(self):
+        """
+        Closes the display.
+        """
+        self.set('quit')
+
+    # ===================================================================
+    #  Instrument specific methods
+    # ===================================================================
+
+    # basic access points
 
     def get(self, param_string):
         value_string = self.__disp.get(param_string)
@@ -33,6 +85,8 @@ class DS9display(object):
             if (verbose == True):
                 logging.info("IMDISP: Set %s" % param_string)
         return err
+
+    # setting display parameters
 
     def about(self):
         info = self.__disp.get('about')
@@ -105,15 +159,13 @@ class DS9display(object):
     def vertical_graph(self, on=True):
         return self.set('view graph vertical %s' % (on and 'yes' or 'no'))
 
+    # grouping a few operations for convenience
 
-# could also attach functions for fits files and arrays
+    def default_config(self):
+        self.colormap(self.cmap)
+        self.set("view object no")
+        self.set("view wcs no")
+        self.horizontal_graph()
+        self.vertical_graph()
 
-def display_hdu(self, hdulist)
-
-    d = DS9display('DS9')
-    d.load_hdulist(hdulist)
-    d.set_crosshair(100, 100)
-    d.scale('minmax')
-
-bench.Bench.display_hdu = display_hdu
 
