@@ -3,6 +3,7 @@
 # LSST
 #
 # Simple tools to analyze fits files
+# Exists also now as part of the bench scripts
 
 import sys
 import time
