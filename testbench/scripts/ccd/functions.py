@@ -9,18 +9,16 @@ import os
 import time
 import logging
 import astropy.io.fits as pyfits
-#import lsst.testbench.scripts.ccd.ds9display
 
 #reload(lsst.testbench.scripts.ccd.functions)
 
-import lsst.testbench.bench as bench
+from lsst.testbench.bench import Bench
 
-B = bench.Bench()  # singleton
+B = Bench()  # singleton
 
 B.register('reb')  # connect to the REB
 B.register('bss')  # connect (remotely) to the BackSubstrate Power
 # B.register('PhD')
-B.register('ds9')
 
 
 def load_sequencer(self, filename=None):
@@ -29,7 +27,7 @@ def load_sequencer(self, filename=None):
     """
     self.reb.load_sequencer(filename)
 
-bench.Bench.load_sequencer = load_sequencer
+Bench.load_sequencer = load_sequencer
 
 
 def initialize_REB(self):
@@ -44,7 +42,7 @@ def initialize_REB(self):
     else:
         logging.info("Back-Substrate is enabled, we should not be in this state when executing intitialize_REB")
 
-bench.Bench.initialize_REB = initialize_REB
+Bench.initialize_REB = initialize_REB
 
 
 def shutdown_REB(self):
@@ -61,7 +59,7 @@ def shutdown_REB(self):
 
     # TODO: need to add power supplies here for shutdown
 
-bench.Bench.shutdown_REB = shutdown_REB
+Bench.shutdown_REB = shutdown_REB
 
 
 def powerup_CCD(self):
@@ -85,7 +83,7 @@ def powerup_CCD(self):
     #do that after
     #proc = self.reb.start_waiting_sequence()
 
-bench.Bench.powerup_CCD = powerup_CCD
+Bench.powerup_CCD = powerup_CCD
 
 
 def shutdown_CCD(self):
@@ -102,7 +100,7 @@ def shutdown_CCD(self):
     self.reb.CCDshutdown()
     logging.info("CCD shut-down sequence is complete")
 
-bench.Bench.shutdown_CCD = shutdown_CCD
+Bench.shutdown_CCD = shutdown_CCD
 
 
 def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True, withmeta=True):
@@ -152,7 +150,7 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True
                            'data': []}  # added data for compatibility with the rest of the meta
     return meta
 
-bench.Bench.execute_reb_sequence = execute_reb_sequence
+Bench.execute_reb_sequence = execute_reb_sequence
 
 
 def append_kvc(exthdu, keys, values, comments):
@@ -185,7 +183,7 @@ def conv_to_fits(self, channels=None, borders=False, imgname=None):
 
     return hdulist
 
-bench.Bench.conv_to_fits = conv_to_fits
+Bench.conv_to_fits = conv_to_fits
 
 
 def eotest_header(hdulist):
@@ -276,61 +274,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
     hdulist.writeto(fitsname, clobber=True)
     logging.info("Wrote FITS file "+fitsname)
 
-bench.Bench.save_to_fits = save_to_fits
-
-def basic_stats(self, hdulist, logtofile=False):
-    """
-    Basic statistics on the frame from the fits HDUlist. 
-    Printed to screen and saved to a txt file.
-    Appends estimated values to the fits extension header.
-    """
-    summaryfile = "stats_"+time.strftime("%Y%m%d",time.localtime())+".txt"
-    if logtofile:
-        logger = open(summaryfile, 'a')
-
-    print("Channel\t MeanLight  SdevLight   MeanOverS   SdevOverS   MeanOverP   SdevOverP")
-    for ichan in range(16):
-        name = "CHAN_%d" % ichan
-        if name not in hdulist:
-            continue
-        hdr = hdulist[name].header
-        img = hdulist[name].data
-        imgcols = 512
-        colstart = 10
-        imglines = 2002
-        light = img[:imglines, colstart:colstart+imgcols].flatten()
-        dark = img[:imglines, colstart+imgcols:].flatten()
-        overp = img[imglines+2:, colstart:].flatten()
-        
-        hdr['AVLIGHT'] = light.mean()
-        hdr['STDLIGHT'] = light.std()
-        hdr['AVOVERS'] = dark.mean()
-        hdr['STDOVERS'] = dark.std()
-        hdr['AVOVERP'] = overp.mean()
-        hdr['STDOVERP'] = overp.std()
-        
-        out = "{}\t{:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f} {:10.2f}".format(name,
-                                                                                 hdr['AVLIGHT'], hdr['STDLIGHT'],
-                                                                                 hdr['AVOVERS'], hdr['STDOVERS'],
-                                                                                 hdr['AVOVERP'], hdr['STDOVERP'])
-        print(out)
-        if logtofile:
-            logger.write(out+'\n')
-    #return out
-
-bench.Bench.basic_stats = basic_stats
-
-
-# could also attach functions for fits files and arrays
-
-def display_hdu(self, hdulist):
-
-    self.ds9.load_hdulist(hdulist)
-    self.ds9.set_crosshair(100, 100)
-    self.ds9.scale('minmax')
-
-bench.Bench.display_hdu = display_hdu
-
+Bench.save_to_fits = save_to_fits
 
 
 # def wait_for_action(action):
