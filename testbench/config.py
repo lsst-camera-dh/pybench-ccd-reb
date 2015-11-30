@@ -82,9 +82,9 @@ config = {
     #
     'ds9': {
         'driver'      : 'ds9display',
-        'cmap'       : 'grey'
+        'cmap'        : 'grey',
         # possible to specify which display here if there are several
-        # 'display'    :  'zorglub'
+        'display'    :  ''
        },
     #
     # ---------------------------------------------------------------------
