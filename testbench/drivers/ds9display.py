@@ -1,14 +1,76 @@
 #! /usr/bin/env python 
 
 # ds9display.py : operate a ds9 window to display images
-# original class by Peter Doherty
+# C. Juramy based on an original class by Peter Doherty
 
 from driver import Driver
 import pyds9
 import logging
 import astropy.io.fits as pyfits
+import numpy as np
 
-class DS9display(Driver):
+
+def split_slicing(strslice):
+    """
+    Utility function: parses a string with nD slicing into the slicing indexes.
+    Exp: '[x, y]' -> [x, y]
+    :type strslice: string
+    :type n: int
+    :rtype: list
+    """
+    s = strslice.strip('[]')
+
+    dimlist = s.split(',')
+    indexes = []
+
+    for pair in dimlist:
+        i1, i2 = pair.split(':')
+        indexes.append(int(i1))
+        indexes.append(int(i2))
+
+    return indexes
+
+def hdulist_to_array(i):
+    """ Recreate the array from the HDUlist
+    :type i: pyfits.HDUlist
+    :rtype: np.array
+    """
+
+    detsize = i[0].header['DETSIZE']
+    dimlist = split_slicing(detsize)
+    # initialize array with 0 over the whole image
+    # order of indexes in FITS headers is reversed from order in numpy
+    a = np.zeros((dimlist[3], dimlist[1]), dtype=np.int32)
+
+    # fill with data from the CHAN extensions
+    for ihdu in i[1:]:
+        if 'CHAN' in ihdu.header['EXTNAME']:
+            # replace with data from  DATASEC in the DETSEC section of the new array
+            dsec = split_slicing(ihdu.header['DATASEC'])
+            pos = split_slicing(ihdu.header['DETSEC'])
+            # indexes are in decreasing order if the image is flipped
+            if pos[0] < pos[1]:
+                x1 = pos[0]-1
+                x2 = pos[1]
+                xs = 1
+            else:
+                x1 = pos[0]
+                x2 = pos[1]-1
+                xs = -1
+            if pos[2] < pos[3]:
+                y1 = pos[2]-1
+                y2 = pos[3]
+                ys = 1
+            else:
+                y1 = pos[2]
+                y2 = pos[3]-1
+                ys = -1
+
+            a[y1:y2:ys, x1:x2:xs] = ihdu.data[dsec[2]-1:dsec[3], dsec[0]-1:dsec[1]]
+
+    return a
+
+class Instrument(Driver):
 
     # ===================================================================
     # Generic methods (init, open, etc)
@@ -106,17 +168,6 @@ class DS9display(Driver):
 
     # loading image data to display
 
-    def load_file(self, file):
-        #if (os.path.isfile(file) == True):
-        #    err = self.set("file mosaicimage iraf %s" % file, verbose=False)
-        #    self.set("zoom to fit")
-
-        # to bypass bug in vertical and horizontal graphs
-        f = pyfits.open(file)
-        # TODO: recreate array
-
-        f.close()
-
     def load_array(self, a, verbose=False):
         err = self.__disp.set_np2arr(a)
         if (err == 0):
@@ -128,14 +179,28 @@ class DS9display(Driver):
         return err
 
     def load_hdulist(self, h, verbose=False):
-        err = self.__disp.set_pyfits(h)
-        if (err == 0):
-            logging.error("IMDISP: Error loading HDU list")
-        else:
-            if (verbose == True):
-                logging.info("IMDISP: loaded from HDU list")
-            self.set("zoom to fit")
-        return err
+        #err = self.__disp.set_pyfits(h)
+
+        # there is a bug for vertical and horizontal graphs with multiple HDUs
+        # so instead we recreate a single array and display it
+        a = hdulist_to_array(h)
+
+        return self.load_array(a, verbose)
+
+    def load_file(self, fitsfile, verbose=False):
+        #if (os.path.isfile(file) == True):
+        #    err = self.set("file mosaicimage iraf %s" % file, verbose=False)
+        #    self.set("zoom to fit")
+
+        # there is a bug for vertical and horizontal graphs with multiple HDUs
+        # so instead we recreate a single array and display it
+        i = pyfits.open(fitsfile)
+
+        a = hdulist_to_array(i)
+
+        i.close()
+
+        return self.load_array(a, verbose)
 
     # getting image data from display
 
