@@ -12,7 +12,13 @@ import astropy.io.fits as pyfits
 import numpy as np
 from lsst.testbench.bench import Bench
 
+
+#usage:
+#from lsst.testbench.bench import Bench
 B = Bench()  # singleton
+#import lsst.testbench.scripts.ccd.analysis
+#B.display_file('/Users/nayman/Documents/LSST-CCD/Setups/REB1-new/100-00_ptc_flat_00010_2_20150601155652.fits')
+
 
 B.register('ds9')
 
@@ -134,6 +140,7 @@ def cut_scan(hdulist, cutcolumns=[180], selectchannels=None):
             chanvalues.append((polyscan[1, b], polyscan[0, b], residuals.std()))
             if b in cutcolumns:
                 #TODO: plot along column with fit
+                pass
         values.append(chanvalues)
 
     #TODO: log to file, plots along line direction
