@@ -54,18 +54,18 @@ def hdulist_to_array(i):
                 x2 = pos[1]
                 xs = 1
             else:
-                x1 = pos[0]
-                x2 = pos[1]-1
+                x1 = pos[0]-1
+                x2 = pos[1]-2
                 xs = -1
             if pos[2] < pos[3]:
                 y1 = pos[2]-1
                 y2 = pos[3]
                 ys = 1
             else:
-                y1 = pos[2]
-                y2 = pos[3]-1
+                y1 = pos[2]-1
+                y2 = pos[3]-2
                 ys = -1
-
+            #print '%d:%d:%d, %d:%d:%d' % (y1, y2, ys, x1, x2, xs)
             a[y1:y2:ys, x1:x2:xs] = ihdu.data[dsec[2]-1:dsec[3], dsec[0]-1:dsec[1]]
 
     return a
