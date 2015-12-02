@@ -191,6 +191,13 @@ class Bench(Borg):
     #  Meta data / state of the instrument 
     # ===================================================================
 
+    def get_identifiers(self):
+        """
+        Returns a list of instruments currently loaded.
+        :return:
+        """
+        return self.registry.iterkeys()
+
     def get_meta(self):
         """
         Returns meta data describing the current state of all the
