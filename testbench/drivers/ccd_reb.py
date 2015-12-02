@@ -419,7 +419,7 @@ class Instrument(Driver):
         """
         return self.reb.make_img_name()
 
-
+    #TODO: integrate these functions with the upgraded sequencer file
     def set_amplifier_size(self, cols, lines):
         """
         Sets the dimensions of the image. This affects how the image is reconstituted, not the sequencer (yet).
@@ -429,6 +429,21 @@ class Instrument(Driver):
         """
         self.reb.imgcols = cols
         self.reb.imglines = lines
+
+    def get_amplifier_size(self, window=False):
+        """
+        Gets the dimension of the image data (from a single amplifier). Currently read from the XML, until
+        it is changed.
+        :param window:
+        :return:
+        """
+        if window:
+            lines = self.reb.seq.parameters['WindowLines']
+            cols = self.reb.seq.parameters['WindowColumns']
+        else:
+            cols = self.reb.seq.parameters['ReadColumns']
+            lines = self.reb.seq.parameters['ReadLines']
+        return cols, lines
 
     def conv_to_fits(self, imgname, channels=None, displayborders=False):
         """
