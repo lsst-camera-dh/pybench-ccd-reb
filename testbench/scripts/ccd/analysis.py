@@ -8,19 +8,39 @@
 import os
 import time
 import logging
-import astropy.io.fits as pyfits
+
 import numpy as np
+from matplotlib import pyplot as plt
+#from lsst.testbench.drivers.ds9display import split_slicing
+
 from lsst.testbench.bench import Bench
 
+dataDir = './'
 
-#usage:
-#from lsst.testbench.bench import Bench
 B = Bench()  # singleton
-#import lsst.testbench.scripts.ccd.analysis
-#B.display_file('/Users/nayman/Documents/LSST-CCD/Setups/REB1-new/100-00_ptc_flat_00010_2_20150601155652.fits')
-
 
 B.register('ds9')
+
+# USAGE
+
+#from lsst.testbench.bench import Bench
+#B = Bench()
+#import lsst.testbench.scripts.ccd.analysis
+
+# from file:
+#B.display_file('/Users/nayman/Documents/LSST-CCD/Setups/REB1-new/100-00_ptc_flat_00010_2_20150601155652.fits')
+
+# from HDUlist:
+#import astropy.io.fits as pyfits
+#s2 = pyfits.open('/Users/nayman/Documents/REB/REB3/LPNHEtest/20151014/0x0020151014134249.fits')
+#s2[0].header['width'] = 256
+#s2[0].header['height'] = 1000
+#s2[0].header['detsize'] = '[1:6144,1:2000]'
+#B.display_hdu(s2)
+#B.cut_scan_plot(s2)
+
+
+# UTILITIES
 
 
 def find_channels(hdulist, selectchannels=None):
@@ -42,6 +62,19 @@ def find_channels(hdulist, selectchannels=None):
             rangechannel.append(name)
 
     return rangechannel
+
+
+def get_image_id(hdulist):
+    """
+    Defines the image identifier that will be used for output files.
+    :rtype: string
+    """
+    fitsname = hdulist[0].header['FILENAME']
+    return fitsname[:-4]
+
+
+# ANALYSIS METHODS
+
 
 def basic_stats(self, hdulist, logtofile=False, selectchannels=None):
     """
@@ -110,37 +143,90 @@ def display_file(self, fitsfile):
 Bench.display_file = display_file
 
 
-#TODO: add a rough estimate of gain from a pair of flats
-#TODO: rough estimate of the CTE from the first line and first column of overscans
-
-def cut_scan(hdulist, cutcolumns=[180], selectchannels=None):
+def cut_scan_plot(self, hdulist, cutcolumns=[180], selectchannels=None):
     """
-    Cut and fit plots for images acquired in scanning mode.
+    Cut and fit plots accross image (designed for images acquired in scanning mode).
     :param cutcolumns: list of columns for display accross column direction
     :param selectchannels: list of selected channels for display (all by default)
     :return:
     """
     values = []
-    Nlines = 2000
-    Nbins = 256
+    figX, (p0, p1, pdev) = plt.subplots(nrows=3, num='Fit over lines', figsize=(8,12))
+    plt.xlabel('Scan increment (10 ns)')
+    figY = plt.figure(num='Selected line fit', figsize=(8,5))
+    plt.xlabel('Line')
+    plt.ylabel('ADU')
+
+    Nlines = hdulist[0].header['HEIGHT']
+    Nbins = hdulist[0].header['WIDTH']
     lines = np.arange(Nlines)
 
-    for name in find_channels(hdulist, selectchannels):
+    listchan = find_channels(hdulist, selectchannels)
+    for name in listchan:
         #hdr = hdulist[name].header
         img = hdulist[name].data
+        #dsec = split_slicing(hdr['DATASEC'])
+        #Nbins = dsec[1]
+        #Nlines = dsec[3]
+
         chanvalues = []
 
         # first-order polynomial fit of scans
 
         polyscan = np.polyfit(lines, img, 1)
-
+        stddev = np.empty(Nbins)
         for b in range(Nbins):
             polyfit = np.poly1d(polyscan[:, b])
             residuals = img[:,b] - polyfit(lines)
-            chanvalues.append((polyscan[1, b], polyscan[0, b], residuals.std()))
+            stddev[b] = residuals.std()
+            chanvalues.append((polyscan[1, b], polyscan[0, b], stddev[b]))
             if b in cutcolumns:
-                #TODO: plot along column with fit
-                pass
+                plt.figure(figY.number)
+                plt.plot(img[:,b])
+                plt.plot(polyfit(lines))
         values.append(chanvalues)
 
-    #TODO: log to file, plots along line direction
+        # plots along line direction
+        plt.figure(figX.number)
+        #p0.plot(polyscan[1, :])
+        plt.subplot(311)
+        plt.plot(polyscan[1, :])
+        plt.ylabel('Constant in polynomial fit')
+        plt.subplot(312)
+        plt.plot(polyscan[0, :])
+        #p1.plot(polyscan[0, :])
+        plt.ylabel('Slope in polynomial fit')
+        plt.subplot(313)
+        plt.plot(stddev)
+        #pdev.plot(stddev)
+        plt.ylabel('Residuals from fit')
+
+    # log to file
+    rootname = get_image_id(hdulist)
+    valuelog = os.path.join(dataDir, 'scanfit' + rootname + '.txt')
+    outfile = open(valuelog, 'w')
+    # header line
+    outfile.write("ScanBin\t")
+    for name in listchan:
+        outfile.write("%s_P0\t%s_P1\t%s_SD\t" % (name, name, name))
+    outfile.write("\n")
+    # one line per bin
+    for b in range(Nbins):
+        outfile.write("%d\t" % b)
+        for j in range(len(listchan)):
+            outfile.write("%.2f\t%.4f\t%.2f\t" % values[j][b])
+        outfile.write("\n")
+
+    outfile.close()
+
+    # save figures
+    figX.savefig(os.path.join(dataDir, 'scanfit' + rootname + '.png'))
+    figY.savefig(os.path.join(dataDir, 'plotscanfit' + rootname + '.png'))
+
+    plt.show()
+
+Bench.cut_scan_plot = cut_scan_plot
+
+
+#TODO: add a rough estimate of gain from a pair of flats
+#TODO: rough estimate of the CTE from the first line and first column of overscans
