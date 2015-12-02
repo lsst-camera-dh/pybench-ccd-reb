@@ -10,6 +10,8 @@ import astropy.io.fits as pyfits
 import numpy as np
 
 
+#
+
 def split_slicing(strslice):
     """
     Utility function: parses a string with nD slicing into the slicing indexes.
@@ -66,7 +68,13 @@ def hdulist_to_array(i):
                 y2 = pos[3]-2
                 ys = -1
             #print '%d:%d:%d, %d:%d:%d' % (y1, y2, ys, x1, x2, xs)
-            a[y1:y2:ys, x1:x2:xs] = ihdu.data[dsec[2]-1:dsec[3], dsec[0]-1:dsec[1]]
+            # note : this relies on the fact that the line direction is not reversed in the [0,yyy] range
+            # otherwise we would need to add more cases
+            if x2<0:
+                # this makes the high limit default to actual -1 (so we go down to 0), not n-1
+                a[y1:y2:ys, x1::xs] = ihdu.data[dsec[2]-1:dsec[3], dsec[0]-1:dsec[1]]
+            else:
+                a[y1:y2:ys, x1:x2:xs] = ihdu.data[dsec[2]-1:dsec[3], dsec[0]-1:dsec[1]]
 
     return a
 
