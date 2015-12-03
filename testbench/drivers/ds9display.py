@@ -113,8 +113,8 @@ class Instrument(Driver):
 
     def checkConnection(self):
         """
-        Get the REB id from the REB itself.
-        Return it or None.
+        Check by getting the version of DS9. Answer is e.g. 'ds9 5.7'.
+        Return 'ds9' or None.
         """
         try:
             return self.get('version')[:3]

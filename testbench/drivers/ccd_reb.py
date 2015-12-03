@@ -456,13 +456,13 @@ class Instrument(Driver):
         """
         return self.reb.conv_to_fits(imgname, channels, displayborders)
 
-    def make_fits_name(self, imgstr):
+    def make_fits_name(self, imgstr, compressed=True):
         """
         Builds a complete FITS file path. imgstr should be the name of the file without the extension.
         :param imgstr: string
         :return: string
         """
-        return self.reb.make_fits_name(imgstr)
+        return self.reb.make_fits_name(imgstr, compressed)
 
     def set_testtype(self, name):
         """
