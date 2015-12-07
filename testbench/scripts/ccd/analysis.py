@@ -70,7 +70,7 @@ def get_image_id(hdulist):
     :rtype: string
     """
     fitsname = hdulist[0].header['FILENAME']
-    return fitsname[:-4]
+    return fitsname[:-3]
 
 
 # ANALYSIS METHODS
