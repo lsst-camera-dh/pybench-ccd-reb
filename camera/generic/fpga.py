@@ -1145,8 +1145,8 @@ class FPGA(object):
                 conv_i = 80e-6  # 8 uA (80 uA in reality ?)
             else:
                 conv_i = 250e-6  # 25 uA  in doc, 250 uA in reality
-            voltages[v] = ((raw[0x600000 + i * 2] & 0xfff0) >> 4) * 0.025  # 25 mV
-            currents[v] = ((raw[0x600001 + i * 2] & 0xfff0) >> 4) * conv_i
+            voltages[v] = round(((raw[0x600000 + i * 2] & 0xfff0) >> 4) * 0.025, 3)  # 25 mV
+            currents[v] = round(((raw[0x600001 + i * 2] & 0xfff0) >> 4) * conv_i, 3)
             vstr = 'V_%s' % v
             istr = 'I_%s' % v
             orderkeys.append(vstr)

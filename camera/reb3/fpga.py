@@ -84,10 +84,10 @@ class FPGA3(FPGA):
               'CS_T5_2': (5, 8), 'CS_B5_2': (5, 9),
               'CS_T6_2': (6, 8), 'CS_B6_2': (6, 9),
               'CS_T7_2': (7, 8), 'CS_B7_2': (7, 9),
-              'OD_0': (0, 12), 'OD_1': (5, 12), 'OD_2': (3, 13),
-              'OG_0': (1, 12), 'OG_1': (6, 12), 'OG_2': (4, 13),
-              'RD_0': (2, 12), 'RD_1': (7, 12), 'RD_2': (5, 13),
-              'GD_0': (3, 12), 'GD_1': (0, 13), 'GD_2': (6, 13),
+              'OD_0': (1, 12), 'OD_1': (6, 12), 'OD_2': (4, 13),
+              'OG_0': (2, 12), 'OG_1': (7, 12), 'OG_2': (5, 13),
+              'RD_0': (3, 12), 'RD_1': (0, 13), 'RD_2': (6, 13),
+              'GD_0': (0, 12), 'GD_1': (5, 12), 'GD_2': (3, 13),
               'ADC5V_0': (4, 12), 'ADC5V_1': (1, 13), 'ADC5V_2': (7, 13),
               'REF2V5_1': (2, 13)
               }
@@ -107,17 +107,17 @@ class FPGA3(FPGA):
 
     # --------------------------------------------------------------------
 
-    def sigmadelta_spi(self, rw, address, data):
+    def sigmadelta_spi(self, rnotw, address, data):
         """
         Communication to the sigma-delta ADC for CCD temperature sensors.
-        :param rw: bool
-        :param address: int
-        :param data: int
-        :return: int
+        :type rnotw: bool
+        :type address: int
+        :type data: int
+        :rtype: int
         """
         # To be checked: there are several bugs in the documentation
         code = 0
-        if rw:
+        if rnotw:
             code += (1 << 19)
         code += ((address & 7) << 16)
         code += (data & 0xffff)
@@ -126,6 +126,24 @@ class FPGA3(FPGA):
 
         answer = self.read(0x700001, 1)[0x700001]
         return answer
+
+    def config_sigmadelta(self, continuous=False):
+        """
+        Configures the 24-bit sigma-delta ADC.
+        :param continuous:
+        :return:
+        """
+        #TODO: read mode, gain, current, ?
+        if not continuous:
+            self.sigmadelta_spi(False, 1, 0x200A)
+
+    def read_sigmadelta(self, channel):
+        """
+        Reads the given channel of the sigma-delta ADC.
+        :param channel:
+        :return:
+        """
+        pass
 
     # --------------------------------------------------------------------
 
@@ -184,12 +202,12 @@ class FPGA3(FPGA):
 
         for key in self.groups['CLK_L']:
             # fitsheader[key]= "{:.2f}".format(self.dacs[key]*self.serial_conv)
-            dictvalues[key] = self.dacs[key] * self.convertclocks[key] \
-                              - self.dacs[key + "_S"] * self.convertclocks[key + "_S"]
+            dictvalues[key] = round(self.dacs[key] * self.convertclocks[key] \
+                              - self.dacs[key + "_S"] * self.convertclocks[key + "_S"], 3)
             dictcomments[key] = '[V] %s low clock rail voltage' % key
 
         for key in self.groups['CLK_U']:
-            dictvalues[key] = self.dacs[key]* self.convertclocks[key]
+            dictvalues[key] = round(self.dacs[key]* self.convertclocks[key], 3)
             dictcomments[key] = '[V] %s high clock rail voltage' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
@@ -252,6 +270,38 @@ class FPGA3(FPGA):
 
     # ----------------------------------------------------------
 
+    def check_bias_safety(self, biases, s):
+        """
+        Checks that the proposed parameters are safe for the CCD, using saved values.
+        :type biases: dict
+        :type s: int
+        :rtype: bool
+        """
+        # reads current configuration (currently from object, could be from ADC)
+        current = self.get_bias_voltages(s)
+        # computes proposed configuration
+        proposed = {}
+        for param in self.groups['BIASES']:
+            if param in biases:
+                proposed[param] = biases[param]
+            else:
+                proposed[param] = current.values[param]
+
+        # safety: OG<OD (add margin for rounding errors)
+        if proposed['OD'] < proposed['OG'] - 0.2:
+            print("Warning: proposed configuration has OG at %f, higher than OD at %f" % (proposed['OG'], proposed['OD']))
+            return False
+
+        # safety: OD-RD < 20 V, but preferably also OD>RD (add margin for rounding errors)
+        if proposed['RD'] > proposed['OD'] + 0.2:
+            print("Warning: proposed configuration has OD lower than RD")
+            return False
+        elif proposed['OD'] > proposed['RD'] + 20:
+            print("Warning: proposed configuration has OD higher than RD + 20 V")
+            return False
+
+        return True
+
     def set_bias_voltages(self, biases, s):
         """
         Sets the DC bias voltages.
@@ -260,7 +310,8 @@ class FPGA3(FPGA):
         :param s: stripe
         :return:
         """
-        # TODO (again): safety tests
+        if not self.check_bias_safety(biases, s):
+            raise ValueError('Trying to program an unsafe bias value')
 
         outputnum = {"GD": 0, "OD": 1, "OG": 3, "OG_S": 2, "RD": 4}
         # OG seen by CCD will be the difference OG-OGS (factor to be checked)
@@ -304,10 +355,10 @@ class FPGA3(FPGA):
             dackey = key + '%s' % s
             if key == 'OG':
                 dackeyshift = "OG_S" + '%s' % s
-                dictvalues[key] = self.dacs[dackey] * self.convertbiases[key] \
-                                  - self.dacs[dackeyshift] * self.convertbiases["OG_S"]
+                dictvalues[key] = round(self.dacs[dackey] * self.convertbiases[key] \
+                                  - self.dacs[dackeyshift] * self.convertbiases["OG_S"], 3)
             else:
-                dictvalues[key] = self.dacs[dackey] * self.convertbiases[key]
+                dictvalues[key] = round(self.dacs[dackey] * self.convertbiases[key], 3)
             dictcomments[key] = '[V] %s voltage setting' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
