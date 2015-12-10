@@ -1114,15 +1114,22 @@ class FPGA(object):
         # trigger will stop autonomously when done
         while self.get_state() & 0x10:
             time.sleep(0.05)
+
         raw = self.read(0x600010, self.n_sensors_boardtemp)
+        tempkeys = []
         temperatures = {}
+        comments = {}
+
         for i in xrange(self.n_sensors_boardtemp):
+            tempkey = 'TREB_%d' % i
+            tempkeys.append(tempkey)
             answer = raw[0x600010 + i]
-            temperatures[i] = (answer & 0xffff) * 0.0078
+            temperatures[tempkey] = (answer & 0xffff) * 0.0078
             if answer & 0x10000:
                 print("Warning: error on board temperature measurement %d" % i)
+            comments[tempkey] = '[C] REB board temperature sensor %d' % i
 
-        return temperatures
+        return MetaData(tempkeys, temperatures, comments)
 
     # ----------------------------------------------------------
 
@@ -1167,6 +1174,6 @@ class FPGA(object):
         Output for header.
         """
         config = self.get_input_voltages_currents()
-        # TODO: add board temperatures ?
+        config.update(self.get_board_temperatures())
 
         return config
