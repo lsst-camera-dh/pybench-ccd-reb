@@ -559,7 +559,7 @@ class FPGA3(FPGA):
         Output for header.
         """
         #TODO: check readback versus stored values for biases, then remove/keep(?) stored values
-        config = self.get_input_voltages_currents()
+        config = FPGA.get_fpga_config(self, s)
         config.update(self.get_clock_voltages())
         config.update(self.get_bias_voltages(s), readback=False)
         config.update(self.get_current_source(s), readback=False) # readback with slow ADC
