@@ -76,6 +76,7 @@ class REB3(reb.REB):
         if len(self.stripes) > 1:
             for s in self.stripes[1:]:
                 config.update(self.fpga.get_bias_voltages(s))
+        return config
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
@@ -163,9 +164,9 @@ class REB3(reb.REB):
         """
         Sequence to shutdown power to the CCD.
         """
-        print('BSS must be shutdown at this time.')
-        # TODO: check that this works
+        print('BSS should be shutdown at this time.')
         time.sleep(5)
+        # This works, but it is common to all stripes  
         self.fpga.enable_bss(False)
 
         # clock rails first (in V)

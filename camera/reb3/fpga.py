@@ -17,14 +17,27 @@ class FPGA3(FPGA):
     # reb_id = 2
 
     supplies = ['DREB', '7V', 'VDDCLK', 'VDDOD']
-    # conversion factors for DAC (V/LSB):
-    clock_conv = 0.00425
-
     n_sensors_boardtemp = 10
+
+     # list of acceptable parameters for REB commands
+    params = ["OD", "GD", "RD", "OG", 'CS',
+              "SL", "SU", "RGL", "RGU", "PL", "PU"]
+
+    groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU"],
+              'CLK_L': ["SL", "RGL", "PL"],
+              'CLK_U': ["SU", "RGU", "PU"],
+              'BIASES': ["OD", "GD", "RD", "OG"]}
+    # list of DACs to be set
+    dacparams = ["OD0", "GD0", "RD0", "OG0", 'OG_S0', 'CS0',
+                 "OD1", "GD1", "RD1", "OG1", 'OG_S1', 'CS1',
+                 "OD2", "GD2", "RD2", "OG2", 'OG_S2', 'CS2',
+                 "SL", 'SL_S', "SU", "RGL", 'RGL_S', "RGU", "PL", 'PL_S', "PU"]
 
     # mapping of clock rail settings
     clockmap = {"SL": 2, "SL_S": 1, "SU": 0, "PL": 5, "PL_S": 4, "PU": 3, "RGL": 0x12, "RGL_S": 0x11,"RGU": 0x10}
-    # mapping for conversion
+    # default conversion factors for clock DAC (V/LSB):
+    clock_conv = 0.00425
+    # mapping for clock conversions
     convertclocks = {"SL": clock_conv,
                      "SL_S": clock_conv,
                      "SU": 0.00426758,
@@ -35,25 +48,12 @@ class FPGA3(FPGA):
                      "RGL_S": 0.00268,
                      "RGU": 0.00425293}
 
-    # list of acceptable parameters for REB commands
-    params = ["OD", "GD", "RD", "OG", 'CS',
-              "SL", "SU", "RGL", "RGU", "PL", "PU"]
-    # mapping for conversion
+    # mapping for bias conversions
     convertbiases = {"OD": 0.00880585,
                      "GD": 0.0088833,
                      "RD": 0.0061035,
                      "OG": 0.00240885,
                      'OG_S': 0.0012561}
-    
-    groups = {'CLOCKS': ["SL", "SU", "RGL", "RGU", "PL", "PU"],
-              'CLK_L': ["SL", "RGL", "PL"],
-              'CLK_U': ["SU", "RGU", "PU"],
-              'BIASES': ["OD", "GD", "RD", "OG"]}
-    # list of DACs to be set
-    dacparams = ["OD0", "GD0", "RD0", "OG0", 'OG_S0', 'CS0',
-                 "OD1", "GD1", "RD1", "OG1", 'OG_S1', 'CS1',
-                 "OD2", "GD2", "RD2", "OG2", 'OG_S2', 'CS2',
-                 "SL", 'SL_S', "SU", "RGL", 'RGL_S', "RGU", "PL", 'PL_S', "PU"]
 
     # mapping of slow ADC (mux8chan, adcmux)
     # last digit of parameter name is always the stripe
@@ -91,6 +91,8 @@ class FPGA3(FPGA):
               'ADC5V_0': (4, 12), 'ADC5V_1': (1, 13), 'ADC5V_2': (7, 13),
               'REF2V5_1': (2, 13)
               }
+    # conversion factor for slow ADC
+    adcconvert = 0.0012207
 
     # --------------------------------------------------------------------
 
@@ -236,9 +238,9 @@ class FPGA3(FPGA):
         #activates DAC output
         self.write(0x400101 + (s << 4), 1)
 
-    def get_current_source(self, s):
+    def get_current_source(self, s, readback=False):
         """
-        In REB3, we should also be able to read from the slow ADC+mux.
+        In REB3, we can read all channels from the slow ADC+mux, or just the stored value.
         """
 
         self.check_location(s)
@@ -250,7 +252,18 @@ class FPGA3(FPGA):
         dictcomments = {}
 
         dictvalues[key] = self.dacs[dackey]
-        dictcomments[key] = '[ADU] %s CS gate current setting' % key
+        dictcomments[key] = '[ADU] %s CS gate current setting' % dackey
+
+        if readback:
+            #cschannels = ['CS_T%d' % chan for chan in range(8)] + ['CS_B%d' % chan for chan in range(8)]
+            cschannels =['CS_T0', 'CS_T1', 'CS_T2', 'CS_T3', 'CS_T4', 'CS_T5', 'CS_T6', 'CS_T7',
+                         'CS_B0', 'CS_B1', 'CS_B2', 'CS_B3', 'CS_B4', 'CS_B5', 'CS_B6', 'CS_B7']
+            for key in cschannels:
+                adckey = key + '_%s' % s
+                orderkeys.append(key)
+                value = self.slow_adc_read(adckey)
+                dictvalues[key] = value
+                dictcomments[key] = '[mA] current in source %s'  % adckey
 
         return MetaData(orderkeys, dictvalues, dictcomments)
 
@@ -277,7 +290,8 @@ class FPGA3(FPGA):
         :type s: int
         :rtype: bool
         """
-        # reads current configuration (currently from object, could be from ADC)
+        # reads current configuration
+        # #TODO: (currently from object, could be from ADC)
         current = self.get_bias_voltages(s)
         # computes proposed configuration
         proposed = {}
@@ -340,10 +354,11 @@ class FPGA3(FPGA):
         # activates DAC outputs
         self.write(0x400101 + (s << 4), 1)
 
-    def get_bias_voltages(self, s):
+    def get_bias_voltages(self, s, readback=False):
         """
-        In REB3, we should also be able to read from the slow ADC+mux (with limitations).
+        In REB3, we can read from the slow ADC+mux or from the stored DAC values.
         :type s: int
+        :type readback: bool
         :param s: stripe
         """
         self.check_location(s)
@@ -352,14 +367,20 @@ class FPGA3(FPGA):
         dictcomments = {}
 
         for key in self.groups['BIASES']:
-            dackey = key + '%s' % s
-            if key == 'OG':
-                dackeyshift = "OG_S" + '%s' % s
-                dictvalues[key] = round(self.dacs[dackey] * self.convertbiases[key] \
-                                  - self.dacs[dackeyshift] * self.convertbiases["OG_S"], 3)
+            if readback:
+                adckey = key + '_%s' % s
+                value = self.slow_adc_read(adckey)
+                dictvalues[key] = value
+                dictcomments[key] = '[V] %s read through slow ADC'  % key
             else:
-                dictvalues[key] = round(self.dacs[dackey] * self.convertbiases[key], 3)
-            dictcomments[key] = '[V] %s voltage setting' % key
+                dackey = key + '%s' % s
+                if key == 'OG':
+                    dackeyshift = "OG_S" + '%s' % s
+                    dictvalues[key] = round(self.dacs[dackey] * self.convertbiases[key] \
+                                      - self.dacs[dackeyshift] * self.convertbiases["OG_S"], 3)
+                else:
+                    dictvalues[key] = round(self.dacs[dackey] * self.convertbiases[key], 3)
+                dictcomments[key] = '[V] %s voltage setting' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
 
@@ -407,21 +428,26 @@ class FPGA3(FPGA):
         dictcomments = {}
 
         for iaddress, key in enumerate(orderkeys):
-            dictvalues[key] = temps[0x601000 + iaddress]
-            dictcomments[key] = '[ADU] ASPIC temperature sensor %s' % key
-            # TODO: conversion to volts, then to temperature
+            dictvalues[key] = temps[0x601000 + iaddress] * self.adcconvert
+            dictcomments[key] = '[V] ASPIC temperature sensor %s' % key
+            # TODO: conversion to temperature
 
         return MetaData(orderkeys, dictvalues, dictcomments)
 
     def slow_adc_read(self, param):
         """
         Reads any parameter by name.
-        :param param:
-        :return:
+        :type param: string
+        :rtype: float
         """
         extmux, adcmux = self.adcmap[param]
+        # convert ADU to V or mA (for current sources)
+        value = self.slow_adc_readmux(extmux, adcmux) * self.adcconvert
+        # resistor bridge for biases
+        if param[:2] in self.groups['BIASES']:
+            value *= 11
 
-        return self.slow_adc_readmux(extmux, adcmux)
+        return value
 
     def slow_adc_stripe(self, s):
         """
@@ -441,7 +467,10 @@ class FPGA3(FPGA):
                 value = self.slow_adc_read(key)
                 orderkeys.append(key)
                 dictvalues[key] = value
-                dictcomments[key] = '[ADU] %s read through slow ADC' % key
+                if key[:2] == 'CS':
+                    dictcomments[key] = '[mA] current in source %s' % key
+                else:
+                    dictcomments[key] = '[V] %s voltage read through slow ADC' % key
 
         return MetaData(orderkeys, dictvalues, dictcomments)
 
@@ -529,10 +558,11 @@ class FPGA3(FPGA):
         """
         Output for header.
         """
+        #TODO: check readback versus stored values for biases, then remove/keep(?) stored values
         config = self.get_input_voltages_currents()
         config.update(self.get_clock_voltages())
-        config.update(self.get_bias_voltages(s))
-        config.update(self.get_current_source(s))
+        config.update(self.get_bias_voltages(s), readback=False)
+        config.update(self.get_current_source(s), readback=False) # readback with slow ADC
         config.update(self.slow_adc_stripe(s))
         config.update(self.get_aspic_config(s, check=False))
 
