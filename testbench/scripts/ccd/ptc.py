@@ -10,7 +10,7 @@ B.register('laser')
 B.register('lakeshore1')
 #B.register("DKD")
 # done in ccd.functions:
-#B.register("PhD")
+B.register("PhD")
 #B.register('reb')  # connect to the REB
 #B.register('bss')  # connect (remotely) to the BackSubstrate Power
 
@@ -65,7 +65,7 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
     effpow = self.laser.getPower(laserchannel)
     # First take bias frames
     self.log("Taking bias")
-    m = self.execute_reb_sequence(True, 'ClearBias', 0, 20)
+    m = self.execute_reb_sequence('ClearBias', 0, 20, True )
     #to have only useful channels:
     fname = "%s_ptc_bias_%s.fits" % (serno, self.reb.reb.imgtag)
     i = self.conv_to_fits(channels=validamps)
@@ -78,7 +78,7 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
         # pair of flats
         for numpair in [1, 2]:
             effpow = self.laser.getPower(laserchannel)
-            m = self.execute_reb_sequence(True, 'Acquisition', t)
+            m = self.execute_reb_sequence('Acquisition', t)
             #to have only useful channels:
             fname = "%s_ptc_flat%d_%05d_%s.fits" % (serno, numpair, int(t*100), self.reb.reb.imgtag)
             i = self.conv_to_fits(channels=validamps)

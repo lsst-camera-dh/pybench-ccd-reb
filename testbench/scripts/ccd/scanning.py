@@ -56,7 +56,7 @@ def scanning_acquisition(self, waittime=4 , exptime=0.2, laserchannel = 2, laser
     # First take normal frames
     for numpair in [1, 2]:
         self.log("Taking reference frame %d for scanning" % numpair)
-        m = self.execute_reb_sequence(True, 'Acquisition', exptime, waittime)
+        m = self.execute_reb_sequence('Acquisition', exptime, waittime)
         fname = "acq_frame%d_%s.fits" % (numpair, self.reb.reb.imgtag)
         i = self.conv_to_fits(channels=validamps)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
@@ -66,7 +66,7 @@ def scanning_acquisition(self, waittime=4 , exptime=0.2, laserchannel = 2, laser
 
     for numpair in [1, 2]:
         self.log("Taking scanning frame %d" % numpair)
-        m = self.execute_reb_sequence(True, 'Window', exptime, waittime)
+        m = self.execute_reb_sequence('Window', exptime, waittime)
         fname = "acq_scan%d_%s.fits" % (numpair, self.reb.reb.imgtag)
         i = self.conv_to_fits(channels=validamps, borders=True)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
