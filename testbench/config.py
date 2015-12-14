@@ -191,7 +191,7 @@ config = {
     'triax': {
         'host'        : 'lpnlsstbench',
 #SK edit 03062015        'devices'     : ['/dev/ttyS0'],
-	'devices'     : ['/dev/ttyS5'],
+	    'devices'     : ['/dev/ttyS5'],
         'driver'      : 'monochromator_triax',
         'port'        : 8086,
         'commandline' : 'triax %device %port'
@@ -201,6 +201,16 @@ config = {
     # Newport monochromator
     # ...
     # ...
+    # Not tested yet
+    'cornerstone': {
+        'host'        : 'lpnlsstbench',
+#SK edit 03062015        'devices'     : ['/dev/ttyS0'],
+#	    'devices'     : ['/dev/ttyS5'],
+        'driver'      : 'monochromator_newport'
+#        'port'        : 8086,
+#        'commandline' : 'triax %device %port'
+
+        },
     # ---------------------------------------------------------------------
 
     # =====================================================================

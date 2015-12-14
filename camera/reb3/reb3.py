@@ -24,7 +24,6 @@ class REB3(reb.REB):
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0]):
         reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.fpga = fpga.FPGA3(ctrl_host, rriaddress)
-        self.config = {"VSUB": 0}  # depends on power supply values and board configuration
         self.xmlfile = "sequencer-reb3.xml"
         self.exposure_unit = 0.025  # duration of the elementary exposure subroutine in s
         self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
@@ -72,10 +71,10 @@ class REB3(reb.REB):
         Reads configuration of biases (replaces CABAC readback).
         :return:
         """
-        config = self.fpga.get_bias_voltages(self.stripes[0])
+        config = self.fpga.get_bias_voltages(self.stripes[0], readback=True)
         if len(self.stripes) > 1:
             for s in self.stripes[1:]:
-                config.update(self.fpga.get_bias_voltages(s))
+                config.update(self.fpga.get_bias_voltages(s), readback=True)
         return config
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
