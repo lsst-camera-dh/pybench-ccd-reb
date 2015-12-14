@@ -15,7 +15,6 @@ from driver import Driver
 import logging
 import os.path
 import time
-import subprocess
 
 # =======================================================================
 
@@ -72,7 +71,10 @@ class Instrument(Driver):
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
-        self.testtype = 'TEST'
+        
+        # CCD and test-related values (for meta)
+        self.testID = { 'TESTTYPE': 'TEST', 'IMGTYPE': 'TEST', 'SEQNUM': 0}
+        self.sensorID = { 'CCD_MANU': 'NONE', 'CCD_TYPE': 'NONE', 'CCD_SERN': '000-00', 'LSST_NUM': 'NONE'}
 
         logging.basicConfig(filename='REB-'+ time.strftime('%Y%m%d', time.gmtime()) + '.log',
                             level=logging.DEBUG, format='%(asctime)s: %(message)s')
@@ -470,7 +472,26 @@ class Instrument(Driver):
         :param name:
         :return:
         """
-        self.testtype = name
+        self.testID['TESTTYPE'] = name
+
+    def set_imgtype(self, name):
+        self.testID['IMGTYPE'] = name
+
+    def set_seqnum(self, num):
+        self.testID['SEQNUM'] = num
+
+    def set_sensorID(self, manu, manutype, sernum):
+        """
+        Stores CCD ID information for header.
+        :param manu:
+        :param manutype:
+        :param sernum:
+        :return:
+        """
+        self.sensorID['CCD_MANU'] = manu
+        self.sensorID['CCD_SERN'] = sernum
+        self.sensorID['CCD_TYPE'] = manutype
+        self.sensorID['LSST_NUM'] = '-'.join([manu, manutype, sernum])
 
     # ===================================================================
     #  Meta data / state of the instrument 
@@ -484,25 +505,28 @@ class Instrument(Driver):
         """
 
         # keys : specify the key order
-        keys = ['DATE-OBS', 'LSST_LAB', 'TSTAND', 'INSTRUME', 'CCD_CTRL',
-                'CTRL_SYS', 'CTRL_ID', 'FIRMWARE', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'TESTTYPE', 'IMGTYPE',
+        keys = ['DATE-OBS', 'ORIGIN', 'TSTAND', 'INSTRUME', 'CONTROLL',
+                'CTRL_SYS', 'CONTNUM', 'FIRMWARE', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'LSST_NUM',
+                'TESTTYPE', 'IMGTYPE', 'SEQNUM',
                 'EXPTIME', 'SHUT_DEL', 'CTRLCFG', 'IMAGETAG', 'DETSIZE', 'WIDTH', 'HEIGHT', 'SYSGAIN']
 
         # comments : meaning of the keys
         comments = {
             'DATE-OBS': 'Date of the observation (image acquisition), UTC',
-            'LSST_LAB': 'Which site acquired the data',
+            'ORIGIN': 'Which site acquired the data',
             'TSTAND': 'Which Test stand at the site was used',
-            'INSTRUME': 'Camera',
-            'CCD_CTRL': 'CCD Controller type',
+            'INSTRUME': 'CCD Controller type',
+            'CONTROLL': 'Duplicates INSTRUME',
             'CTRL_SYS': 'Instrument Software Driver',
-            'CTRL_ID': 'CCD Controller Serial Number',
+            'CONTNUM': 'CCD Controller Serial Number',
             'FIRMWARE': 'CCD Controller Firmware Version',
             'CCD_MANU': 'CCD Manufacturer: E2V, ITL',
             'CCD_TYPE': 'CCD Model Number',
-            'CCD_SERN': 'LSST Assigned CCD Number ',
+            'CCD_SERN': 'Manufacturer CCD Serial Number',
+            'LSST_NUM': 'LSST Assigned CCD Number ',
             'TESTTYPE': 'TEST:DARK:FLAT:OBS:PPUMP:QE:SFLAT',
             'IMGTYPE': 'Image type',
+            'SEQNUM': 'Sequence number',
             'EXPTIME': '[s] Exposure Time in seconds',
             'SHUT_DEL': '[ms] Delay between shutter close command and readout',
             'CTRLCFG': 'Sequencer XML file',
@@ -515,18 +539,20 @@ class Instrument(Driver):
 
         values = {
             'DATE-OBS': self.reb.tstamp,
-            'LSST_LAB': 'LPNHE',
+            'ORIGIN': 'LPNHE',
             'TSTAND': 'ISO7',
             'INSTRUME': 'LSST',
-            'CCD_CTRL': self.identifier.upper(),
+            'CONTROLL': 'LSST',
             'CTRL_SYS': 'CCD_REB',
-            'CTRL_ID': self.reb_id,
+            'CONTNUM': self.reb_id,
             'FIRMWARE': self.version,
-            'CCD_MANU': 'E2V',
-            'CCD_TYPE': 'E2V250',
-            'CCD_SERN': '100-00',
-            'TESTTYPE': self.testtype,
-            'IMGTYPE': self.reb.seqname,
+            'CCD_MANU': self.sensorID['CCD_MANU'],
+            'CCD_TYPE': self.sensorID['CCD_TYPE'],
+            'CCD_SERN': self.sensorID['CCD_SERN'],
+            'LSST_NUM': self.sensorID['LSST_NUM'],
+            'TESTTYPE': self.testID['TESTTYPE'],
+            'IMGTYPE': self.testID['IMGTYPE'],
+            'SEQNUM': self.testID['SEQNUM'],
             'EXPTIME': self.reb.exptime,
             'SHUT_DEL': self.reb.shutdelay,
             'CTRLCFG': self.xmlfile,
@@ -536,7 +562,7 @@ class Instrument(Driver):
             'HEIGHT': self.reb.imglines,
             'SYSGAIN': 0.35
         }
-
+        #TODO: replace reb_id with REB serial number
         data = []
 
         return keys, values, comments, data

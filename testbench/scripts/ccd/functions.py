@@ -61,6 +61,24 @@ def shutdown_REB(self):
 
 Bench.shutdown_REB = shutdown_REB
 
+def setup_BSS(self):
+    """
+    Does setup operations for BSS, only if it is not enabled.
+    :param self:
+    :return:
+    """
+    if not self.bss.voltageStatus():
+        # reset only if not enabled
+        self.bss.send('*RST')
+        # reset is apparently needed before configuring (otherwise error 16 pops up)
+        self.bss.setup(voltage=-60)
+        self.bss.setup_current_measure(2e-5)
+        logging.info('Done BSS setup')
+    else:
+        logging.info('Could not perform BSS setup, was already ON')
+
+Bench.setup_BSS = setup_BSS
+
 
 def powerup_CCD(self):
     """
@@ -70,18 +88,12 @@ def powerup_CCD(self):
     logging.info("Starting CCD power-up sequence")
     self.reb.CCDpowerup()
     time.sleep(1)
+
+    self.setup_BSS()
     # starts Keithley backsubstrate voltage
-    if not self.bss.voltageStatus():
-        # reset only if not enabled
-        self.bss.send('*RST')
-        # reset is apparently needed before configuring (otherwise error 16 pops up)
-        self.bss.setup(voltage=-60)
-        self.bss.setup_current_measure(2e-5)
     self.bss.enable(delay=20.0)
     # TODO: wait until complete
     logging.info("CCD start-up sequence is complete")
-    #do that after
-    #proc = self.reb.start_waiting_sequence()
 
 Bench.powerup_CCD = powerup_CCD
 
