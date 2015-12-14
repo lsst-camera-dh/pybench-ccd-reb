@@ -1,29 +1,28 @@
 # -*- mode: python; -*- 
 
-APPNAME = 'lsst.testbench.scripts'
-VERSION = '0.0.2'
+APPNAME = 'lsst.testbench.scripts.eotest'
+VERSION = '0.0.1'
 top = '.'
 build = 'build'
 
-# submodules = ['ccd', 'spot', 'beam-maps']
-submodules = ['ccd','metrology','mires', 'eotest']
+submodules = []
 
 def options(opt):
     opt.load('python')        
-    # opt.load('compiler_c')
+    opt.load('compiler_c')
     # opt.sub_options(submodules)
 
 def configure(conf):
     conf.load('python')
-    # conf.load('compiler_c')
+    conf.load('compiler_c')
     conf.check_python_headers()
     # conf.sub_config(submodules)
     
 def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
-        source = ['__init__.py'], 
-        install_path = '${PYTHONDIR}/lsst/testbench/scripts')
+        source = ['common.py', 'eolib.py', '__init__.py', 'pybeoflat.py'],
+        install_path = '${PYTHONDIR}/lsst/testbench/scripts/eotest')
 
     bld.recurse(submodules)
 
