@@ -109,6 +109,23 @@ class FPGA3(FPGA):
 
     # --------------------------------------------------------------------
 
+    def get_boardID(self):
+        """
+        Reads the REB serial number stored in a chip on the board.
+        :rtype: string
+        """
+        self.write(0x800000, 1)  # starts REB SN acquisition
+        time.sleep(0.01)
+        regs = self.read(0x800001, 2)
+        controlbits = regs[0x800002] >> 16
+        if not controlbits & 1:
+            print('Error code %d while reading the board serial number' % controlbits)
+        SNstring = '0x%04x%08x' % (regs[0x800002] & 0xffff, regs[0x800001])
+
+        return SNstring
+
+    # --------------------------------------------------------------------
+
     def sigmadelta_spi(self, rnotw, address, data):
         """
         Communication to the sigma-delta ADC for CCD temperature sensors.

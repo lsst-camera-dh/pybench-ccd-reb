@@ -505,10 +505,12 @@ class Instrument(Driver):
         """
 
         # keys : specify the key order
-        keys = ['DATE-OBS', 'ORIGIN', 'TSTAND', 'INSTRUME', 'CONTROLL',
-                'CTRL_SYS', 'CONTNUM', 'FIRMWARE', 'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'LSST_NUM',
+        keys = ['ORIGIN', 'DATE-OBS', 'TSTAND', 'INSTRUME', 'CONTROLL',
+                'CTRL_SYS', 'CONTNUM', 'FIRMWARE',
+                'CCD_MANU', 'CCD_TYPE', 'CCD_SERN', 'LSST_NUM',
                 'TESTTYPE', 'IMGTYPE', 'SEQNUM',
-                'EXPTIME', 'SHUT_DEL', 'CTRLCFG', 'IMAGETAG', 'DETSIZE', 'WIDTH', 'HEIGHT', 'SYSGAIN']
+                'EXPTIME', 'SHUT_DEL', 'CTRLCFG', 'IMAGETAG', 'CCDGAIN', 'CCDNOISE',
+                'BINX', 'BINY', 'HEADVER']
 
         # comments : meaning of the keys
         comments = {
@@ -529,12 +531,13 @@ class Instrument(Driver):
             'SEQNUM': 'Sequence number',
             'EXPTIME': '[s] Exposure Time in seconds',
             'SHUT_DEL': '[ms] Delay between shutter close command and readout',
-            'CTRLCFG': 'Sequencer XML file',
+            'CTRLCFG': 'Controller configuration file',
             'IMAGETAG': 'Image tag',
-            'DETSIZE': 'NOAO MOSAIC keywords',
-            'WIDTH': 'CCD columns per channel',
-            'HEIGHT': 'CCD lines per channel',
-            'SYSGAIN': 'Rough guess at overall system gain in e/DN'
+            'CCDGAIN': 'Estimate of overall system gain in e/DN',
+            'CCDNOISE': 'Rough guess at system noise',
+            'BINX': 'Binning along X axis',
+            'BINY': 'Binning along Y axis',
+            'HEADVER': 'Version number of header'
         }
 
         values = {
@@ -544,7 +547,7 @@ class Instrument(Driver):
             'INSTRUME': 'LSST',
             'CONTROLL': 'LSST',
             'CTRL_SYS': 'CCD_REB',
-            'CONTNUM': self.reb_id,
+            'CONTNUM': self.reb.fpga.get_boardID(),
             'FIRMWARE': self.version,
             'CCD_MANU': self.sensorID['CCD_MANU'],
             'CCD_TYPE': self.sensorID['CCD_TYPE'],
@@ -557,12 +560,13 @@ class Instrument(Driver):
             'SHUT_DEL': self.reb.shutdelay,
             'CTRLCFG': self.xmlfile,
             'IMAGETAG': self.reb.imgtag,
-            'DETSIZE': self.reb.get_detsize(displayborders=False),
-            'WIDTH': self.reb.imgcols,
-            'HEIGHT': self.reb.imglines,
-            'SYSGAIN': 0.35
+            'CCDGAIN': 1.0,
+            'CCDNOISE': 15.0,
+            'BINX': 1,
+            'BINY': 1,
+            'HEADVER': 1
         }
-        #TODO: replace reb_id with REB serial number
+        # will need to overwrite BINX and BINY if doing actual rebinning
         data = []
 
         return keys, values, comments, data

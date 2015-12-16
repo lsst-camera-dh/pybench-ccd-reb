@@ -10,6 +10,7 @@ talk to the appropriate FPGAs (which will inherit from the generic FPGA object).
 """
 
 import time
+import datetime
 import os
 import numpy as N
 import astropy.io.fits as pyfits
@@ -24,6 +25,9 @@ def generate_tagstr():
 def generate_hextag(tagstr):
     hextag = int(tagstr, 16)
     return hextag
+
+def utc_now_isoformat():
+    return datetime.datetime.utcnow().isoformat()
 
 def get_sequencer_hdu(seq):
     """
@@ -311,7 +315,7 @@ class REB(object):
         self.wait_end_sequencer()
         if self.seqname != 'Wait':
             self.update_filetag()
-        self.tstamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
+        self.tstamp = utc_now_isoformat()
         self.fpga.start()
         print("Starting %s sequence with %f exposure time." % (self.seqname, self.exptime))
         #freeze until image output (do not send commands while the COB is acquiring)
@@ -367,6 +371,9 @@ class REB(object):
         # Creating FITS HDUs:
         # Create empty primary HDU and fills header
         primaryhdu = pyfits.PrimaryHDU()
+        primaryhdu.header['DETSIZE'] = (self.get_detsize(channels, displayborders), 'NOAO MOSAIC keywords')
+        primaryhdu.header['WIDTH'] = (self.imgcols, 'CCD columns per channel')
+        primaryhdu.header['HEIGHT'] = (self.imglines, 'CCD lines per channel')
         # Create HDU list
         hdulist = pyfits.HDUList([primaryhdu])
 
@@ -454,6 +461,9 @@ class REB(object):
                 sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
 
         extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
+
+        # this is valid in any case with a CCD
+        extheader['BIASSEC'] = ('[523:544,1:2002]', 'Serial overscan region')
 
     def make_fits_name(self, imgstr, compressed=True):
         """

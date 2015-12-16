@@ -1050,6 +1050,15 @@ class FPGA(object):
 
     # ----------------------------------------------------------
 
+    def get_boardID(self):
+        """
+        Default when no readback available from the board itself.
+        :return:
+        """
+        return str(self.get_sci_id())
+
+    # ----------------------------------------------------------
+
     def set_trigger(self, trigger):
         self.write(0x9, trigger)
 
