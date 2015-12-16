@@ -7,8 +7,10 @@
 
 import os
 import time
+import datetime
 import logging
 import astropy.io.fits as pyfits
+from astropy.time import Time
 
 #reload(lsst.testbench.scripts.ccd.functions)
 
@@ -209,14 +211,19 @@ def eotest_header(hdulist):
     testhdu = pyfits.ImageHDU(name='TEST_COND')
     primaryhdu = hdulist[0]
 
+    obstime = primaryhdu.header["DATE-OBS"]
+    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
+
     if 'BSS' in hdulist:
         if hdulist['BSS'].header['VOLTSRC']:  # if it is activated
             hdulist['CCD_COND'].header['V_BSS'] = (hdulist['BSS'].header['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
         else:
             hdulist['CCD_COND'].header['V_BSS'] = (0.0, '[V] Keithley Back-Substrate voltage')
         hdulist['CCD_COND'].header['I_BSS'] = (hdulist['BSS'].header['CURRENT'], '[A] Keithley Back-Substrate current')
-    if 'TRIAX' in hdulist:  # TODO: to be updated with Newport
+    if 'TRIAX' in hdulist:
         primaryhdu.header['MONOWL'] = (hdulist['TRIAX'].header['WVLGTH'], '[nm] Monochromator wavelength')
+    elif 'CORNERSTONE' in hdulist:
+        primaryhdu.header['MONOWL'] = (hdulist['CORNERSTONE'].header['WVLGTH'], '[nm] Monochromator wavelength')
         # add to testhdu
         # replace with laser wavelength if laser is connected
     if 'LAKESHORE0' in hdulist:
@@ -256,8 +263,8 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
     primaryhdu = hdulist[0]
 
     # appending more keywords to header
-    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'FITS file name')
-    primaryhdu.header["DATE"] = (time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()), 'FITS file creation date')
+    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
+    primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
 
     # one extension per instrument
     for identifier in meta:
@@ -283,7 +290,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
     seqhdu.header['EXTNAME'] = 'SEQUENCER'
     hdulist.append(seqhdu)
 
-    hdulist.writeto(fitsname, clobber=True)
+    hdulist.writeto(fitsname, clobber=True, checksum=True)
     logging.info("Wrote FITS file "+fitsname)
 
 Bench.save_to_fits = save_to_fits
