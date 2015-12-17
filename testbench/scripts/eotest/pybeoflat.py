@@ -25,6 +25,8 @@ B.register('cornerstone')
 
 B.register('QTH')
 
+B.register('lakeshore1')
+
 # this registers the REB and BSS
 import lsst.testbench.scripts.ccd.functions
 # this requires the ccd.functions
