@@ -578,8 +578,8 @@ class FPGA3(FPGA):
         #TODO: check readback versus stored values for biases, then remove/keep(?) stored values
         config = FPGA.get_fpga_config(self, s)
         config.update(self.get_clock_voltages())
-        config.update(self.get_bias_voltages(s), readback=False)
-        config.update(self.get_current_source(s), readback=False) # readback with slow ADC
+        config.update(self.get_bias_voltages(s, readback=False))
+        config.update(self.get_current_source(s, readback=False)) # readback with slow ADC
         config.update(self.slow_adc_stripe(s))
         config.update(self.get_aspic_config(s, check=False))
 
