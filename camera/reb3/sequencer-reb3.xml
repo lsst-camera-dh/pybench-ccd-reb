@@ -12,7 +12,7 @@
             </parameter>
             <parameter id="StartLine">
                 <fullname>Starting line for windowed readout</fullname>
-                <value>0</value>
+                <value>100</value>
             </parameter>
             <parameter id="StartColumn">
                 <fullname>Starting column for windowed readout</fullname>
@@ -20,7 +20,7 @@
             </parameter>
             <parameter id="WindowLines">
                 <fullname>Number of lines of the window</fullname>
-                <value>2020</value>
+                <value>1000</value>
             </parameter>
             <parameter id="WindowColumns">
                 <fullname>Number of columns of the window</fullname>
@@ -28,7 +28,7 @@
             </parameter>
             <parameter id="EndLine">
                 <fullname>Number of lines after window</fullname>
-                <value>0</value>
+                <value>920</value>
             </parameter>
             <parameter id="EndColumn">
                 <fullname>Number of columns after window</fullname>
