@@ -616,12 +616,20 @@ class MetaData(object):
     To produce meta-data in the format accepted by the testbench.
     """
 
-    def __init__(self, orderkeys=[], dictvalues={}, dictcomments={}, name=''):
+    def __init__(self, orderkeys, dictvalues={}, dictcomments={}, name=''):
         self.name = name
         self.keys = orderkeys
-        self.values = dictvalues
-        self.comments = dictcomments
-        self.update_ordered(orderkeys, dictvalues, dictcomments)
+        self.values = {}
+        self.comments = {}
+        for k in self.keys:
+            if k in dictvalues:
+                self.values[k] = dictvalues[k]
+            else:
+                self.values[k] = ''
+            if k in dictcomments:
+                self.comments[k] = dictcomments[k]
+            else:
+                self.comments[k] = ''
 
     def __repr__(self):
         s = 'MetaData object %s:\n' % self.name

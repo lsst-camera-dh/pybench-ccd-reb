@@ -428,10 +428,10 @@ class REB(object):
         :return:
         """
         extheader = fitshdu.header
-        #extheader['EXTNAME'] = "CHAN_%d" % CCDchan  # bug makes it necessary here
         extheader["NAXIS1"] = self.imgcols
         extheader["NAXIS2"] = self.imglines
         extheader['DETSIZE'] = self.get_detsize(channels, displayborders)
+        extheader['CHANNEL'] = CCDchan
 
         if displayborders:
             parstringlow = '1:%d' % self.imglines

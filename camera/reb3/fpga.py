@@ -483,7 +483,7 @@ class FPGA3(FPGA):
             if key[-1] == '%d' % s:
                 value = self.slow_adc_read(key)
                 orderkeys.append(key)
-                dictvalues[key] = value
+                dictvalues[key] = round(value, 3)
                 if key[:2] == 'CS':
                     dictcomments[key] = '[mA] current in source %s' % key
                 else:
