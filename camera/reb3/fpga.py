@@ -134,7 +134,7 @@ class FPGA3(FPGA):
         :type data: int
         :rtype: int
         """
-        # To be checked: there are several bugs in the documentation
+
         code = 0
         if rnotw:
             code += (1 << 19)
@@ -143,26 +143,42 @@ class FPGA3(FPGA):
         self.write(0x700000, code)
         time.sleep(0.05)
 
-        answer = self.read(0x700001, 1)[0x700001]
+        if rnotw:
+            answer = self.read(0x700001, 1)[0x700001]
+        else:
+            answer = code
         return answer
 
-    def config_sigmadelta(self, continuous=False):
+    def config_sigmadelta(self, channel, continuous=True):
         """
-        Configures the 24-bit sigma-delta ADC.
+        Configures the 24-bit sigma-delta ADC: readout mode, channel, gain? etc.
         :param continuous:
         :return:
         """
         #TODO: read mode, gain, current, ?
-        if not continuous:
+        if continuous:
+            self.sigmadelta_spi(False, 1, 0xA)
+        else
             self.sigmadelta_spi(False, 1, 0x200A)
+        currentconfig = self.sigmadelta_spi(True, 2, 0)
+        newconfig = (currentconfig & 0xfff0) + channel
+        self.sigmadelta_spi(False, 2, newconfig)
 
-    def read_sigmadelta(self, channel):
+    def read_sigmadelta(self, continuous=True):
         """
-        Reads the given channel of the sigma-delta ADC.
-        :param channel:
+        Reads the data from the sigma-delta ADC.
         :return:
         """
-        pass
+        if continuous:
+            # could wait here by watching RDY bit, probably not time-critical enough
+            answer = self.sigmadelta_spi(True, 3, 0)
+        else:
+            # power up and perform conversion
+            self.sigmadelta(False, 1, 0xA)
+            # read result
+            answer = self.sigmadelta_spi(True, 3, 0)
+        
+        return answer
 
     # --------------------------------------------------------------------
 
