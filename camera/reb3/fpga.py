@@ -174,7 +174,7 @@ class FPGA3(FPGA):
             answer = self.sigmadelta_spi(True, 3, 0)
         else:
             # power up and perform conversion
-            self.sigmadelta(False, 1, 0xA)
+            self.sigmadelta_spi(False, 1, 0xA)
             # read result
             answer = self.sigmadelta_spi(True, 3, 0)
         
@@ -324,7 +324,8 @@ class FPGA3(FPGA):
         :rtype: bool
         """
         # reads current configuration
-        # #TODO: (currently from object, could be from ADC)
+        # TODO: (currently from object, could be from ADC)
+        # not while latch-up mess with multiplexed bias values
         current = self.get_bias_voltages(s)
         # computes proposed configuration
         proposed = {}
@@ -494,7 +495,8 @@ class FPGA3(FPGA):
         dictvalues = {}
         dictcomments = {}
 
-        for key in self.adcmap:
+        # sort dictionary keys for reliable order in the header
+        for key in sorted(self.adcmap.keys()):
             # last digit of parameter name is always the stripe
             if key[-1] == '%d' % s:
                 value = self.slow_adc_read(key)
