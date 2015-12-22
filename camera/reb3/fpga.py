@@ -158,7 +158,7 @@ class FPGA3(FPGA):
         #TODO: read mode, gain, current, ?
         if continuous:
             self.sigmadelta_spi(False, 1, 0xA)
-        else
+        else:
             self.sigmadelta_spi(False, 1, 0x200A)
         currentconfig = self.sigmadelta_spi(True, 2, 0)
         newconfig = (currentconfig & 0xfff0) + channel
