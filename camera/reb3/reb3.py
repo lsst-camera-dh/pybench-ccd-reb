@@ -256,18 +256,18 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
         primaryhdu.header["IMGTYPE"] = R.seqname
         localheader = pyfits.Header.fromtextfile("localheader.txt")
         primaryhdu.header.update(localheader)
-        # for more meta, use the driver
-        # Extended header HDU for REB operating conditions (no readback here, get it from the config dictionary).
-        exthdu = pyfits.ImageHDU(name="CCD_COND")
+        # for more meta, use the driver ccd_reb.py
+        # from FPGA object:
+        #exthdu = pyfits.ImageHDU(name="CCD_COND")
 
         #headerdict.update(R.get_cabac_config())
         #headerdict.update(R.get_aspic_config())
         #for keyword in headerdict:
         #    exthdu.header[keyword] = headerdict[keyword]
-        hdulist.append(exthdu)
-        headermeta = R.get_meta_operating()
-        for key in headermeta.keys:
-            exthdu.header[key] = (headermeta.values[key], headermeta.comments[key])
+        #hdulist.append(exthdu)
+        #headermeta = R.get_meta_operating()
+        #for key in headermeta.keys:
+        #    exthdu.header[key] = (headermeta.values[key], headermeta.comments[key])
         # Sequencer content (no actual readback, get it from the seq object)
         seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
                                                          array=reb.get_sequencer_string(R.seq),
