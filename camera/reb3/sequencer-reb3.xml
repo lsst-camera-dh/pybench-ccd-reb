@@ -249,10 +249,6 @@
                         <duration>50 ns</duration>
                         <value>001000001</value>
                     </timeslice>
-                    <timeslice id="slice11">
-                        <duration>500 ns</duration>
-                        <value>001000000</value>
-                    </timeslice>
                 </slicelist>
                 <constants>
                     <constant ref="P2">1</constant>
