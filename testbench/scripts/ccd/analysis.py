@@ -12,33 +12,15 @@ import logging
 import numpy as np
 from matplotlib import pyplot as plt
 import astropy.io.fits as pyfits
-#from lsst.testbench.drivers.ds9display import split_slicing
 
-from lsst.testbench.bench import Bench
-
-dataDir = './'
-
-B = Bench()  # singleton
-
-B.register('ds9')
 
 # USAGE
 
-#from lsst.testbench.bench import Bench
-#B = Bench()
-#import lsst.testbench.scripts.ccd.analysis
-
-# from file:
-#B.display_file('/Users/nayman/Documents/LSST-CCD/Setups/REB1-new/100-00_ptc_flat_00010_2_20150601155652.fits')
-
-# from HDUlist:
-#import astropy.io.fits as pyfits
 #s2 = pyfits.open('/Users/nayman/Documents/REB/REB3/LPNHEtest/20151014/0x0020151014134249.fits')
-#s2[0].header['width'] = 256
+#s2[0].header['width'] = 256  # if missing from header (older files)
 #s2[0].header['height'] = 1000
 #s2[0].header['detsize'] = '[1:6144,1:2000]'
-#B.display_hdu(s2)
-#B.cut_scan_plot(s2)
+#cut_scan_plot(s2)
 
 
 # UTILITIES
@@ -138,34 +120,7 @@ def area_stats(hdulist, logtofile=False, selectchannels=None):
     #return out
 
 
-def display_array(self, nparray):
-
-    self.ds9.load_array(nparray)
-    self.ds9.set_crosshair(100, 100)
-    self.ds9.scale('minmax')
-
-Bench.display_array = display_array
-
-
-def display_hdu(self, hdulist):
-
-    self.ds9.load_hdulist(hdulist)
-    self.ds9.set_crosshair(100, 100)
-    self.ds9.scale('minmax')
-
-Bench.display_hdu = display_hdu
-
-
-def display_file(self, fitsfile):
-
-    self.ds9.load_file(fitsfile)
-    self.ds9.set_crosshair(100, 100)
-    self.ds9.scale('minmax')
-
-Bench.display_file = display_file
-
-
-def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None):
+def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''):
     """
     Cut and fit plots accross image (designed for images acquired in scanning mode).
     :param cutcolumns: list of columns for display accross column direction
@@ -225,7 +180,7 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None):
 
     # log to file
     rootname = get_image_id(hdulist)
-    valuelog = os.path.join(dataDir, 'scanfit' + rootname + '.txt')
+    valuelog = os.path.join(outputdir, 'scanfit' + rootname + '.txt')
     outfile = open(valuelog, 'w')
     # header line
     outfile.write("ScanBin\t")
@@ -242,8 +197,8 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None):
     outfile.close()
 
     # save figures
-    figX.savefig(os.path.join(dataDir, 'scanfit' + rootname + '.png'))
-    figY.savefig(os.path.join(dataDir, 'plotscanfit' + rootname + '.png'))
+    figX.savefig(os.path.join(outputdir, 'scanfit' + rootname + '.png'))
+    figY.savefig(os.path.join(outputdir, 'plotscanfit' + rootname + '.png'))
 
     plt.show()
 
