@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 from matplotlib import pyplot as plt
+import astropy.io.fits as pyfits
 #from lsst.testbench.drivers.ds9display import split_slicing
 
 from lsst.testbench.bench import Bench
@@ -75,10 +76,33 @@ def get_image_id(hdulist):
 
 # ANALYSIS METHODS
 
-
-def basic_stats(self, hdulist, logtofile=False, selectchannels=None):
+def stats_on_files(listfile, listnum, datadir, selectchannels=None):
     """
-    Basic statistics on the frame from the fits HDUlist. 
+    Very basic statistics over a list of fits files. Useful for linearity of REB.
+    :param listfile: list of files without path
+    :param listnum: list of index to associate to file
+    :param datadir: directory location of files
+    :param selectchannels:
+    :return:
+    """
+    fname = datadir + 'stats.txt'
+    f = open(fname)
+    for num,fitsfile in enumerate(listfile):
+        i = pyfits.open(os.path.join(datadir,fitsfile))
+        f.write(listnum[]+'\t')
+        for name in find_channels(i, selectchannels):
+            img = i[name].data
+            light = img[500:, 20:]
+            f.write('%10.2f\t%4.2f\t' % (light.mean(), light.std()))
+        i.close()
+        f.write('\n')
+    f.close()
+    print('Wrote stats for list to %s' % fname)
+
+
+def area_stats(hdulist, logtofile=False, selectchannels=None):
+    """
+    Basic statistics on the frame from the fits HDUlist, split into ligth and dark areas.
     Printed to screen and saved to a txt file.
     Appends estimated values to the fits extension header.
     """
@@ -113,8 +137,6 @@ def basic_stats(self, hdulist, logtofile=False, selectchannels=None):
             logger.write(out+'\n')
     #return out
 
-Bench.basic_stats = basic_stats
-
 
 def display_array(self, nparray):
 
@@ -143,7 +165,7 @@ def display_file(self, fitsfile):
 Bench.display_file = display_file
 
 
-def cut_scan_plot(self, hdulist, cutcolumns=[180], selectchannels=None):
+def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None):
     """
     Cut and fit plots accross image (designed for images acquired in scanning mode).
     :param cutcolumns: list of columns for display accross column direction
@@ -224,8 +246,6 @@ def cut_scan_plot(self, hdulist, cutcolumns=[180], selectchannels=None):
     figY.savefig(os.path.join(dataDir, 'plotscanfit' + rootname + '.png'))
 
     plt.show()
-
-Bench.cut_scan_plot = cut_scan_plot
 
 
 #TODO: add a rough estimate of gain from a pair of flats
