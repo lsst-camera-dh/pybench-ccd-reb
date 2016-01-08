@@ -75,7 +75,7 @@ def stats_on_files(listfile, listnum, datadir, selectchannels=None):
     :param selectchannels:
     :return:
     """
-    fname = datadir + 'stats.txt'
+    fname = os.path.join(datadir, 'stats.txt')
     f = open(fname)
     for num,fitsfile in enumerate(listfile):
         i = open_fits(fitsfile)
@@ -211,7 +211,7 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
     plt.show()
 
 
-def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=None):
+def xtalk_memory(hdulist, sourcechan, trigger, outputdir='', selectchannels=None):
     """
     Calculates crosstalk and memory from one channel with signal to all others.
     :param infilename:
@@ -229,42 +229,30 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
 
     #Find indexes of peaks resulting from input pulses
     SplitPeaks = source>trigger
-    # indexes
-    #indexes = np.arange(len(source))
-    #HiCollect = indexes[SplitPeaks]
-    #LowCollect = indexes[~SplitPeaks]
 
     # if no peak found
-    #if HiCollect == []:
     if not np.any(SplitPeaks):
         raise ValueError("No input pulses above %f in channel %d" % (trigger, sourcechan))
     else :
         print "Found %d pulses in channel %d" % (np.count_nonzero(SplitPeaks), sourcechan)
 
     # baseline for source: find last points before series of peaks
-    #HiCollectminus1 = HiCollect[1:-1] - 1
-    #pre_peak_index = HiCollectminus1[np.not_equal(HiCollect[:-2], HiCollectminus1)]
-    #pre_peak_detect = np.logical_and(np.logical_not(SplitPeaks[:, :-1]), SplitPeaks[:, 1:])
-
     # number of bins: search for pre_peak_index on first line
     pre_peak_index = np.flatnonzero(np.logical_and(np.logical_not(SplitPeaks[0, :-1]), SplitPeaks[0, 1:]))
     interval = pre_peak_index[1] - pre_peak_index[0]
-    print('Binning over %d' % interval)
+    print('Binning over %d pixels' % interval)
     # detect pre_peak on all lines after removing last block of each line (it could be incomplete)
-    pre_peak_index = np.flatnonzero(np.logical_and(
-        np.logical_not(SplitPeaks[:, :-interval-1]), SplitPeaks[:, 1:-interval]))
-    #print pre_peak_index.shape
-    print(pre_peak_index[:10])
-
-    #- Output file
-    outfilename = outputdir + 'xtalk_memory.txt'
+    pre_peak_index = np.nonzero(np.logical_and(np.logical_not(SplitPeaks[:, :-interval-1]), SplitPeaks[:, 1:-interval]))
+    # note: pre_peak_index is a tuple of two arrays
+    
+    # output file
+    outfilename = os.path.join(outputdir, 'xtalk_memory.txt')
     outfile = open(outfilename,'w')
 
     # outputs full memory/crosstalk matrix
     for name in find_channels(hdulist, selectchannels):
-
-        # remove same as source, flatten to use indexes
-        receiver = hdulist[name].data[1:, :].ravel()
+        # remove same as source
+        receiver = hdulist[name].data[1:, :]
 
         basereceiver = receiver[pre_peak_index].mean()
         noisereceiver = receiver[pre_peak_index].std()
@@ -274,7 +262,7 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
         outfile.write("%s\t %.2f\t %.2f\t" % (name, basereceiver, noisereceiver))
 
         for b in range(1, interval):
-            value = receiver[pre_peak_index + b].mean() - basereceiver
+            value = receiver[(pre_peak_index[0], pre_peak_index[1] + b)].mean() - basereceiver
             outfile.write("%.2f\t" % value)
         outfile.write("\n")
 
