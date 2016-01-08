@@ -25,6 +25,14 @@ import astropy.io.fits as pyfits
 
 # UTILITIES
 
+def open_fits(infilename):
+    try :
+        fitsfile = pyfits.open(infilename)
+        print "Opening file " + infilename
+    except :
+        raise ValueError("Sorry, unable to open the file: " + infilename)
+    return fitsfile
+
 
 def find_channels(hdulist, selectchannels=None):
     """
@@ -70,8 +78,8 @@ def stats_on_files(listfile, listnum, datadir, selectchannels=None):
     fname = datadir + 'stats.txt'
     f = open(fname)
     for num,fitsfile in enumerate(listfile):
-        i = pyfits.open(os.path.join(datadir,fitsfile))
-        f.write(listnum[]+'\t')
+        i = open_fits(fitsfile)
+        f.write(listnum[num]+'\t')
         for name in find_channels(i, selectchannels):
             img = i[name].data
             light = img[500:, 20:]
@@ -201,6 +209,71 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
     figY.savefig(os.path.join(outputdir, 'plotscanfit' + rootname + '.png'))
 
     plt.show()
+
+
+def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=None):
+    """
+    Calculates crosstalk and memory from one channel with signal to all others.
+    :param infilename:
+    :param sourcechan: channel with signal
+    :param trigger:
+    :return:
+    """
+
+    # can remove beginning of each line here
+    source = hdulist["CHAN_%d" % sourcechan].data[:, 1:].ravel()
+    #- Skip missing channels:
+    if source == [] :
+        raise ValueError("Channel %d has no data" % sourcechan)
+
+    #Find indexes of peaks resulting from input pulses
+    SplitPeaks = source>trigger
+    # indexes
+    indexes = np.arange(len(source))
+    HiCollect = indexes[SplitPeaks]
+    # LowCollect = indexes[~SplitPeaks]
+
+    # if no peak found
+    if HiCollect == []:
+        raise ValueError("No input pulses above %f in channel %d" % (trigger, sourcechan))
+    else :
+        print "Found %d pulses in channel %d" % (len(HiCollect), sourcechan)
+
+    # baseline for source: find last points before series of peaks, skip first and last block
+    HiCollectminus1 = HiCollect[1:-1] - 1
+    pre_peak_index = HiCollectminus1[np.not_equal(HiCollect[:-2], HiCollectminus1)]
+    #print pre_peak_index.shape
+    print pre_peak_index[:20]
+    #source: average on peaks, skip also first and last block
+    peak_index = HiCollect[1:-1]
+    print peak_index[:20]
+    # number of bins: use pre_peak_index
+    interval = pre_peak_index[1] - pre_peak_index[0]
+    print('Binning over %d' % interval)
+
+    #- Output file
+    outfilename = outputdir + 'xtalk_memory.txt'
+    outfile = open(outfilename,'w')
+
+    # outputs full memory/crosstalk matrix
+    for name in find_channels(hdulist, selectchannels):
+
+        # same as source: remove first point(s) of each line and flatten
+        receiver = hdulist[name].data[:, 1:].ravel()
+
+        basereceiver = receiver[pre_peak_index].mean()
+        noisereceiver = receiver[pre_peak_index].std()
+        #print basereceiver, noisereceiver
+
+        # Split by bins, one line per channel
+        outfile.write("%s\t %.2f\t %.2f\t" % (name, basereceiver, noisereceiver))
+
+        for b in range(1, interval):
+            value = receiver[pre_peak_index + b].mean() - basereceiver
+            outfile.write("%.2f\t" % value)
+        outfile.write("\n")
+
+    outfile.close()
 
 
 #TODO: add a rough estimate of gain from a pair of flats
