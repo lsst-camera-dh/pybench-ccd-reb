@@ -245,14 +245,16 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
     #HiCollectminus1 = HiCollect[1:-1] - 1
     #pre_peak_index = HiCollectminus1[np.not_equal(HiCollect[:-2], HiCollectminus1)]
     #pre_peak_detect = np.logical_and(np.logical_not(SplitPeaks[:, :-1]), SplitPeaks[:, 1:])
-    pre_peak_index = np.nonzero(np.logical_and(np.logical_not(SplitPeaks[:, :-1]), SplitPeaks[:, 1:]))
-    # number of bins: use pre_peak_index
-    interval = pre_peak_index[0, 1] - pre_peak_index[0, 0]
+
+    # number of bins: search for pre_peak_index on first line
+    pre_peak_index = np.flatnonzero(np.logical_and(np.logical_not(SplitPeaks[0, :-1]), SplitPeaks[0, 1:]))
+    interval = pre_peak_index[1] - pre_peak_index[0]
     print('Binning over %d' % interval)
-    # remove last block of each line (could be incomplete)
-    pre_peak_index = pre_peak_index[:, :-interval].ravel()
+    # detect pre_peak on all lines after removing last block of each line (it could be incomplete)
+    pre_peak_index = np.flatnonzero(np.logical_and(
+        np.logical_not(SplitPeaks[:, :-interval-1]), SplitPeaks[:, 1:-interval]))
     #print pre_peak_index.shape
-    print pre_peak_index[:20]
+    print(pre_peak_index[:10])
 
     #- Output file
     outfilename = outputdir + 'xtalk_memory.txt'
@@ -261,7 +263,7 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
     # outputs full memory/crosstalk matrix
     for name in find_channels(hdulist, selectchannels):
 
-        # remove same as source
+        # remove same as source, flatten to use indexes
         receiver = hdulist[name].data[1:, :].ravel()
 
         basereceiver = receiver[pre_peak_index].mean()
