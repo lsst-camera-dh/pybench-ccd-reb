@@ -220,8 +220,9 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
     :return:
     """
 
-    # can remove beginning of each line here
-    source = hdulist["CHAN_%d" % sourcechan].data[:, 1:].ravel()
+    # can remove first line here (shifted by triggers during warm-up before acquisition)
+    source = hdulist["CHAN_%d" % sourcechan].data[1:, :]
+    #old : flatten
     #- Skip missing channels:
     if source == [] :
         raise ValueError("Channel %d has no data" % sourcechan)
@@ -229,24 +230,25 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
     #Find indexes of peaks resulting from input pulses
     SplitPeaks = source>trigger
     # indexes
-    indexes = np.arange(len(source))
-    HiCollect = indexes[SplitPeaks]
-    # LowCollect = indexes[~SplitPeaks]
+    #indexes = np.arange(len(source))
+    #HiCollect = indexes[SplitPeaks]
+    #LowCollect = indexes[~SplitPeaks]
 
     # if no peak found
-    if HiCollect == []:
+    #if HiCollect == []:
+    if not np.any(SplitPeaks):
         raise ValueError("No input pulses above %f in channel %d" % (trigger, sourcechan))
     else :
-        print "Found %d pulses in channel %d" % (len(HiCollect), sourcechan)
+        print "Found %d pulses in channel %d" % (np.count_nonzero(SplitPeaks), sourcechan)
 
-    # baseline for source: find last points before series of peaks, skip first and last block
-    HiCollectminus1 = HiCollect[1:-1] - 1
-    pre_peak_index = HiCollectminus1[np.not_equal(HiCollect[:-2], HiCollectminus1)]
+    # baseline for source: find last points before series of peaks
+    #HiCollectminus1 = HiCollect[1:-1] - 1
+    #pre_peak_index = HiCollectminus1[np.not_equal(HiCollect[:-2], HiCollectminus1)]
+    #pre_peak_detect = np.logical_and(np.logical_not(SplitPeaks[:, :-1]), SplitPeaks[:, 1:])
+    pre_peak_index = np.flatnonzero(np.logical_and(np.logical_not(SplitPeaks[:, :-1]), SplitPeaks[:, 1:]))
     #print pre_peak_index.shape
     print pre_peak_index[:20]
-    #source: average on peaks, skip also first and last block
-    peak_index = HiCollect[1:-1]
-    print peak_index[:20]
+
     # number of bins: use pre_peak_index
     interval = pre_peak_index[1] - pre_peak_index[0]
     print('Binning over %d' % interval)
@@ -258,8 +260,8 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir = '', selectchannels=No
     # outputs full memory/crosstalk matrix
     for name in find_channels(hdulist, selectchannels):
 
-        # same as source: remove first point(s) of each line and flatten
-        receiver = hdulist[name].data[:, 1:].ravel()
+        # remove same as source
+        receiver = hdulist[name].data[1:, :]
 
         basereceiver = receiver[pre_peak_index].mean()
         noisereceiver = receiver[pre_peak_index].std()
