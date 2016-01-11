@@ -335,9 +335,24 @@ config = {
         'driver'      : 'sensor_clap',
         'port'        : 8950,
         'commandline' : 'clap-server -d'
-        }
-
+        },
 
     # =====================================================================
-}    
+    #  Other instruments
+    # =====================================================================
+    #
+    # Programmable attenuator
+    # attenuator
+    #
+    'attenuator' : {
+        # 'host'        : 'lpnp405.in2p3.fr',
+        'host'        : '134.158.155.200',
+        'devices'     : ['/dev/ttyUSB0'],
+        'driver'      : 'attenuator',
+        'port'        : 8888,
+        'commandline' : 'attenuator'
+        }
 
+    # =====================================================================
+    #
+}

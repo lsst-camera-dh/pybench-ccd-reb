@@ -36,6 +36,7 @@ def build(bld):
                   'keithley_ks.py',
                   'sensor_clap.py',
                   'thermal_lakeshore.py',
+                  'attenuator.py',
                   'dummy_dummy.py', 
                   'wallace_gromit.py'], 
 
