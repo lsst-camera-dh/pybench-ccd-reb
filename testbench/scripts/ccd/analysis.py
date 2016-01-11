@@ -22,6 +22,8 @@ import astropy.io.fits as pyfits
 #s2[0].header['detsize'] = '[1:6144,1:2000]'
 #cut_scan_plot(s2)
 
+#h = pyfits.open('/Users/nayman/Documents/REB/REB3/LPNHEtest/xmemory/reb3-ch4-2V-att10.fz')
+#xtalk_memory(h, 4, 50000, outfilename='/Users/nayman/Documents/REB/REB3/LPNHEtest/xmemory/xtalk_memory-db10.txt')
 
 # UTILITIES
 
@@ -211,7 +213,7 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
     plt.show()
 
 
-def xtalk_memory(hdulist, sourcechan, trigger, outputdir='', selectchannels=None):
+def xtalk_memory(hdulist, sourcechan, trigger, outfilename='xtalk_memory.txt', selectchannels=None):
     """
     Calculates crosstalk and memory from one channel with signal to all others.
     :param infilename:
@@ -246,8 +248,7 @@ def xtalk_memory(hdulist, sourcechan, trigger, outputdir='', selectchannels=None
     # note: pre_peak_index is a tuple of two arrays
     
     # output file
-    outfilename = os.path.join(outputdir, 'xtalk_memory.txt')
-    outfile = open(outfilename,'w')
+    outfile = open(outfilename,'a')
 
     # outputs full memory/crosstalk matrix
     for name in find_channels(hdulist, selectchannels):

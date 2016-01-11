@@ -22,7 +22,7 @@ def build(bld):
     bld(features = 'py', 
         # source = bld.path.ant_glob('*.py'), 
         source = ['functions.py', '__init__.py', 'qe.py', 'ptc.py',
-                  'shutter.py', 'scanning.py', 'analysis.py', 'display.py'],
+                  'shutter.py', 'scanning.py', 'analysis.py', 'display.py', 'reb.py'],
         install_path = '${PYTHONDIR}/lsst/testbench/scripts/ccd')
 
     bld.recurse(submodules)
