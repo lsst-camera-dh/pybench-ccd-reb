@@ -46,7 +46,7 @@ def hdulist_to_array(i):
 
     # fill with data from the CHAN extensions
     for ihdu in i[1:]:
-        if 'CHAN' in ihdu.header['EXTNAME']:
+        if 'CHAN' in ihdu.name:
             # replace with data from  DATASEC in the DETSEC section of the new array
             dsec = split_slicing(ihdu.header['DATASEC'])
             pos = split_slicing(ihdu.header['DETSEC'])
