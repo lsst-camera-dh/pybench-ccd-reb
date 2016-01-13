@@ -29,6 +29,8 @@ def generate_hextag(tagstr):
 def utc_now_isoformat():
     return datetime.datetime.utcnow().isoformat()
 
+# Sequencer representation
+
 def get_sequencer_hdu(seq):
     """
     Builds table HDU for FITS file containing sequencer dump
@@ -85,6 +87,147 @@ def get_sequencer_string(seq):
 
     return reprarray
 
+# FITS mosaic formating
+
+
+def get_detsize(imgcols, imglines, nchannels, nstripes, channels=None, displayborders=False):
+    """
+    Builds detector size information for the FITS header.
+    If borders is True, includes all read pixels in DETSIZE.
+    If only some channels are selected, puts them side by side.
+    :return: string
+    """
+    if channels:
+        if displayborders:
+            detstring = '[1:%d,1:%d]' % (imgcols * len(channels), imglines)
+        else:
+            detstring = '[1:%d,1:2002]' % (512 * len(channels))
+    else:
+        if displayborders:
+            detstring = '[1:%d,1:%d]' % (imgcols * nchannels / 2, 2 * imglines)
+        else:
+            detstring = '[1:%d,1:4004]' % (nstripes * 4096)
+
+    return detstring
+
+
+def get_extension_header(imgcols, imglines, CCDchan, fitshdu, detstring, channels=None, displayborders=False):
+    """
+    Builds FITS extension header with position information for each channel.
+    If displayborders is True, includes all read pixels in DATASEC display.
+    :type CCDchan: int
+    :type fitshdu: pyfits.HDU
+    :type detstring: basestring
+    :type channels: list
+    :type displayborders: bool
+    :return:
+    """
+    extheader = fitshdu.header
+    extheader["NAXIS1"] = imgcols
+    extheader["NAXIS2"] = imglines
+    extheader['DETSIZE'] = detstring
+    extheader['CHANNEL'] = CCDchan
+
+    if displayborders:
+        parstringlow = '1:%d' % imglines
+        parstringhigh = '%d:%d' % (2 * imglines, imglines + 1)
+        colwidth = imgcols
+        extheader['DATASEC'] = '[1:%d,1:%d]' % (imgcols, imglines)
+    else:
+        parstringlow = '1:2002'
+        parstringhigh = '4004:2003'
+        colwidth = 512
+        extheader['DATASEC'] = '[11:522,1:2002]'
+
+    if channels:  # put them in a row
+        pdet = parstringlow
+        si = colwidth * CCDchan +1
+        sf = colwidth * (CCDchan + 1)
+    else:
+        numCCD = CCDchan / 16
+        chan = CCDchan - numCCD * 16
+        if chan < 8:
+            pdet = parstringlow
+            si = colwidth * (CCDchan - 8 * numCCD + 1)
+            sf = colwidth * (CCDchan - 8 * numCCD) + 1
+        else:
+            pdet = parstringhigh
+            si = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
+            sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
+
+    extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
+
+    # this is valid in any case with a CCD
+    extheader['BIASSEC'] = ('[523:544,1:2002]', 'Serial overscan region')
+
+
+def make_fits_name(fitstopdir, imgstr, compressed=True):
+    """
+    Builds a complete FITS file path.
+    Takes the root name of imgstr as FITS name.
+    :type imgstr: string
+    :type compressed: bool
+    :return: string
+    """
+    fitsdir = os.path.join(fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
+    if not os.path.isdir(fitsdir):
+        os.mkdir(fitsdir)
+
+    rootname = os.path.splitext(os.path.basename(imgstr))[0]
+
+    fitsname = os.path.join(fitsdir, rootname + (compressed and '.fz' or '.fits'))
+
+    return fitsname
+
+
+def conv_to_fits(imgname, imgcols, imglines, nchannels, nstripes, channels=None, displayborders=False):
+    """
+    Creates the fits object from the acquired data.
+    If channels is not None, it is the list of channels to be saved.
+    """
+
+    # Reading raw file to array
+    dt = N.dtype('i4')
+    buff = N.fromfile(imgname, dtype=dt)
+
+    # for 18-bit data:
+    # negative numbers are translated, sign is inverted on all data, also make all values positive
+    # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
+    # this works by XORing the lowest 17 bits
+    rawdata = N.bitwise_xor(buff, 0x1FFFF)
+    # reshape by channel
+    length = imglines * imgcols
+    rawdata = rawdata.reshape(length, nchannels)
+
+    # Creating FITS HDUs:
+    # Create empty primary HDU and fills header
+    primaryhdu = pyfits.PrimaryHDU()
+    detstring = get_detsize(channels, displayborders, nchannels, nstripes)
+    primaryhdu.header['DETSIZE'] = (detstring, 'NOAO MOSAIC keywords')
+    primaryhdu.header['WIDTH'] = (imgcols, 'CCD columns per channel')
+    primaryhdu.header['HEIGHT'] = (imglines, 'CCD lines per channel')
+    # Create HDU list
+    hdulist = pyfits.HDUList([primaryhdu])
+
+    # Add extensions for channels HDUs
+    for num in channels:
+        if channels:  # to skip non-useful channels
+            if num not in channels:
+                continue
+        chan = rawdata[0:length, num]
+        chan = chan.reshape(imglines, imgcols)
+        y = chan.astype(N.int32)
+        # create extension to fits file for each channel
+        #if self.compression:
+        exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
+        #else:
+            #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
+        get_extension_header(imgcols, imglines, num, exthdu, detstring, channels, displayborders)
+        avchan = N.mean(y[11:imgcols-50, 2:imglines-20])
+        exthdu.header["AVERAGE"] = avchan
+        hdulist.append(exthdu)
+
+    return hdulist
 
 # =======================================================================
 
@@ -347,142 +490,6 @@ class REB(object):
         """
         return os.path.join(self.rawimgdir, '0x%016x.img' % self.fpga.get_time())
 
-    # --------------------------------------------------------------------
-
-    def conv_to_fits(self, imgname, channels=None, displayborders=False):
-        """
-        Creates the fits object from the acquired data.
-        If channels is not None but a list, saves the channels in the list (number 0 to 15).
-        """
-
-        # Reading raw file to array
-        dt = N.dtype('i4')
-        buff = N.fromfile(imgname, dtype=dt)
-
-        # for 18-bit data:
-        # negative numbers are translated, sign is inverted on all data, also make all values positive
-        # 0 -> 1FFFF, 1FFFF -> 0, 20000 -> 3FFFF, 3FFFF -> 20000
-        # this works by XORing the lowest 17 bits
-        rawdata = N.bitwise_xor(buff, 0x1FFFF)
-        # reshape by channel
-        length = self.imglines * self.imgcols
-        rawdata = rawdata.reshape(length, self.nchannels)
-
-        # Creating FITS HDUs:
-        # Create empty primary HDU and fills header
-        primaryhdu = pyfits.PrimaryHDU()
-        primaryhdu.header['DETSIZE'] = (self.get_detsize(channels, displayborders), 'NOAO MOSAIC keywords')
-        primaryhdu.header['WIDTH'] = (self.imgcols, 'CCD columns per channel')
-        primaryhdu.header['HEIGHT'] = (self.imglines, 'CCD lines per channel')
-        # Create HDU list
-        hdulist = pyfits.HDUList([primaryhdu])
-
-        # Add extensions for channels HDUs
-        for num in range(self.nchannels):
-            if channels:  # to skip non-useful channels
-                if num not in channels:
-                    continue
-            chan = rawdata[0:length, num]
-            chan = chan.reshape(self.imglines, self.imgcols)
-            y = chan.astype(N.int32)
-            # create extension to fits file for each channel
-            #if self.compression:
-            exthdu = pyfits.CompImageHDU(data=y, name="CHAN_%d" % num, compression_type='RICE_1')
-            #else:
-                #exthdu = pyfits.ImageHDU(data=y, name="CHAN_%d" % num)  # for non-compressed image
-            self.get_extension_header(num, exthdu, channels, displayborders)
-            avchan = N.mean(y[11:self.imgcols-50, 2:self.imglines-20])
-            exthdu.header["AVERAGE"] = avchan
-            hdulist.append(exthdu)
-
-        return hdulist
-
-    def get_detsize(self, channels=None, displayborders=False):
-        """
-        Builds detector size information for the FITS header.
-        If borders is True, includes all read pixels in DETSIZE.
-        If only some channels are selected, puts them side by side.
-        :return: string
-        """
-        if channels:
-            if displayborders:
-                detstring = '[1:%d,1:%d]' % (self.imgcols * len(channels), self.imglines)
-            else:
-                detstring = '[1:%d,1:2002]' % (512 * len(channels))
-        else:
-            if displayborders:
-                detstring = '[1:%d,1:%d]' % (self.imgcols * self.nchannels / 2, 2 * self.imglines)
-            else:
-                detstring = '[1:%d,1:4004]' % (len(self.stripes) * 4096)
-
-        return detstring
-
-    def get_extension_header(self, CCDchan, fitshdu, channels=None, displayborders=False):
-        """
-        Builds FITS extension header with position information for each channel.
-        If displayborders is True, includes all read pixels in DATASEC display.
-        :type CCDchan: int
-        :type fitshdu: pyfits.HDU
-        :type channels: list
-        :type displayborders: bool
-        :return:
-        """
-        extheader = fitshdu.header
-        extheader["NAXIS1"] = self.imgcols
-        extheader["NAXIS2"] = self.imglines
-        extheader['DETSIZE'] = self.get_detsize(channels, displayborders)
-        extheader['CHANNEL'] = CCDchan
-
-        if displayborders:
-            parstringlow = '1:%d' % self.imglines
-            parstringhigh = '%d:%d' % (2*self.imglines, self.imglines+1)
-            colwidth = self.imgcols
-            extheader['DATASEC'] = '[1:%d,1:%d]' % (self.imgcols, self.imglines)
-        else:
-            parstringlow = '1:2002'
-            parstringhigh = '4004:2003'
-            colwidth = 512
-            extheader['DATASEC'] = '[11:522,1:2002]'
-
-        if channels:  # put them in a row
-            pdet = parstringlow
-            si = colwidth * CCDchan +1
-            sf = colwidth * (CCDchan + 1)
-        else:
-            numCCD = CCDchan / 16
-            chan = CCDchan - numCCD * 16
-            if chan < 8:
-                pdet = parstringlow
-                si = colwidth * (CCDchan - 8 * numCCD + 1)
-                sf = colwidth * (CCDchan - 8 * numCCD) + 1
-            else:
-                pdet = parstringhigh
-                si = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
-                sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
-
-        extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
-
-        # this is valid in any case with a CCD
-        extheader['BIASSEC'] = ('[523:544,1:2002]', 'Serial overscan region')
-
-    def make_fits_name(self, imgstr, compressed=True):
-        """
-        Builds a complete FITS file path.
-        Takes the root name of imgstr as FITS name.
-        :type imgstr: string
-        :type compressed: bool
-        :return: string
-        """
-        fitsdir = os.path.join(self.fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
-        if not os.path.isdir(fitsdir):
-            os.mkdir(fitsdir)
-
-        rootname = os.path.splitext(os.path.basename(imgstr))[0]
-
-        fitsname = os.path.join(fitsdir, rootname + (compressed and '.fz' or '.fits'))
-
-        return fitsname
-        
     # --------------------------------------------------------------------
 
     def get_meta_operating(self):
