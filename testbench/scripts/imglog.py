@@ -1,5 +1,5 @@
-import lsst.testbench
-B = lsst.testbench.Bench()
+from lsst.testbench.bench import Bench
+B = Bench()
 import lsst.testbench.scripts.ccd.functions
 
 # BEFORE connecting to CCD
@@ -7,7 +7,7 @@ B.initialize_REB()
 # AFTER connecting to CCD
 B.powerup_CCD()
 B.reb.set_testtype('TEST')
-m = B.execute_reb_sequence(True, 'Acquisition', 2)
+m = B.execute_reb_sequence('Acquisition', 2)
 # to execute again the same sequence :
 m = B.execute_reb_sequence()
 
@@ -41,8 +41,8 @@ B.register('lakeshore1')
 
 
 # to recover REB object after Python reboot without reloading the whole sequencer
-import lsst.testbench.bench as bench
-B = bench.Bench()
+from lsst.testbench.bench import Bench
+B = Bench()
 import lsst.testbench.scripts.ccd.functions
 from lsst.camera.generic import rebxml
 B.reb.reb.seq = rebxml.fromxmlfile('/home/lsst/git/py/camera/reb1/sequencer-soi.xml')
