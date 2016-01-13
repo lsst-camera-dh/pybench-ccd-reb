@@ -9,7 +9,7 @@ Testbench driver for REB (through direct calls to rriClient)
 import lsst.camera.reb1.reb1 as reb1
 import lsst.camera.wreb.wreb as wreb
 import lsst.camera.reb3.reb3 as reb3
-from lsst.camera.generic.reb import get_sequencer_string
+from lsst.camera.generic.reb import *
 
 from driver import Driver
 import logging
@@ -456,7 +456,9 @@ class Instrument(Driver):
         :param displayborders: bool
         :return: pyfits.HDUlist
         """
-        return self.reb.conv_to_fits(imgname, channels, displayborders)
+        return conv_to_fits(imgname, self.reb.imgcols, self.reb.imglines, self.reb.nchannels, len(self.reb.stripes),
+                            channels,
+                            displayborders)
 
     def make_fits_name(self, imgstr, compressed=True):
         """
@@ -464,7 +466,7 @@ class Instrument(Driver):
         :param imgstr: string
         :return: string
         """
-        return self.reb.make_fits_name(imgstr, compressed)
+        return make_fits_name(self.reb.fitstopdir, imgstr, compressed)
 
     def set_testtype(self, name):
         """

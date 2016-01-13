@@ -243,12 +243,13 @@ def save_to_fits(R, channels=None, rawimg='', fitsname = ""):  # not meant to be
     else:
         imgname = R.make_img_name()
     if os.path.isfile(imgname):
-        hdulist = R.conv_to_fits(imgname, channels, displayborders=True)
+        hdulist = reb.conv_to_fits(imgname, R.imgcols, R.imglines, R.nchannels, len(R.stripes), channels,
+                                 displayborders=True)
         primaryhdu = hdulist[0]
         imgstr = os.path.splitext(os.path.basename(imgname))[0]
         primaryhdu.header["IMAGETAG"] = imgstr
         if not fitsname:
-            fitsname = R.make_fits_name(imgstr)
+            fitsname = reb.make_fits_name(R.fitstopdir, imgstr)
         # else: using LSST scheme for directory and image name, already built in fitsname
         primaryhdu.header["FILENAME"] = os.path.basename(fitsname)
         primaryhdu.header["DATE-OBS"] = R.tstamp
