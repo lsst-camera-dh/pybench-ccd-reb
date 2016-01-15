@@ -256,8 +256,7 @@ class FPGA0(FPGA):
         """
         check_location(s)
 
-        config = MetaData()
-        config.update_fromdict({'G_T': 4, 'RC_T': 500, 'G_B': 4, 'RC_B': 500})
+        config = MetaData(['G_T', 'RC_T', 'G_B', 'RC_B'], {'G_T': 4, 'RC_T': 500, 'G_B': 4, 'RC_B': 500})
 
         return config
 
