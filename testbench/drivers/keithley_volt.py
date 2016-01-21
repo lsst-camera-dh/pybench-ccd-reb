@@ -3,7 +3,7 @@
 # Author: Laurent Le Guillou
 #
 """
-Testbench driver for the Keithley multimeter (through keithley-server and XML-RPC)
+Testbench driver for the Keithley multimeter 6514 (through keithley app on remote computer and XML-RPC)
 """
 
 # XML-RPC interface:
@@ -18,25 +18,24 @@ Testbench driver for the Keithley multimeter (through keithley-server and XML-RP
 #   void setVerbose(bool)        puts software in verbose mode
 #   void recordData(String)      records data (amps.) in String file if String is not empty, otherwise stops recording
 #   void writeComment(String)    adds String to the header of the record file
-#   help()                       this information
+#   help()                       this information (for 6487 model in fact)
 
 # current measurement related methods
 #   zeroCorrect()                performs zero correct procedure
+#   setCurrentRange()            int argument [0-2]
 #   double getCurrent()          the last read value, instrument must be acquiring continuously
 #   readContinuous(int)          -1 to stop, 0 to read fastest, other value = delay between reads
 #   setRate(double)              sets read rate 0.01 --> 10.0 or 50.0 (if model is 6487)
 #   startSequence(int)           begins acquiring a sequence, argument: number of data values to acquire
 #   getSequence()                returns the list of read values (double)
 
-# voltage source related methods (only 6487 model)
-#   getVoltageRange              returns int 0: 10V 1: 50V 2: 500V
-#   setVoltageRange              int argument [0-2]
-#   getVoltage                   returns a double, preset output voltage
-#   setVoltage                   double argument, [-70.0, 0.0]
-#   getCurrentLimit              returns int 0: 25uA, 1: 250uA, 2: 2.5mA and 3: 25mA iff voltage range is 10V
-#   setCurrentLimit              int argument [0-2,3]
-#   sourceVoltage                int argument 0: stop sourcing, other value sources voltage
-#   voltageStatus                returns int 0: not sourcing 1: sourcing
+# voltage measurement related methods
+#   zeroCorrectVolts()           performs zero correct procedure for volt measurements
+#   selectVolts                  int argument [0-2]: selects DC volt measurement and sets the range
+#   readVoltage                  instrument acquires a value
+#   retrieveVoltage              retrieves last acquired value from instrument
+
+import time
 
 from driver import Driver
 
@@ -69,7 +68,9 @@ class Instrument(Driver):
 
         self.xmlrpc = xmlrpclib.ServerProxy("http://%s:%d/" % 
                                             (self.host, self.port))
-
+        self.v1 = 0
+        self.v2 = 0
+        self.rangeV = 0  # for auto
 
     def open(self):
         """
@@ -141,60 +142,48 @@ class Instrument(Driver):
         # logging.info("Keithley.reset() done.")
         return result
 
-
-    def clear(self):
-        """
-        Clear the instrument status.
-        """ 
-        # logging.info("Keithley.clear() called.")
-        result = self.xmlrpc.clear()
-        # logging.info("Keithley.clear() done.")
-        return result
-
-    
-    # ----------------------- Keithley generic command ------------------
-
-    def send(self, command, timeout = None):
-        """
-        Send a command through the serial port.
-        Read the answer from the serial port.
-        Return it as a string.
-
-        If <timeout> is specified, the function will wait
-        for data with the specified timeout (instead of the default one). 
-        """
-
-        # logging.info("Keithley.send() called.")
-        # logging.info("  command = [%s]" % command)
-        answer = self.xmlrpc.send(command, timeout = timeout)
-        # logging.info("  answer = [%s]" % answer)
-        # logging.info("Keithley.send() done.")
-        return answer
-
     # ----------------------- Keithley identification -------------------
 
     def get_serial(self):
         """
         Return the identification string of the Keithley.
         """
-        # logging.info("Keithley.get_serial() called.")
-        serial = self.xmlrpc.get_serial()
-        # logging.info("  serial = [%s]" % serial)
-        # logging.info("Keithley.get_serial() done.")
+
+        serial = self.xmlrpc.getModel()
+
         return serial
 
     # ----------------------- Various methods ---------------------------
 
-    def scroll_text(self, msg):
+    def setup(self, rangevolts):
         """
-        Scroll text 'msg' on the Multimeter display.
-        For debug purpose only.
+        Does zero correct and sets the voltage range.
+        :param r:
+        :return:
         """
-        # logging.info("Keithley.scroll_text() called.")
-        result = self.xmlrpc.scroll_text(msg)
-        # logging.info("Keithley.scroll_text() done.")
-        return result
+        self.xmlrpc.selectVolts(rangevolts)
+        self.rangeV = rangevolts  # read back ?
+        self.xmlrpc.zeroCorrectVolts()
 
+    def get_voltage(self):
+        """
+        Gets a single voltage readout.
+        :return:
+        """
+        self.xmlrpc.readVoltage()
+        time.sleep(0.2)
+        self.xmlrpc.retrieveVoltage()
+
+
+    # ===================================================================
+    # PRE/POST exposure hooks
+    # ===================================================================
+
+    def pre_exposure(self, exptime):
+        self.v1 = self.get_voltage()
+
+    def post_exposure(self):
+        self.v2 = self.get_voltage()
 
     # ===================================================================
     #  Meta data / state of the instrument 
@@ -210,17 +199,26 @@ class Instrument(Driver):
 
         # keys : specify the key order
         keys = ['MODEL',
-                'DRIVER']
+                'DRIVER',
+                'RANGE',
+                'PREEXP',
+                'POSTEXP']
 
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
-            'DRIVER' : 'Instrument software driver' 
-            }
+            'DRIVER' : 'Instrument software driver',
+            'RANGE'  : '[V] instrument range',
+            'PREEXP' : '[V] measurement before exposure',
+            'POSTEXP': '[V] measurement after exposure'
+        }
 
         values = {
             'MODEL'  : self.get_serial(),
-            'DRIVER' : 'keithley-server / keithley' 
+            'DRIVER' : 'keithley_volt',
+            'RANGE'  : self.rangeV and ('%.2f' % self.rangeV) or 'Auto',
+            'PREEXP' : self.v1,
+            'POSTEXP': self.v2
             }
 
         data = []

@@ -190,18 +190,19 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
         # option 1: check baseline and pulse amplitude (roughly)
         self.attenuator.set_attenuation(127)
         # TODO: volt measure
-        i[0].header['VOLTBASE'] = 0
+        k127 = 0
+        i[0].header['VOLTBASE'] = k127
         self.attenuator.set_attenuation(0)
         # TODO: volt measure
-        i[0].header['ATT0'] = 0
+        k0 = 0
+        i[0].header['ATT0'] = k0
 
         self.save_to_fits(i, m, fitsname=os.path.join(fitsdir, 'reb3-dB%d.fz' % att))
 
-        # TODO: better estimate than k
         if sourcechan is None:
             memfile = os.path.join(fitsdir, 'recap.txt')
             f = open(memfile, 'a')
-            f.write('%d\t%f\t' % (att, k))
+            f.write('%d\t%f\t%f\t%f\t' % (att, k, k0, k127))
             for name in find_channels(i):
                 img = i[name].data
                 light = img[500:, 20:]
@@ -215,7 +216,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
             xtalk_memory(i, sourcechan, 50000, outfilename=memfile)
         i.close()
 
-        # option 2: acquire baseline file
+        # option 2: acquire baseline file and reference file
 
 Bench.linearity_scan = linearity_scan
 
