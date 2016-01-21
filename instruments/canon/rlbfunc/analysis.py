@@ -446,12 +446,19 @@ def make_dead_line(fact=3.):
     for f in frames:
         print "Computing frame : " + str(i_f) + "/" + str(length_f)
         image = gl.glob(f + "single_masterflat_image.fits")
-        if len(image) == 1:
+        fringes = gl.glob(f + "single_flatfield_image.fits")
+        if len(image) == 1 and len(fringes) == 1:
+            mask = np.zeros((4004,4096))
+
+            temp_fringes = pf.open(fringes[0])
+            data = temp_fringes[0].data
+            mask[data<0.] = 1
+            temp_fringes.close()
+
             temp_flat = pf.open(image[0])
             d = temp_flat[0].data
             x_step = 143
             x_div = np.linspace(0,4004,29).astype(int)
-            mask = np.zeros((4004,4096))
             mask[d<0.00001] = 1
             d = np.ma.array(d,mask=mask)
             for x in x_div[:-1]:
