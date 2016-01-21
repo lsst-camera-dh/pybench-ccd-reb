@@ -325,6 +325,21 @@ config = {
 
     # =====================================================================
     #
+    # Keithley 6514 multimeter (8889) in voltage measurement configuration
+    # for the REB bench
+    # keithley /dev/ttyUSB1
+    #
+    'Vkeithley' : {
+        # 'host'        : 'lpnp405.in2p3.fr',
+        'host'        : '134.158.155.200',
+        'devices'     : ['/dev/ttyUSB1'],
+        'driver'      : 'keithley_volt',
+        'port'        : 8087,
+        'commandline' : 'keithley'
+        },
+
+    # =====================================================================
+    #
     # CLAP (from DICE)
     #
 

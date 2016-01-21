@@ -32,7 +32,7 @@ def build(bld):
                   'ttl_ni.py',
                   'monochromator_triax.py',
                   'xyz_pollux.py',
-                  # 'keithley.py',
+                  'keithley_volt.py',
                   'keithley_ks.py',
                   'sensor_clap.py',
                   'thermal_lakeshore.py',
