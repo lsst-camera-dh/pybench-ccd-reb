@@ -18,6 +18,7 @@ B = Bench()  # singleton
 
 B.register('reb')  # connect to the REB
 B.register('attenuator')
+B.register('Vkeithley')
 
 
 #load_sequencer(self, filename=None):
@@ -167,6 +168,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     :param att:
     :return:
     """
+    self.Vkeithley.setup(1)
     self.reb.set_testtype('LINEARITY')
     fitsdir = os.path.join(self.reb.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), localdir)
     if not os.path.isdir(fitsdir):
@@ -181,20 +183,20 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
         self.attenuator.set_attenuation(att)
         m = self.execute_reb_sequence(name='Bias', delaytime=2, withmeta=True)
         i = self.conv_to_fits(borders=True)
-        # TODO: do a voltage measure outside of running time
-        k = 0
-        # k = self.
+
         i[0].header['ATT'] = att
-        i[0].header['VOLT'] = k
+        i[0].header['VOLT1'] = self.Vkeithley.v1
+        i[0].header['VOLT2'] = self.Vkeithley.v2
+        k = (self.Vkeithley.v1 + self.Vkeithley.v2)/2
 
         # option 1: check baseline and pulse amplitude (roughly)
         self.attenuator.set_attenuation(127)
-        # TODO: volt measure
-        k127 = 0
+        time.sleep(2)
+        k127 = self.Vkeithley.get_voltage()
         i[0].header['VOLTBASE'] = k127
         self.attenuator.set_attenuation(0)
-        # TODO: volt measure
-        k0 = 0
+        time.sleep(2)
+        k0 = self.Vkeithley.get_voltage()
         i[0].header['ATT0'] = k0
 
         self.save_to_fits(i, m, fitsname=os.path.join(fitsdir, 'reb3-dB%d.fz' % att))
