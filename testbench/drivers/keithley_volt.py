@@ -86,10 +86,7 @@ class Instrument(Driver):
         """
         answer = self.checkConnection()
 
-        if answer == "":
-            return False
-
-        if 'KEITHLEY' not in answer:
+        if answer != '6514':
             return False
             
         return True
@@ -99,7 +96,7 @@ class Instrument(Driver):
         """
         Returns a NULL string or the instrument model name
         """
-        return self.xmlrpc.getModel()
+        return self.get_serial()
 
 
     def register(self, bench):
@@ -161,9 +158,9 @@ class Instrument(Driver):
         :param r:
         :return:
         """
-        self.xmlrpc.selectVolts(rangevolts)
-        self.rangeV = rangevolts  # read back ?
-        self.xmlrpc.zeroCorrectVolts()
+        self.xmlrpc.selectVolts(rangevolts)  # TODO: check if and how it works
+        self.rangeV = rangevolts
+        self.xmlrpc.zeroCorrectVolts()  # does it only if not done already
 
     def get_voltage(self):
         """
@@ -172,8 +169,8 @@ class Instrument(Driver):
         """
         self.xmlrpc.readVoltage()
         time.sleep(0.2)
-        self.xmlrpc.retrieveVoltage()
 
+        return self.xmlrpc.retrieveVoltage()
 
     # ===================================================================
     # PRE/POST exposure hooks
@@ -204,11 +201,12 @@ class Instrument(Driver):
                 'PREEXP',
                 'POSTEXP']
 
+        # TODO: check ranges
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
             'DRIVER' : 'Instrument software driver',
-            'RANGE'  : '[V] instrument range',
+            'RANGE'  : 'Instrument range: 0:Auto, 1:2V, 2:20V',
             'PREEXP' : '[V] measurement before exposure',
             'POSTEXP': '[V] measurement after exposure'
         }
@@ -216,7 +214,7 @@ class Instrument(Driver):
         values = {
             'MODEL'  : self.get_serial(),
             'DRIVER' : 'keithley_volt',
-            'RANGE'  : self.rangeV and ('%.2f' % self.rangeV) or 'Auto',
+            'RANGE'  : self.rangeV,
             'PREEXP' : self.v1,
             'POSTEXP': self.v2
             }
