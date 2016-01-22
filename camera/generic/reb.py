@@ -90,7 +90,7 @@ def get_sequencer_string(seq):
 # FITS mosaic formating
 
 
-def get_detsize(imgcols, imglines, nchannels, nstripes, channels=None, displayborders=False):
+def get_detsize(imgcols, imglines, nchannels, channels=None, displayborders=False):
     """
     Builds detector size information for the FITS header.
     If borders is True, includes all read pixels in DETSIZE.
@@ -106,7 +106,7 @@ def get_detsize(imgcols, imglines, nchannels, nstripes, channels=None, displaybo
         if displayborders:
             detstring = '[1:%d,1:%d]' % (imgcols * nchannels / 2, 2 * imglines)
         else:
-            detstring = '[1:%d,1:4004]' % (nstripes * 4096)
+            detstring = '[1:%d,1:4004]' % (nchannels * 256)
 
     return detstring
 
@@ -180,10 +180,16 @@ def make_fits_name(fitstopdir, imgstr, compressed=True):
     return fitsname
 
 
-def conv_to_fits(imgname, imgcols, imglines, nchannels, nstripes, channels=None, displayborders=False):
+def conv_to_fits(imgname, imgcols, imglines, nchannels, channels=None, displayborders=False):
     """
     Creates the fits object from the acquired data.
     If channels is not None, it is the list of channels to be saved.
+    :param imgname: file in .img format
+    :param imgcols: columns in a single channel
+    :param imglines: lines in a single channel
+    :param nchannels: total number of channels acquired
+    :param channels: selected channels to convert to fits, if not None
+    :param displayborders: if the displayed image will include the non-exposed areas
     """
 
     # Reading raw file to array
@@ -202,7 +208,7 @@ def conv_to_fits(imgname, imgcols, imglines, nchannels, nstripes, channels=None,
     # Creating FITS HDUs:
     # Create empty primary HDU and fills header
     primaryhdu = pyfits.PrimaryHDU()
-    detstring = get_detsize(channels, displayborders, nchannels, nstripes)
+    detstring = get_detsize(channels, displayborders, nchannels, channels, displayborders)
     primaryhdu.header['DETSIZE'] = (detstring, 'NOAO MOSAIC keywords')
     primaryhdu.header['WIDTH'] = (imgcols, 'CCD columns per channel')
     primaryhdu.header['HEIGHT'] = (imglines, 'CCD lines per channel')
@@ -210,7 +216,7 @@ def conv_to_fits(imgname, imgcols, imglines, nchannels, nstripes, channels=None,
     hdulist = pyfits.HDUList([primaryhdu])
 
     # Add extensions for channels HDUs
-    for num in channels:
+    for num in range(nchannels):
         if channels:  # to skip non-useful channels
             if num not in channels:
                 continue

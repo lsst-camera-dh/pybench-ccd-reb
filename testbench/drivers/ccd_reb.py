@@ -456,9 +456,7 @@ class Instrument(Driver):
         :param displayborders: bool
         :return: pyfits.HDUlist
         """
-        return conv_to_fits(imgname, self.reb.imgcols, self.reb.imglines, self.reb.nchannels, len(self.reb.stripes),
-                            channels,
-                            displayborders)
+        return conv_to_fits(imgname, self.reb.imgcols, self.reb.imglines, self.reb.nchannels, channels, displayborders)
 
     def make_fits_name(self, imgstr, compressed=True):
         """
