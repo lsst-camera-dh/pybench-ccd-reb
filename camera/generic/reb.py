@@ -208,7 +208,7 @@ def conv_to_fits(imgname, imgcols, imglines, nchannels, channels=None, displaybo
     # Creating FITS HDUs:
     # Create empty primary HDU and fills header
     primaryhdu = pyfits.PrimaryHDU()
-    detstring = get_detsize(channels, displayborders, nchannels, channels, displayborders)
+    detstring = get_detsize(imgcols, imglines, nchannels, channels, displayborders)
     primaryhdu.header['DETSIZE'] = (detstring, 'NOAO MOSAIC keywords')
     primaryhdu.header['WIDTH'] = (imgcols, 'CCD columns per channel')
     primaryhdu.header['HEIGHT'] = (imglines, 'CCD lines per channel')
