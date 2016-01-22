@@ -36,27 +36,27 @@ config = {
     # REB (version 1)
     # 
     #
-    'reb': {
-       'driver'      : 'ccd_reb',
-       'hardware'    : 'REB1',
-       'reb_id'      : 2,
-       'stripe'      : 0,
-       'xmlfile'     : 'sequencer-soi.xml',
-       'version'     : 0xb01c0008  # TODO: read it from the board
-       },
+    #'reb': {
+    #   'driver'      : 'ccd_reb',
+    #   'hardware'    : 'REB1',
+    #   'reb_id'      : 2,
+    #   'stripe'      : 0,
+    #   'xmlfile'     : 'sequencer-soi.xml',
+    #   'version'     : 0xb01c0008  # TODO: read it from the board
+    #   },
     
     # ---------------------------------------------------------------------
     # WREB (version 1)
     # 
     #
-    # 'reb': {
-    #     'driver'      : 'ccd_reb',
-    #     'hardware'    : 'WREB1',
-    #     'reb_id'      : 0xFF,
-    #     'stripe'      : 0,
-    #     'xmlfile'     : 'sequencer-wreb.xml',
-    #     'version'     : 0xb0200101   # TODO: read it from the board
-    #     },
+     'reb': {
+         'driver'      : 'ccd_reb',
+         'hardware'    : 'WREB1',
+         'reb_id'      : 0xFF,
+         'stripe'      : 0,
+         'xmlfile'     : 'sequencer-wreb.xml',
+         'version'     : 0xb0200101   # TODO: read it from the board
+         },
     #
     # ---------------------------------------------------------------------
     # REB (version 3)
