@@ -23,7 +23,10 @@ import astropy.io.fits as pyfits
 #cut_scan_plot(s2)
 
 #h = pyfits.open('/Users/nayman/Documents/REB/REB3/LPNHEtest/xmemory/reb3-ch4-2V-att10.fz')
-#xtalk_memory(h, 4, 50000, outfilename='/Users/nayman/Documents/REB/REB3/LPNHEtest/xmemory/xtalk_memory-db10.txt')
+#outfilename='/Users/nayman/Documents/REB/REB3/LPNHEtest/xmemory/xtalk_memory-db10.txt'
+#outfile = open(outfilename,'a')
+#xtalk_memory(h, 4, 50000, outfile)
+#outfile.close()
 
 # UTILITIES
 
@@ -213,12 +216,11 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
     plt.show()
 
 
-def xtalk_memory(hdulist, sourcechan, trigger, outfilename='xtalk_memory.txt', selectchannels=None):
+def xtalk_memory(hdulist, sourcechan, trigger, outfile, selectchannels=None):
     """
     Calculates crosstalk and memory from one channel with signal to all others.
-    :param infilename:
     :param sourcechan: channel with signal
-    :param trigger:
+    :param trigger: minimal level of signal
     :return:
     """
 
@@ -246,9 +248,6 @@ def xtalk_memory(hdulist, sourcechan, trigger, outfilename='xtalk_memory.txt', s
     # detect pre_peak on all lines after removing last block of each line (it could be incomplete)
     pre_peak_index = np.nonzero(np.logical_and(np.logical_not(SplitPeaks[:, :-interval-1]), SplitPeaks[:, 1:-interval]))
     # note: pre_peak_index is a tuple of two arrays
-    
-    # output file
-    outfile = open(outfilename,'a')
 
     # outputs full memory/crosstalk matrix
     for name in find_channels(hdulist, selectchannels):
@@ -267,8 +266,7 @@ def xtalk_memory(hdulist, sourcechan, trigger, outfilename='xtalk_memory.txt', s
             outfile.write("%.2f\t" % value)
         outfile.write("\n")
 
-    outfile.close()
-
 
 #TODO: add a rough estimate of gain from a pair of flats
 #TODO: rough estimate of the CTE from the first line and first column of overscans
+

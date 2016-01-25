@@ -107,11 +107,11 @@ class Instrument(Driver):
         Return it or None.
         """
         try:
-            answer = self.reb.fpga.read(0x2)
+            answer = self.reb.fpga.read(0x2)[0x2]
         except IOError:
             answer = None
 
-        return answer[0x2]
+        return answer
 
     def register(self, bench):
         self.open()
@@ -121,7 +121,8 @@ class Instrument(Driver):
                 "REB #%d not connected.\n You should run this on the computer connected to the crate." % self.reb_id)
 
         Driver.register(self, bench)
-
+        self.boardID = self.reb.fpga.get_boardID()
+        
     def close(self):
         """
         Close the hardware connection.
@@ -547,7 +548,7 @@ class Instrument(Driver):
             'INSTRUME': 'LSST',
             'CONTROLL': 'LSST',
             'CTRL_SYS': 'CCD_REB',
-            'CONTNUM': self.reb.fpga.get_boardID(),
+            'CONTNUM': self.boardID,
             'FIRMWARE': self.version,
             'CCD_MANU': self.sensorID['CCD_MANU'],
             'CCD_TYPE': self.sensorID['CCD_TYPE'],
@@ -588,3 +589,5 @@ class Instrument(Driver):
         :return: numpy.array
         """
         return get_sequencer_string(self.reb.seq)
+        
+
