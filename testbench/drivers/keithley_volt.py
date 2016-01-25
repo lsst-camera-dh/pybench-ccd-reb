@@ -172,15 +172,31 @@ class Instrument(Driver):
 
         return self.xmlrpc.retrieveVoltage()
 
+    def get_voltage_median(self, n=10, verbose=False):
+        """
+        Gets n voltage readouts and return the median.
+        :return:
+        """
+        volts = []
+        for i in range(n):
+            self.xmlrpc.readVoltage()
+            time.sleep(0.5)
+            v = self.xmlrpc.retrieveVoltage()
+            volts.append(v)
+            if verbose:
+                print v
+            
+        return sorted(volts)[n/2]
+
     # ===================================================================
     # PRE/POST exposure hooks
     # ===================================================================
 
     def pre_exposure(self, exptime):
-        self.v1 = self.get_voltage()
+        self.v1 = self.get_voltage_median(5)
 
     def post_exposure(self):
-        self.v2 = self.get_voltage()
+        self.v2 = self.get_voltage_median(5)
 
     # ===================================================================
     #  Meta data / state of the instrument 
@@ -224,3 +240,4 @@ class Instrument(Driver):
         return keys, values, comments, data
 
     # ===================================================================
+    

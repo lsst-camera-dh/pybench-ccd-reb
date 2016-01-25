@@ -19,7 +19,7 @@ B = Bench()  # singleton
 B.register('reb')  # connect to the REB
 B.register('attenuator')
 B.register('Vkeithley')
-
+B.Vkeithley.setup(1)
 
 #load_sequencer(self, filename=None):
 # B.reb.load_sequencer(filename)
@@ -33,6 +33,7 @@ B.register('Vkeithley')
 
 # def powerup_CCD(self):
 # B.reb.CCDpowerup()
+# B.reb.set_parameter('RGU', 5)
 
 #def shutdown_CCD(self):
 # B.reb.wait_end_sequencer()
@@ -68,7 +69,7 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withmeta=True
     self.post_exposure()
 
     # delay for readout
-    time.sleep(4.0)
+    time.sleep(5.0)
     
     meta = {}
     if withmeta:
@@ -168,7 +169,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     :param att:
     :return:
     """
-    self.Vkeithley.setup(1)
+
     self.reb.set_testtype('LINEARITY')
     fitsdir = os.path.join(self.reb.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), localdir)
     if not os.path.isdir(fitsdir):
@@ -176,49 +177,53 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
 
     # list of values
     listdB = range(start, start6)
-    listdB.extend(range(start6, end, step=6))
+    listdB.extend(range(start6, end, 6))
 
+    if sourcechan is None:
+        memfile = os.path.join(fitsdir, 'recap.txt')     
+    else:
+        memfile = os.path.join(fitsdir, 'xtalk_memory.txt')
+    f = open(memfile, 'a')
+    f.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
+    
     for att in listdB:
         #
         self.attenuator.set_attenuation(att)
-        m = self.execute_reb_sequence(name='Bias', delaytime=2, withmeta=True)
+        m = self.execute_reb_sequence(name='Bias', delaytime=4, withmeta=True)
         i = self.conv_to_fits(borders=True)
 
         i[0].header['ATT'] = att
-        i[0].header['VOLT1'] = self.Vkeithley.v1
-        i[0].header['VOLT2'] = self.Vkeithley.v2
-        k = (self.Vkeithley.v1 + self.Vkeithley.v2)/2
+        k1 = self.Vkeithley.v1
+        i[0].header['VOLT1'] = k1
+        k2 = self.Vkeithley.v2
+        i[0].header['VOLT2'] = k2
 
         # option 1: check baseline and pulse amplitude (roughly)
         self.attenuator.set_attenuation(127)
-        time.sleep(2)
-        k127 = self.Vkeithley.get_voltage()
+        time.sleep(4)
+        k127 = self.Vkeithley.get_voltage_median(5)
         i[0].header['VOLTBASE'] = k127
         self.attenuator.set_attenuation(0)
-        time.sleep(2)
-        k0 = self.Vkeithley.get_voltage()
+        time.sleep(4)
+        k0 = self.Vkeithley.get_voltage_median(5)
         i[0].header['ATT0'] = k0
 
         self.save_to_fits(i, m, fitsname=os.path.join(fitsdir, 'reb3-dB%d.fz' % att))
 
+        f.write('%d\t%f\t%f\t%f\t%f\t' % (att, k1, k2, k0, k127))
         if sourcechan is None:
-            memfile = os.path.join(fitsdir, 'recap.txt')
-            f = open(memfile, 'a')
-            f.write('%d\t%f\t%f\t%f\t' % (att, k, k0, k127))
             for name in find_channels(i):
                 img = i[name].data
                 light = img[500:, 20:]
                 f.write('%10.2f\t%4.2f\t' % (light.mean(), light.std()))
             f.write('\n')
         else:
-            memfile = os.path.join(fitsdir, 'xtalk_memory.txt')
-            f = open(memfile, 'a')
-            f.write('%d\t%f\n' % (att, k))
-            f.close()
-            xtalk_memory(i, sourcechan, 50000, outfilename=memfile)
+            f.write('\n')
+            xtalk_memory(i, sourcechan, 26000, f)
         i.close()
 
         # option 2: acquire baseline file and reference file
-
+    f.close()
+    
 Bench.linearity_scan = linearity_scan
 

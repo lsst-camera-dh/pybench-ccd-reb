@@ -49,27 +49,27 @@ config = {
     # WREB (version 1)
     # 
     #
-     'reb': {
-         'driver'      : 'ccd_reb',
-         'hardware'    : 'WREB1',
-         'reb_id'      : 0xFF,
-         'stripe'      : 0,
-         'xmlfile'     : 'sequencer-wreb.xml',
-         'version'     : 0xb0200101   # TODO: read it from the board
-         },
+    #'reb': {
+    #    'driver'      : 'ccd_reb',
+    #    'hardware'    : 'WREB1',
+    #    'reb_id'      : 0xFF,
+    #    'stripe'      : 0,
+    #    'xmlfile'     : 'sequencer-wreb.xml',
+    #    'version'     : 0xb0200101   # TODO: read it from the board
+    #    },
     #
     # ---------------------------------------------------------------------
     # REB (version 3)
     #
     #
-    #'reb': {
-    #    'driver'      : 'ccd_reb',
-    #    'hardware'    : 'REB3',
-    #    'reb_id'      : 0x2,
-    #    'stripe'      : 1,
-    #    'xmlfile'     : 'sequencer-wreb.xml',
-    #    'version'     : 0xb0200101
-    #    },
+    'reb': {
+        'driver'      : 'ccd_reb',
+        'hardware'    : 'REB3',
+        'reb_id'      : 0x2,
+        'stripe'      : 1,
+        'xmlfile'     : 'sequencer-reb3.xml',
+        'version'     : 0xb0200103
+        },
     # ---------------------------------------------------------------------
     # =====================================================================
     #  Image display
@@ -325,7 +325,7 @@ config = {
 
     # =====================================================================
     #
-    # Keithley 6514 multimeter (8889) in voltage measurement configuration
+    # Keithley 6514 multimeter (8087) in voltage measurement configuration
     # for the REB bench
     # keithley /dev/ttyUSB1
     #
