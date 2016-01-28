@@ -221,7 +221,9 @@ class XYZ(object):
 
         # Then, zero pos for a axis
         if (self.axes['a'] != None):
-            self.axes['a'].move_absolute(0.0)
+            # self.axes['a'].move_absolute(0.0)
+            # Easier to put/remove the pattern ('mire')
+            self.axes['a'].move_absolute(340.0) 
 
 
     # ---------- Current motor position ---------------------- 
@@ -320,6 +322,12 @@ class XYZ(object):
             if dist > radius:
                 raise ValueError(
                     "XYZ target not allowed: will hit the window mount!!!")
+
+
+        #----------------------------------------------------------------
+        # New setup Y motor higher (RLB & LLG 2016-01-26)
+        if y < 18.0:
+            raise ValueError("XYZ coordinate y out of allowed range (CLAP collision).")
 
         #----------------------------------------------------------------
         # # Former: orange cryostat
