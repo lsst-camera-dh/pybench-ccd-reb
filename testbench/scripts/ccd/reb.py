@@ -219,7 +219,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
             f.write('\n')
         else:
             f.write('\n')
-            xtalk_memory(i, sourcechan, 26000, f)
+            xtalk_memory(i, sourcechan, 35000, f)
         i.close()
 
         # option 2: acquire baseline file and reference file
