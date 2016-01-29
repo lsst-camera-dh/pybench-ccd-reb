@@ -174,7 +174,7 @@ def launch(program, args=[],
       print arguments
       pid = subprocess.Popen(arguments).pid
 
-      # print pid
+      print pid
 
       time.sleep(0.5)
 
@@ -185,7 +185,7 @@ def launch(program, args=[],
             return
 
       # Find the window for this pid
-      
+
       win = findwindow(pid)
       if win == None:
             print >> sys.stderr, \
