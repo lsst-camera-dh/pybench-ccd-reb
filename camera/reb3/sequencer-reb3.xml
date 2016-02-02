@@ -609,7 +609,7 @@
                 </call>
             </subroutine>
             <subroutine id="Dark25ms">
-                <fullname>Repeat dark flushing function for 26 ms</fullname>
+                <fullname>Repeat dark flushing function for 25 ms</fullname>
                 <call ref="FlushSerial">
                     <repeat>20000</repeat>
                 </call>
@@ -679,10 +679,13 @@
                     <repeat>2</repeat>
                 </call>
                 <call ref="Exposure"/>
+                <call ref="CloseShutter"/>
                 <call ref="PumpLine">
                     <repeat>1000</repeat>
                 </call>
-                <call ref="ReadFrame"/>
+                <call ref="StartOfImage"/>
+                <call ref="ReadWindow"/>
+                <call ref="EndOfImage"/>
             </subroutine>
         </subroutines>
         <mains>
