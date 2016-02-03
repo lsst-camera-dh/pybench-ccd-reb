@@ -180,9 +180,9 @@ bench.Bench.mire_angles = mire_angles
 
 def mire_shifts(self, 
                 axis = 'y',
-                position = {'x': 53.25, 'y': 39.6, 'z': 28.8},
+                position = {'x': 53.25, 'y': 59.6, 'z': 28.8},
                 offsets = (-1.0, 1.0, 20),
-                exptime = 0.75, images = 10, view=False):
+                exptime = 0.75, images = 1, view=False):
     """
     Prend des images de la mire sous differents offset en X ou en Y.
     """
@@ -197,7 +197,8 @@ def mire_shifts(self,
     for offset in np.linspace(*offsets):
         du = float(offset)
         self.log("Moving axis %s offset %f" % (axis, du))
-        self.xyz.move({daxis: du})
+        self.xyz.move({axis: position[axis] + du})
+        print self.xyz.position
             
         for i in xrange(images):
             meta = self.execute_reb_sequence('Acquisition', exptime=exptime)
@@ -207,6 +208,9 @@ def mire_shifts(self,
             # tentative pour limiter les fuites de memoire...
             for hdu in img: del hdu
             del img
+
+    self.log("Moving to position %s" % str(position))
+    self.xyz.move(position)
 
 bench.Bench.mire_shifts = mire_shifts
 
