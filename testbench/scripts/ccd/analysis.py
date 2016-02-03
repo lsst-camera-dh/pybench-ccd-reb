@@ -68,6 +68,14 @@ def get_image_id(hdulist):
     fitsname = hdulist[0].header['FILENAME']
     return fitsname[:-3]
 
+def get_fits_dir(datadir):
+    """
+    Finds all fits file in the directory, returns a list with complete path.
+    :param datadir:
+    :return:
+    """
+    listfile = [os.path.join(datadir,f) for f in os.listdir(datadir) if os.path.splitext(f)[1] == '.fz']
+    return listfile
 
 # ANALYSIS METHODS
 
@@ -243,8 +251,11 @@ def xtalk_memory(hdulist, sourcechan, trigger, outfile, selectchannels=None):
     # baseline for source: find last points before series of peaks
     # number of bins: search for pre_peak_index on first line
     pre_peak_index = np.flatnonzero(np.logical_and(np.logical_not(SplitPeaks[0, :-1]), SplitPeaks[0, 1:]))
-    interval = pre_peak_index[1] - pre_peak_index[0]
-    print('Binning over %d pixels' % interval)
+    try:
+        interval = pre_peak_index[1] - pre_peak_index[0]
+        print('Binning over %d pixels' % interval)
+    except:
+        raise ValueError('Could not find interval between pulses')
     # detect pre_peak on all lines after removing last block of each line (it could be incomplete)
     pre_peak_index = np.nonzero(np.logical_and(np.logical_not(SplitPeaks[:, :-interval-1]), SplitPeaks[:, 1:-interval]))
     # note: pre_peak_index is a tuple of two arrays
@@ -266,6 +277,40 @@ def xtalk_memory(hdulist, sourcechan, trigger, outfile, selectchannels=None):
             outfile.write("%.2f\t" % value)
         outfile.write("\n")
 
+
+def xmemory_on_files(datadir, outname, sourcechan=None):
+    """
+    Applies xtalk_memory over all files in a directory (offline version of linearity_scan in scripts.ccd.reb)
+    :return:
+    """
+    listfile = get_fits_dir(datadir)
+    outf = open(outname, 'w')
+    outf.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
+
+    for f in listfile:
+        i = pyfits.open(f)
+        att = i[0].header['ATT']
+        k1 = i[0].header['VOLT1']
+        k2 = i[0].header['VOLT2']
+        k127 = i[0].header['VOLTBASE']
+        k0 = i[0].header['ATT0']
+
+        outf.write('%d\t%f\t%f\t%f\t%f\t' % (att, k1, k2, k0, k127))
+        if sourcechan is None:
+            for name in find_channels(i):
+                img = i[name].data
+                light = img[500:, 20:]
+                outf.write('%10.2f\t%4.2f\t' % (light.mean(), light.std()))
+            outf.write('\n')
+        else:
+            outf.write('\n')
+            try:
+                xtalk_memory(i, sourcechan, 35000, outf)
+            except:
+                outf.write('\n')
+        i.close()
+
+    outf.close()
 
 #TODO: add a rough estimate of gain from a pair of flats
 #TODO: rough estimate of the CTE from the first line and first column of overscans

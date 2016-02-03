@@ -1,5 +1,5 @@
 # REB3 timing for E2V CCD, in new REB sequencer format
-# first proposal
+# more experimental sequences
 # (C. Juramy, 20160201)
 
 [constants]  # will be substituted in the code at compilation time
@@ -142,6 +142,69 @@
          TimeP       = 0,  1,  1,  0,  0
       constants:     S1=1, S2=1, CL=1, RST=1
 
+    ExposureTransferLine:  # Line transfer with open shutter (testing)
+      clocks:          P1, P2, P3, P4, RG
+      slices:
+         BufferP     = 0,  1,  1,  0,  1
+         TimeP       = 0,  0,  1,  1,  1
+         TimeP       = 1,  0,  0,  1,  1
+         TimeP       = 1,  1,  0,  0,  1
+         TimeP       = 0,  1,  1,  0,  0
+      constants:     S1=1, S2=1, CL=1, RST=1, SHU=1
+
+    ExposureReadPixel:  # Single pixel read with open shutter (testing)
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 1,  0,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 1,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         RampBuffer  = 0,  0,  0,  1,  0,  0,  1,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  1,  0,  0
+         ISO2        = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
+      constants:     P2=1, P3=1, SHU=1
+
+    ExposureSerialRebin1:  # First function of serial rebinning with open shutter
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 1,  0,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 1,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         RampBuffer  = 0,  0,  0,  1,  0,  0,  1,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  1,  0,  0
+         TimeS       = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+      constants:     P2=1, P3=1, SHU=1
+
+    ExposureSerialRebin2:  # Middle function of serial rebinning with open shutter
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 0,  0,  1,  0,  0,  0,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
+         TimeS       = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  0,  0,  0
+         TimeS       = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+      constants:     P2=1, P3=1, SHU=1
+
+    ExposureSerialRebin3:  # Last function of serial rebinning with open shutter
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 0,  0,  1,  0,  0,  0,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
+         TimeS       = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  0,  0,  0
+         ISO2        = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
+      constants:     P2=1, P3=1, SHU=1
+
+
 [subroutines]
     FlushLine:  # Transfer line and flush it
         CALL    TransferLine
@@ -194,6 +257,23 @@
         CALL    ReverseTransferLine
         RTS
 
+    ExposureWindowLine:  # Line transfer and readout with open shutter (testing)
+        CALL    ExposureFlush       repeat(@StartColumns)
+        CALL    ExposureReadPixel   repeat(@WindowColumns)
+        CALL    ExposureFlush       repeat(@EndColumns)
+        RTS
+
+    Rebin2:  # Serial rebinning of 2 pixels
+        CALL    ExposureSerialRebin1
+        CALL    ExposureSerialRebin3
+        RTS
+
+    Rebin3: # Serial rebinning of 3 pixels
+        CALL    ExposureSerialRebin1
+        CALL    ExposureSerialRebin2
+        CALL    ExposureSerialRebin3
+        RTS
+
 [mains]
     Bias:  # Bias after clearing and warm-up
         JSR     ClearCCD    repeat(@CleaningNumber)
@@ -219,5 +299,13 @@
         JSR     AcquireFrame
         JSR     PumpLine        repeat(1000)
         JSR     ReadFrame
+        END
+
+    IlluminatedAcquisition:  # Acquiring data with open shutter, uniform exposure
+        JSR     ExposureWindowLine     repeat(5000)
+        CALL    StartOfImage
+        JSR     ExposureWindowLine     repeat(@WindowLines)
+        CALL    EndOfImage
+        JSR     ClearCCD               repeat(@CleaningNumber)
         END
 
