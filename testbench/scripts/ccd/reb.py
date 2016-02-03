@@ -182,7 +182,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     if sourcechan is None:
         memfile = os.path.join(fitsdir, 'recap.txt')     
     else:
-        memfile = os.path.join(fitsdir, 'xtalk_memory.txt')
+        memfile = os.path.join(fitsdir, 'xtalk_memory_ch%d.txt' % sourcechan)
     f = open(memfile, 'a')
     f.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
     
@@ -219,7 +219,11 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
             f.write('\n')
         else:
             f.write('\n')
-            xtalk_memory(i, sourcechan, 35000, f)
+            try:
+                xtalk_memory(i, sourcechan, 35000, f)
+            except:
+                print('Stopping at %d dB' % att)
+                break  # too low to detect pulses
         i.close()
 
         # option 2: acquire baseline file and reference file
