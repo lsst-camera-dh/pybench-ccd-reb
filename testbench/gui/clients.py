@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+1#!/usr/bin/env python
 #
 # Startup script for the LSST CCD testbench at LPNHE
 # Configuration of all the clients
@@ -33,7 +33,7 @@ screens = {
 
 clients = {
     'all': ['laser', 'lamps', 'ttl',
-            'thermals', 'pumps'],
+            'thermals', 'pumps', 'xyz'],
     #
     'all-lights': ['laser', 'lamps'],
     #
@@ -98,16 +98,16 @@ clients = {
     #-------------------------------------------------------------
     # XYZ mounting
     # 
-    'xyz': ['xyz-server', 'xyz-log-console'],
+    'xyz': ['xyz-server', 'xyz-log'],
     'xyz-server': { 
         'host': 'lpnlsstbench',
         'commandline': 'xyz-server -d'
     },
-    'xyz-log-console': { 
+    'xyz-log': { 
         'host': 'lpnlsstbench',
-        'commandline': 'gnome-terminal -x tail -f $HOME/logs/xyz-server.log',
+        'commandline': 'xterm -title "XYZ(A)" -fa Monospace -fs 10 -e tail -f /home/lsst/logs/xyz-server.log',
         'screen': 'lights',
-        'position': {'x': 1400, 'y': 30, 'w': 490, 'h': 300} 
+        'position': {'x': 74, 'y': 830, 'w': 800, 'h': 260} 
     },
     #-------------------------------------------------------------
     # Cryo & Pumps Cryostat chamber #0 (blue)
@@ -154,6 +154,13 @@ clients = {
     # agilent pump      2986, 800, 400, 570
     # pfeiffer          3410, 800, 400, 570
     # pressure gnuplot  3170, 175, 640, 470
+    #-------------------------------------------------------------
+    # General Bench log
+    
+    # 'bench-log' ...
+
+    # 'bss-log' : 
+
     #-------------------------------------------------------------
 
 }
