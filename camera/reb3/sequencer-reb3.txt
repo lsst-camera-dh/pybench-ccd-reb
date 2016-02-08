@@ -132,16 +132,6 @@
          20000 ns    = 1,  0,  1,  0,  1,  1,  0,  0
          20000 ns    = 0,  0,  1,  0,  0,  1,  1,  0
 
-    ReverseTransferLine:  # Reverse single line transfer (for pumping)
-      clocks:          P1, P2, P3, P4, RG
-      slices:
-         BufferP     = 0,  1,  1,  0,  1
-         TimeP       = 1,  1,  0,  0,  1
-         TimeP       = 1,  0,  0,  1,  1
-         TimeP       = 0,  0,  1,  1,  1
-         TimeP       = 0,  1,  1,  0,  0
-      constants:     S1=1, S2=1, CL=1, RST=1
-
 [subroutines]
     FlushLine:  # Transfer line and flush it
         CALL    TransferLine
@@ -189,11 +179,6 @@
         JSR     CloseShutter
         RTS
 
-    PumpLine:  # Pumps line back and forth
-        CALL    TransferLine
-        CALL    ReverseTransferLine
-        RTS
-
 [mains]
     Bias:  # Bias after clearing and warm-up
         JSR     ClearCCD    repeat(@CleaningNumber)
@@ -214,10 +199,3 @@
     InfiniteWait:  # Slow flushing on infinite loop
         CALL    SlowFlush   repeat(Inf)
         END
-
-    PocketPump:  # One acquisition with pocket pumping after exposure
-        JSR     AcquireFrame
-        JSR     PumpLine        repeat(1000)
-        JSR     ReadFrame
-        END
-
