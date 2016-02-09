@@ -1,4 +1,4 @@
-# REB3 timing for E2V CCD, in new REB sequencer format
+ # REB3 timing for E2V CCD, in new REB sequencer format
 # first proposal
 # (C. Juramy, 20160201)
 
