@@ -24,7 +24,8 @@ def build(ctx):
                   'fpga.py',
                   'aspic.py',
                   'rebxml.py',
-                  'bidi.py'],
+                  'bidi.py',
+                  'grammar.py'],
         install_path = '${PYTHONDIR}/lsst/camera/generic')
 
     # ctx.recurse(submodules)
