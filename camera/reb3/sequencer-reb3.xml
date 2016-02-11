@@ -575,14 +575,8 @@
                 <call>
                     <repeat>WindowLines</repeat>
                     <call ref="TransferLine"/>
-                    <call ref="FlushSerial">
-                        <repeat>StartColumn</repeat>
-                    </call>
                     <call ref="ReadPixel">
                         <repeat>WindowColumns</repeat>
-                    </call>
-                    <call ref="FlushSerial">
-                        <repeat>EndColumn</repeat>
                     </call>
                 </call>
                 <call ref="FlushLine">

@@ -49,8 +49,10 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withmeta=True
     if name and exptime:
         self.reb.config_sequence(name, exptime)
     elif name:
-        self.reb.config_sequence(name)
-       
+        self.reb.reb.select_subroutine(name)
+        self.reb.reb.shutdelay = 0
+        self.reb.reb.exptime = 0
+
     # this waits until the sequencer stops...
     self.reb.wait_end_sequencer()
 
@@ -187,9 +189,9 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     f.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
     
     for att in listdB:
-        #
         self.attenuator.set_attenuation(att)
-        m = self.execute_reb_sequence(name='Bias', delaytime=4, withmeta=True)
+        #m = self.execute_reb_sequence(name='Bias', delaytime=4, withmeta=True)
+        m = self.execute_reb_sequence(name='Window', delaytime=4, withmeta=True)
         i = self.conv_to_fits(borders=True)
 
         i[0].header['ATT'] = att
