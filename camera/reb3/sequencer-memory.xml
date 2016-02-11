@@ -204,44 +204,44 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
+                        <duration>50 ns</duration>
+                        <value>001000001</value>
+                    </timeslice>
+                    <timeslice id="slice2">
                         <duration>TimeS</duration>
                         <value>101011000</value>
                     </timeslice>
-                    <timeslice id="slice2">
+                    <timeslice id="slice3">
                         <duration>BufferS</duration>
                         <value>101111000</value>
                     </timeslice>
-                    <timeslice id="slice3">
+                    <timeslice id="slice4">
                         <duration>BufferS</duration>
                         <value>000111000</value>
                     </timeslice>
-                    <timeslice id="slice4">
+                    <timeslice id="slice5">
                         <duration>BufferS</duration>
                         <value>000100000</value>
                     </timeslice>
-                    <timeslice id="slice5">
+                    <timeslice id="slice6">
                         <duration>360 ns</duration>
                         <value>000100100</value>
                     </timeslice>
-                    <timeslice id="slice6">
+                    <timeslice id="slice7">
                         <duration>BufferS</duration>
                         <value>010100100</value>
                     </timeslice>
-                    <timeslice id="slice7">
+                    <timeslice id="slice8">
                         <duration>ISO2</duration>
                         <value>010000000</value>
                     </timeslice>
-                    <timeslice id="slice8">
+                    <timeslice id="slice9">
                         <duration>RampTime</duration>
                         <value>010000010</value>
                     </timeslice>
-                    <timeslice id="slice9">
+                    <timeslice id="slice10">
                         <duration>BufferS</duration>
                         <value>011000000</value>
-                    </timeslice>
-                    <timeslice id="slice10">
-                        <duration>50 ns</duration>
-                        <value>001000001</value>
                     </timeslice>
                 </slicelist>
                 <constants>
@@ -263,44 +263,44 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
+                        <duration>50 ns</duration>
+                        <value>01000001</value>
+                    </timeslice>
+                    <timeslice id="slice2">
                         <duration>TimeS</duration>
                         <value>01011000</value>
                     </timeslice>
-                    <timeslice id="slice2">
+                    <timeslice id="slice3">
                         <duration>BufferS</duration>
                         <value>01111000</value>
                     </timeslice>
-                    <timeslice id="slice3">
+                    <timeslice id="slice4">
                         <duration>BufferS</duration>
                         <value>00111000</value>
                     </timeslice>
-                    <timeslice id="slice4">
+                    <timeslice id="slice5">
                         <duration>BufferS</duration>
                         <value>00100000</value>
                     </timeslice>
-                    <timeslice id="slice5">
+                    <timeslice id="slice6">
                         <duration>360 ns</duration>
                         <value>00100100</value>
                     </timeslice>
-                    <timeslice id="slice6">
+                    <timeslice id="slice7">
                         <duration>BufferS</duration>
                         <value>10100100</value>
                     </timeslice>
-                    <timeslice id="slice7">
+                    <timeslice id="slice8">
                         <duration>ISO2</duration>
                         <value>10000000</value>
                     </timeslice>
-                    <timeslice id="slice8">
+                    <timeslice id="slice9">
                         <duration>RampTime</duration>
                         <value>10000010</value>
                     </timeslice>
-                    <timeslice id="slice9">
+                    <timeslice id="slice10">
                         <duration>BufferS</duration>
                         <value>11000000</value>
-                    </timeslice>
-                    <timeslice id="slice10">
-                        <duration>50 ns</duration>
-                        <value>01000001</value>
                     </timeslice>
                 </slicelist>
                 <constants>
@@ -315,7 +315,7 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>1600 ns</duration>
+                        <duration>3400 ns</duration>
                         <value>0</value>
                     </timeslice>
                     <timeslice id="slice2">
@@ -387,7 +387,7 @@
                 </clocklist>
                 <slicelist>
                     <timeslice id="slice1">
-                        <duration>1600 ns</duration>
+                        <duration>4200 ns</duration>
                         <value>0</value>
                     </timeslice>
                     <timeslice id="slice2">
@@ -434,17 +434,28 @@
                 <call ref="FlushSerial">
                     <repeat>EndColumn</repeat>
                 </call>
+            </subroutine>                
+            <subroutine id="LineRead">
+                <fullname>Reading a line</fullname>
+                <call ref="TransferLine"/>
+                <call ref="ReadPixel">
+                    <repeat>ReadColumns</repeat>
+                </call>
             </subroutine>
-
+            <subroutine id="FlushLine">
+                <fullname>Transfers and dumps whole line</fullname>
+                <call ref="TransferLine"/>
+                <call ref="FlushSerial">
+                    <repeat>ReadColumns</repeat>
+                </call>
+            </subroutine>
             <subroutine id="BaseFrame">
                 <fullname>Basic operations for readout of a CCD frame</fullname>
-                <call>
+                <call ref="StartOfImage"/>
+                <call ref="LineRead">
                     <repeat>ReadLines</repeat>
-                    <call ref="TransferLine"/>
-                    <call ref="ReadPixel">
-                        <repeat>ReadColumns</repeat>
-                    </call>
                 </call>
+                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="WarmUp">
                 <fullname>Warms up ADCs</fullname>
@@ -462,18 +473,18 @@
             <subroutine id="ReadFrame">
                 <fullname>Readout and acquisition of a CCD frame</fullname>
                 <call ref="CloseShutter"/>
-                <call ref="StartOfImage"/>
                 <call ref="BaseFrame"/>
-                <call ref="EndOfImage"/>
             </subroutine>
             <subroutine id="ReadWindow">
                 <fullname>Readout of a windowed frame</fullname>
                 <call ref="FlushLine">
                     <repeat>StartLine</repeat>
                 </call>
-                <call ref="LineBlock/">
+                <call ref="StartOfImage"/>
+                <call ref="LineBlock">
                     <repeat>WindowLines</repeat>
                 </call>
+                <call ref="EndOfImage"/>
                 <call ref="FlushLine">
                     <repeat>EndLine</repeat>
                 </call>
@@ -481,9 +492,7 @@
             <subroutine id="WindowAcquisition">
                 <fullname>One acquisition of a window</fullname>
                 <call ref="CloseShutter"/>
-                <call ref="StartOfImage"/>
                 <call ref="ReadWindow"/>
-                <call ref="EndOfImage"/>
             </subroutine>
        </subroutines>
         <mains>
