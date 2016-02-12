@@ -166,7 +166,7 @@
         RTS
 
     WarmUp:  # Warms up analog electronics and ADCs
-        CALL    ReadPixel       repeat(5000)
+        CALL    ReadPixel       repeat(256)  # any other value will mess up the scanning mode
         RTS
 
     CloseShutter:  # Gives time for shutter to close (testing)
