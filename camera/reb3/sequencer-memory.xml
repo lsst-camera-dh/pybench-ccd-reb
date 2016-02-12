@@ -205,42 +205,46 @@
                 <slicelist>
                     <timeslice id="slice1">
                         <duration>50 ns</duration>
-                        <value>001000001</value>
+                        <value>011000000</value>
                     </timeslice>
                     <timeslice id="slice2">
+                        <duration>50 ns</duration>
+                        <value>001000001</value>
+                    </timeslice>
+                    <timeslice id="slice3">
                         <duration>TimeS</duration>
                         <value>101011000</value>
                     </timeslice>
-                    <timeslice id="slice3">
+                    <timeslice id="slice4">
                         <duration>BufferS</duration>
                         <value>101111000</value>
                     </timeslice>
-                    <timeslice id="slice4">
+                    <timeslice id="slice5">
                         <duration>BufferS</duration>
                         <value>000111000</value>
                     </timeslice>
-                    <timeslice id="slice5">
+                    <timeslice id="slice6">
                         <duration>BufferS</duration>
                         <value>000100000</value>
                     </timeslice>
-                    <timeslice id="slice6">
+                    <timeslice id="slice7">
                         <duration>360 ns</duration>
                         <value>000100100</value>
                     </timeslice>
-                    <timeslice id="slice7">
+                    <timeslice id="slice8">
                         <duration>BufferS</duration>
                         <value>010100100</value>
                     </timeslice>
-                    <timeslice id="slice8">
+                    <timeslice id="slice9">
                         <duration>ISO2</duration>
                         <value>010000000</value>
                     </timeslice>
-                    <timeslice id="slice9">
+                    <timeslice id="slice10">
                         <duration>RampTime</duration>
                         <value>010000010</value>
                     </timeslice>
-                    <timeslice id="slice10">
-                        <duration>BufferS</duration>
+                    <timeslice id="slice11">
+                        <duration>50 ns</duration>
                         <value>011000000</value>
                     </timeslice>
                 </slicelist>
@@ -264,42 +268,46 @@
                 <slicelist>
                     <timeslice id="slice1">
                         <duration>50 ns</duration>
-                        <value>01000001</value>
+                        <value>11000000</value>
                     </timeslice>
                     <timeslice id="slice2">
+                        <duration>50 ns</duration>
+                        <value>01000001</value>
+                    </timeslice>
+                    <timeslice id="slice3">
                         <duration>TimeS</duration>
                         <value>01011000</value>
                     </timeslice>
-                    <timeslice id="slice3">
+                    <timeslice id="slice4">
                         <duration>BufferS</duration>
                         <value>01111000</value>
                     </timeslice>
-                    <timeslice id="slice4">
+                    <timeslice id="slice5">
                         <duration>BufferS</duration>
                         <value>00111000</value>
                     </timeslice>
-                    <timeslice id="slice5">
+                    <timeslice id="slice6">
                         <duration>BufferS</duration>
                         <value>00100000</value>
                     </timeslice>
-                    <timeslice id="slice6">
+                    <timeslice id="slice7">
                         <duration>360 ns</duration>
                         <value>00100100</value>
                     </timeslice>
-                    <timeslice id="slice7">
+                    <timeslice id="slice8">
                         <duration>BufferS</duration>
                         <value>10100100</value>
                     </timeslice>
-                    <timeslice id="slice8">
+                    <timeslice id="slice9">
                         <duration>ISO2</duration>
                         <value>10000000</value>
                     </timeslice>
-                    <timeslice id="slice9">
+                    <timeslice id="slice10">
                         <duration>RampTime</duration>
                         <value>10000010</value>
                     </timeslice>
-                    <timeslice id="slice10">
-                        <duration>BufferS</duration>
+                    <timeslice id="slice11">
+                        <duration>50 ns</duration>
                         <value>11000000</value>
                     </timeslice>
                 </slicelist>
@@ -435,6 +443,19 @@
                     <repeat>EndColumn</repeat>
                 </call>
             </subroutine>                
+            <subroutine id="LineWindow">
+                <fullname>Line for windowed readout</fullname>
+                <call ref="TransferLine"/>
+                <call ref="FlushSerial">
+                    <repeat>StartColumn</repeat>
+                </call>
+                <call ref="ReadPixel">
+                    <repeat>WindowColumns</repeat>
+                </call>
+                <call ref="FlushSerial">
+                    <repeat>EndColumn</repeat>
+                </call>
+            </subroutine>                
             <subroutine id="LineRead">
                 <fullname>Reading a line</fullname>
                 <call ref="TransferLine"/>
@@ -460,7 +481,7 @@
             <subroutine id="WarmUp">
                 <fullname>Warms up ADCs</fullname>
                 <call ref="ReadPixel">
-                    <repeat>5000</repeat>
+                    <repeat>256</repeat>
                 </call>
             </subroutine>
             <subroutine id="CloseShutter">
