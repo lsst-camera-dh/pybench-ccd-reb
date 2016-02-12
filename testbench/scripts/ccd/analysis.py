@@ -224,6 +224,57 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
     plt.show()
 
 
+def deinterlace_scan(Nbins, filename, doplot=True):
+    """
+    Situation-specific: deinterlaces scan fit results.
+    :param Nbins:
+    :return:
+    """
+    scanfile = open(filename, 'r')
+    scanlines = scanfile.readlines()
+    scanfile.close()
+    newname = filename[:-4]+'-deinter.txt'
+    newfile = open(newname, 'w')
+    newfile.write(scanlines[0])
+
+    rebin = len(scanlines)/Nbins
+    for r in range(Nbins):
+        for s in range(rebin):
+            newfile.write(scanlines[r + 1 + s * Nbins])
+    newfile.close()
+
+    # plots
+    if doplot:
+        data = np.loadtxt(newname, skiprows=1)
+        p0b = np.mean(data[:, 1:25:3], axis=1)
+        p1b = np.mean(data[:, 2:26:3], axis=1)
+        sb = np.mean(data[:, 3:27:3], axis=1)
+        p0t = np.mean(data[:, 25::3], axis=1)
+        p1t = np.mean(data[:, 26::3], axis=1)
+        st = np.mean(data[:, 27::3], axis=1)
+
+
+        figX, (p0, p1, pdev) = plt.subplots(nrows=3, num='Fit over lines', figsize=(8,12))
+        plt.xlabel('Scan increment (10 ns)')
+        # plots along line direction
+        plt.figure(figX.number)
+        plt.subplot(311)
+        plt.plot(p0t)
+        plt.plot(p0b)
+        plt.ylabel('Constant in polynomial fit')
+        plt.subplot(312)
+        plt.plot(p1t)
+        plt.plot(p1b)
+        plt.ylabel('Slope in polynomial fit')
+        plt.subplot(313)
+        plt.plot(st)
+        plt.plot(sb)
+        plt.ylabel('Residuals from fit')
+
+        figX.savefig(newname[:-4]+'.png')
+        plt.show()
+
+
 def xtalk_memory(hdulist, sourcechan, trigger, outfile, selectchannels=None):
     """
     Calculates crosstalk and memory from one channel with signal to all others.
