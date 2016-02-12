@@ -550,7 +550,7 @@
             <subroutine id="WarmUp">
                 <fullname>Warms up ADCs</fullname>
                 <call ref="ReadPixel">
-                    <repeat>5000</repeat>
+                    <repeat>256</repeat>
                 </call>
             </subroutine>
             <subroutine id="CloseShutter">
