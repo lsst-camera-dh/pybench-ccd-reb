@@ -26,6 +26,9 @@ class SeqParser(object):
     # INTEGER ::= [0-9]+
     _p_integer = "(\d+)"
 
+    # ADDRESS ::= ((0x)?[0-9a-f]+)
+    _p_address = "((0x)?[0-9a-f]+)"
+    
     # NAME ::= [A-Za-z][0-9A-Za-z\_]*
     _p_name = "([A-Za-z][\dA-Za-z\_]*)"
 
@@ -44,6 +47,7 @@ class SeqParser(object):
         self.p_newline = re.compile("^" + self._p_newline)
         self.p_comment = re.compile("^" + self._p_comment)
         self.p_integer = re.compile("^" + self._p_integer)
+        self.p_address = re.compile("^" + self._p_address)
         self.p_name =    re.compile("^" + self._p_name)
         self.p_duration_unit = re.compile("^" + self._p_duration_unit)
 
@@ -113,6 +117,8 @@ class SeqParser(object):
         comment = matches.group(1)
         pnext = pos + l
 
+        comment = comment.strip()
+        
         return pnext, comment
 
     #-----------------------------------------------------------------------
@@ -161,6 +167,22 @@ class SeqParser(object):
         pnext = pnext + l
 
         return (pnext, integer)
+
+    #-----------------------------------------------------------------------
+    # ADDRESS ::= ((0x)?[0-9a-f]+)
+
+    def m_address(self, pos):
+        pnext = pos
+
+        matches = self.p_integer.search(self.s[pnext:])
+        if matches == None:
+            return None
+
+        l = matches.end()
+        address = int(matches.group(1), 16)
+        pnext = pnext + l
+
+        return (pnext, address)
 
     #-----------------------------------------------------------------------
     # NAME ::= [A-Za-z][0-9A-Za-z\_]*
@@ -216,7 +238,7 @@ class SeqParser(object):
     def m_duration_unit(self, pos):
         pnext = pos
 
-        matches = self.p_name.search(self.s[pos:])
+        matches = self.p_duration_unit.search(self.s[pos:])
         if matches == None:
             return None
 
@@ -430,29 +452,301 @@ class SeqParser(object):
                 
     #=======================================================================
     #
-    # PTR_NAME ::= NAME
-    #
-    # REP_FUNC_DEF_LINE ::=
-    # SPACE* 'REP_FUNC' SPACE+ PTR_NAME SPACE+ INTEGER SPACE* COMMENT? NEWLINE
-    # 
-    # REP_SUBR_DEF_LINE ::=
-    # SPACE* 'REP_SUBR' SPACE+ PTR_NAME SPACE+ INTEGER SPACE* COMMENT? NEWLINE
-    # 
-    # PTR_FUNC_DEF_LINE ::=
-    # SPACE* 'PTR_FUNC' SPACE+ PTR_NAME SPACE+ (FUNC_NAME | FUNC_ID) SPACE* COMMENT? NEWLINE
-    #
-    # PTR_SUBR_DEF_LINE ::=
-    # SPACE* 'PTR_SUBR' SPACE+ PTR_NAME SPACE+ (SUBR_NAME | ADDRESS) SPACE* COMMENT? NEWLINE
+    # REP_FUNC_NAME ::= NAME
+    # REP_SUBR_NAME ::= NAME
+    # PTR_FUNC_NAME ::= NAME
+    # PTR_SUBR_NAME ::= NAME
     #
     
-    def m_ptr_name(self, pos):
+    def m_rep_func_name(self, pos):
         return self.m_name(pos)
 
-    # ...
+    def m_rep_subr_name(self, pos):
+        return self.m_name(pos)
 
+    def m_ptr_func_name(self, pos):
+        return self.m_name(pos)
+
+    def m_ptr_subr_name(self, pos):
+        return self.m_name(pos)
+
+    #-----------------------------------------------------------------------
+    # REP_FUNC_DEF_LINE ::=
+    # SPACE* 'REP_FUNC' SPACE+ REP_FUNC_NAME SPACE+ INTEGER SPACE* COMMENT? NEWLINE
+    # 
+
+    _s_rep_func_def_keyword = "REP_FUNC"
+    
+    def m_rep_func_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        l = len(self._s_rep_func_def_keyword)
+        
+        if ( self.s[pnext:pnext+l] != self._s_rep_func_def_keyword ):
+            return None
+        pnext = pnext + l
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_rep_func_name(pnext)
+        if r == None:
+            return None
+        pnext, rep_func_name = r
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_integer(pnext)
+        if r == None:
+            return None
+        pnext, rep_func_value = r
+        
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, ('REP_FUNC', rep_func_name, rep_func_value, comment)
+
+    #-----------------------------------------------------------------------
+    # REP_SUBR_DEF_LINE ::=
+    # SPACE* 'REP_SUBR' SPACE+ REP_SUBR_NAME SPACE+ INTEGER SPACE* COMMENT? NEWLINE
+    # 
+
+    _s_rep_subr_def_keyword = "REP_SUBR"
+    
+    def m_rep_subr_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        l = len(self._s_rep_subr_def_keyword)
+        
+        if ( self.s[pnext:pnext+l] != self._s_rep_subr_def_keyword ):
+            return None
+        pnext = pnext + l
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_rep_subr_name(pnext)
+        if r == None:
+            return None
+        pnext, rep_subr_name = r
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_integer(pnext)
+        if r == None:
+            return None
+        pnext, rep_subr_value = r
+        
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, ('REP_SUBR', rep_subr_name, rep_subr_value, comment)
+    
+    #-----------------------------------------------------------------------
+    # PTR_FUNC_DEF_LINE ::=
+    # SPACE* 'PTR_FUNC' SPACE+ PTR_FUNC_NAME SPACE+ (FUNC_NAME | FUNC_ID) SPACE* COMMENT? NEWLINE
+    #
+
+    _s_ptr_func_def_keyword = "PTR_FUNC"
+    
+    def m_ptr_func_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        l = len(self._s_ptr_func_def_keyword)
+        if ( self.s[pnext:pnext+l] != self._s_ptr_func_def_keyword ):
+            return None
+        pnext = pnext + l
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_ptr_func_name(pnext)
+        if r == None:
+            return None
+        pnext, ptr_func_name = r
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_func_name(pnext)
+        if r != None:
+            pnext, func = r
+        else:
+            r = self.m_func_id(pnext)
+            if r == None:
+                return None
+            pnext, func = r
+            
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, ('PTR_FUNC', ptr_func_name, func, comment)
+    
+
+    #-----------------------------------------------------------------------
+    # PTR_SUBR_DEF_LINE ::=
+    # SPACE* 'PTR_SUBR' SPACE+ PTR_SUBR_NAME SPACE+ (SUBR_NAME | ADDRESS) SPACE* COMMENT? NEWLINE
+    #
+
+    _s_ptr_subr_def_keyword = "PTR_SUBR"
+    
+    def m_ptr_subr_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        l = len(self._s_ptr_subr_def_keyword)
+        if ( self.s[pnext:pnext+l] != self._s_ptr_subr_def_keyword ):
+            return None
+        pnext = pnext + l
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_ptr_subr_name(pnext)
+        if r == None:
+            return None
+        pnext, ptr_subr_name = r
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_subr_name(pnext)
+        if r != None:
+            pnext, subr = r
+        else:
+            r = self.m_address(pnext)
+            if r == None:
+                return None
+            pnext, subr = r
+            
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, ('PTR_SUBR', ptr_subr_name, subr, comment)
+
+
+    # PTR_SECTION_MARKER ::= '[pointers]' SPACE* COMMENT? NEWLINE
+    #
+    # PTR_SECTION ::=
+    #   PTR_SECTION_MARKER ( EMPTY_LINE | PTR_DEF_LINE )*
+    #
+    # PTR_DEF_LINE ::=  ( REP_FUNC_DEF_LINE | REP_SUBR_DEF_LINE |
+    #                     PTR_FUNC_DEF_LINE | PTR_SUBR_DEF_LINE )
+
+
+    def m_ptr_section(self, pos):
+        pnext = pos
+
+        rep_func_defs = []
+        rep_subr_defs = []
+        ptr_func_defs = []
+        ptr_subr_defs = []
+
+        r = self.m_section_marker(pnext, "pointers")
+        if r == None:
+            return None
+        pnext, section_name = r
+        
+        while True:
+            r = self.m_empty_line(pnext)
+            if r != None:
+                pnext = r
+                continue
+
+            r = self.m_rep_func_def_line(pnext)
+            if r != None:
+                pnext, rep_func_def = r
+                rep_func_defs.append(rep_func_def)
+                continue
+
+            r = self.m_rep_subr_def_line(pnext)
+            if r != None:
+                pnext, rep_subr_def = r
+                rep_subr_defs.append(rep_subr_def)
+                continue
+
+            r = self.m_ptr_func_def_line(pnext)
+            if r != None:
+                pnext, ptr_func_def = r
+                ptr_func_defs.append(ptr_func_def)
+                continue
+
+            r = self.m_ptr_subr_def_line(pnext)
+            if r != None:
+                pnext, ptr_subr_def = r
+                ptr_subr_defs.append(ptr_subr_def)
+                continue
+            
+            break
+
+        return pnext, (rep_func_defs, rep_subr_defs, ptr_func_defs, ptr_subr_defs)
+    
     #=======================================================================
     #
     # FUNC_NAME ::= NAME
+    #
+    # FUNC_ID ::= INTEGER
     #
     # FUNC_NAME_DEF_LINE ::=
     #   SPACE* FUNC_NAME SPACE* ':' SPACE* COMMENT? NEWLINE
@@ -499,11 +793,16 @@ class SeqParser(object):
     #
 
     #-----------------------------------------------------------------------
+    # FUNC_ID ::= INTEGER
+
+    def m_func_id(self, pos):
+        return self.m_integer(pos)
+
+    #-----------------------------------------------------------------------
     # FUNC_NAME ::= NAME
 
     def m_func_name(self, pos):
         return self.m_name(pos)
-
 
     #-----------------------------------------------------------------------
     # FUNC_NAME_DEF_LINE ::=
@@ -513,7 +812,6 @@ class SeqParser(object):
         pnext = pos
 
         pnext = self.m_zmsp(pnext)
-
 
         r = self.m_func_name(pnext)
         if r == None:
@@ -918,3 +1216,728 @@ class SeqParser(object):
         return pnext, funcs
     
     #-----------------------------------------------------------------------
+
+    #=======================================================================
+    #
+    # SUBR_NAME ::= NAME
+    #
+    # INSTR_CALL_LINE ::=
+    #   SPACE* 'CALL' SPACE+ ( ( '@' PTR_FUNC ) | FUNC_ID | FUNC_NAME )
+    #   ( SPACE+ 'repeat(' + SPACE* + ( ( '@' ( REP_FUNC | ADDRESS ) ) | CONSTANT_NAME | INTEGER | 'Inf' ) + SPACE* + ')' )
+    #   SPACE* COMMENT? NEWLINE
+    # 
+    # INSTR_JSR_LINE ::=
+    #   SPACE* 'JSR' SPACE+ ( ( '@' PTR_SUBR ) | SUBR_ADDR | SUBR_NAME )
+    #   ( SPACE+ 'repeat(' + SPACE* + ( ( '@' ( REP_SUBR | ADDRESS ) ) | CONSTANT_NAME | INTEGER ) + SPACE* + ')' )
+    #   SPACE* COMMENT? NEWLINE
+    #
+    # INSTR_RTS_LINE ::=
+    #   SPACE* 'RTS' SPACE* COMMENT? NEWLINE
+    #
+    # INSTR_END_LINE ::=
+    #   SPACE* 'END' SPACE* COMMENT? NEWLINE
+    #
+    # SUBR_NAME_DEF_LINE ::=
+    #   SPACE* SUBR_NAME SPACE* ':' SPACE* COMMENT? NEWLINE
+    #
+    # SUBR_DEF_BLOCK ::=
+    #   SUBR_NAME_DEF_LINE
+    #   ( INSTR_CALL_LINE | INSTR_JSR_LINE )*
+    #   INSTR_RTS_LINE 
+    #
+    # MAIN_DEF_BLOCK ::=
+    #   SUBR_NAME_DEF_LINE
+    #   ( INSTR_CALL_LINE | INSTR_JSR_LINE )*
+    #   INSTR_END_LINE 
+    # 
+    #-----------------------------------------------------------------------
+    # SUBR_NAME ::= NAME
+
+    def m_subr_name(self, pos):
+        return self.m_name(pos)
+
+    #-----------------------------------------------------------------------
+    # INSTR_CALL_FUNC_REF_PTR ::=  '@' ( PTR_FUNC_NAME | ADDRESS ) 
+    # INSTR_CALL_FUNC_REF_DIR ::=  FUNC_ID | FUNC_NAME 
+    # INSTR_CALL_FUNC_REF ::=  INSTR_CALL_FUNC_REF_PTR | INSTR_CALL_FUNC_REF_DIR
+    
+    def m_instr_call_func_ref_ptr(self, pos):
+        pnext = pos
+
+        if self.s[pnext] != '@':
+            return None
+        pnext += 1
+
+        r = self.m_ptr_func_name(pnext)
+        if r != None:
+            pnext, ptr_func = r
+            return pnext, ('PTR_FUNC', ptr_func)
+
+        r = self.m_address(pnext)
+        if r == None:
+            return None
+        pnext, address = r
+        return pnext, ('ADDRESS', address)
+
+
+    def m_instr_call_func_ref_dir(self, pos):
+        pnext = pos
+
+        r = self.m_func_id(pnext)
+        if r != None:
+            pnext, func_id = r
+            return pnext, ('FUNC_ID', func_id)
+
+        r = self.m_func_name(pnext)
+        if r == None:
+            return None
+        pnext, func_name = r
+        return pnext, ('FUNC_NAME', func_name)
+
+
+    def m_instr_call_func_ref(self, pos):
+        pnext = pos
+
+        r = self.m_instr_call_func_ref_ptr(pnext)
+        if r != None:
+            pnext, func_ref = r
+            return pnext, func_ref
+
+        r = self.m_instr_call_func_ref_dir(pnext)
+        if r == None:
+            return None
+        pnext, func_ref = r
+        return pnext, func_ref
+        
+    #-----------------------------------------------------------------------
+    # INSTR_CALL_REP_REF_PTR ::=  '@' ( REP_FUNC_NAME | ADDRESS ) 
+    # INSTR_CALL_REP_REF_DIR ::=  CONSTANT_NAME | 'Inf' | INTEGER 
+    # INSTR_CALL_REP_REF ::=  INSTR_CALL_REP_REF_PTR | INSTR_CALL_REP_REF_DIR
+    # INSTR_CALL_REP ::= 'repeat(' SPACE* INSTR_CALL_REP_REF SPACE* ')'
+
+    
+    def m_instr_call_rep_ref_ptr(self, pos):
+        pnext = pos
+
+        if self.s[pnext] != '@':
+            return None
+        pnext += 1
+
+        r = self.m_rep_func_name(pnext)
+        if r != None:
+            pnext, rep_func_name = r
+            return pnext, ("REP_FUNC", rep_func_name)
+    
+        r = self.m_address(pnext)
+        if r == None:
+            return None
+        pnext, address = r
+        return pnext, ("ADDRESS", address)
+        
+    
+    _s_inf = "Inf"
+
+    def m_instr_call_rep_ref_dir(self, pos):
+        pnext = pos
+
+        l = len(self._s_inf)
+        if self.s[pnext:pnext+l] == self._s_inf:
+            pnext += l
+            return pnext, ("INFINITY", "Inf")
+
+        r = self.m_integer(pnext)
+        if r != None:
+            pnext, rep = r
+            return pnext, ("INTEGER", rep)
+
+        r = self.m_constant_name(pnext)
+        if r != None:
+            pnext, constant_name = r
+            return pnext, ("CONSTANT_NAME", constant_name)
+
+        return None
+
+    
+    def m_instr_call_rep_ref(self, pos):
+        pnext = pos
+
+        r = self.m_instr_call_rep_ref_ptr(pnext)
+        if r != None:
+            pnext, rep_ref = r
+            return pnext, rep_ref
+
+        r = self.m_instr_call_rep_ref_dir(pnext)
+        if r != None:
+            pnext, rep_ref = r
+            return pnext, rep_ref
+
+        return None
+        
+    #-----------------------------------------------------------------------
+    
+    _s_repeat_start = "repeat("
+    _s_repeat_end = ")"
+
+    def m_instr_call_rep(self, pos):
+        pnext = pos
+
+        l = len(self._s_repeat_start)
+        if self.s[pnext:pnext+l] != self._s_repeat_start:
+            return None
+        pnext += l
+
+        pnext = self.m_zmsp(pnext)
+        
+        r = self.m_instr_call_rep_ref(pnext)
+        if r == None:
+            return None
+        pnext, rep = r
+
+        pnext = self.m_zmsp(pnext)
+        
+        if self.s[pnext] != self._s_repeat_end:
+            return None
+        pnext += 1
+        
+        return pnext, rep
+        
+    #-----------------------------------------------------------------------
+    # INSTR_CALL_LINE ::=
+    #   SPACE* 'CALL' SPACE+ INSTR_CALL_FUNC_REF
+    #   ( SPACE+ INSTR_CALL_REP )?
+    #   SPACE* COMMENT? NEWLINE
+
+    _s_instr_call_opname = "CALL"
+    
+    def m_instr_call_line(self, pos):
+        pnext = pos
+
+        call_instr = { 'opname': 'CALL', 'func': None, 'repeat': 1 }
+        
+        pnext = self.m_zmsp(pnext)
+        # print [1], pnext
+        
+        l = len(self._s_instr_call_opname)
+        if self.s[pnext:pnext+l] != self._s_instr_call_opname:
+            return None
+        pnext += l
+        # print [2], pnext
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+        # print [3], pnext
+        
+        r = self.m_instr_call_func_ref(pnext)
+        if r == None:
+            return None
+        pnext, func_ref = r
+        call_instr['func'] = func_ref
+        # print [4], pnext, func_ref
+        
+        r = self.m_omsp(pnext)
+        if r != None:
+            pnext = r
+            r = self.m_instr_call_rep(pnext)
+            if r != None:
+                pnext, func_rep = r
+                call_instr['repeat'] = func_rep
+                # print [5], pnext, func_rep
+
+        pnext = self.m_zmsp(pnext)
+        # print [6], pnext
+        
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+        # print [7], pnext, comment
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        # print [8], pnext
+        
+        return pnext, call_instr
+
+
+
+    #=======================================================================
+
+    #-----------------------------------------------------------------------
+    # INSTR_JSR_SUBR_REF_PTR ::=  '@' ( PTR_SUBR_NAME | ADDRESS ) 
+    # INSTR_JSR_SUBR_REF_DIR ::=  SUBR_NAME | ADDRESS
+    # INSTR_JSR_SUBR_REF ::=  INSTR_JSR_SUBR_REF_PTR | INSTR_JSR_SUBR_REF_DIR
+    
+    def m_instr_jsr_subr_ref_ptr(self, pos):
+        pnext = pos
+
+        if self.s[pnext] != '@':
+            return None
+        pnext += 1
+
+        r = self.m_ptr_subr_name(pnext)
+        if r != None:
+            pnext, ptr_subr = r
+            return pnext, ('PTR_SUBR', ptr_subr)
+
+        r = self.m_address(pnext)
+        if r == None:
+            return None
+        pnext, address = r
+        return pnext, ('ADDRESS', address)
+
+
+    def m_instr_jsr_subr_ref_dir(self, pos):
+        pnext = pos
+
+        r = self.m_subr_name(pnext)
+        if r != None:
+            pnext, subr_name = r
+            return pnext, ('SUBR_NAME', subr_name)
+
+        r = self.m_address(pnext)
+        if r != None:
+            pnext, address = r
+            return pnext, ('ADDRESS', address)
+
+        return None
+    
+
+    def m_instr_jsr_subr_ref(self, pos):
+        pnext = pos
+
+        r = self.m_instr_jsr_subr_ref_ptr(pnext)
+        if r != None:
+            pnext, subr_ref = r
+            return pnext, subr_ref
+
+        r = self.m_instr_jsr_subr_ref_dir(pnext)
+        if r != None:
+            pnext, subr_ref = r
+            return pnext, subr_ref
+
+        return None
+        
+    #-----------------------------------------------------------------------
+    # INSTR_JSR_REP_REF_PTR ::=  '@' ( REP_SUBR_NAME | ADDRESS ) 
+    # INSTR_JSR_REP_REF_DIR ::=  INTEGER | CONSTANT_NAME
+    # INSTR_JSR_REP_REF ::=  INSTR_JSR_REP_REF_PTR | INSTR_JSR_REP_REF_DIR
+    # INSTR_JSR_REP ::= 'repeat(' SPACE* INSTR_CALL_REP_REF SPACE* ')'
+    
+    def m_instr_jsr_rep_ref_ptr(self, pos):
+        pnext = pos
+
+        if self.s[pnext] != '@':
+            return None
+        pnext += 1
+
+        r = self.m_rep_subr_name(pnext)
+        if r != None:
+            pnext, rep_subr_name = r
+            return pnext, ("REP_SUBR", rep_subr_name)
+    
+        r = self.m_address(pnext)
+        if r != None:
+            pnext, address = r
+            return pnext, ("ADDRESS", address)
+
+        return None
+    
+
+    def m_instr_jsr_rep_ref_dir(self, pos):
+        pnext = pos
+
+        r = self.m_integer(pnext)
+        if r != None:
+            pnext, rep = r
+            return pnext, ("INTEGER", rep)
+
+        r = self.m_constant_name(pnext)
+        if r != None:
+            pnext, constant_name = r
+            return pnext, ("CONSTANT_NAME", constant_name)
+
+        return None
+
+    
+    def m_instr_jsr_rep_ref(self, pos):
+        pnext = pos
+
+        r = self.m_instr_jsr_rep_ref_ptr(pnext)
+        if r != None:
+            pnext, rep_ref = r
+            return pnext, rep_ref
+
+        r = self.m_instr_jsr_rep_ref_dir(pnext)
+        if r != None:
+            pnext, rep_ref = r
+            return pnext, rep_ref
+
+        return None
+        
+    #-----------------------------------------------------------------------
+    
+    _s_repeat_start = "repeat("
+    _s_repeat_end = ")"
+
+    def m_instr_jsr_rep(self, pos):
+        pnext = pos
+
+        l = len(self._s_repeat_start)
+        if self.s[pnext:pnext+l] != self._s_repeat_start:
+            return None
+        pnext += l
+
+        pnext = self.m_zmsp(pnext)
+        
+        r = self.m_instr_jsr_rep_ref(pnext)
+        if r == None:
+            return None
+        pnext, rep = r
+
+        pnext = self.m_zmsp(pnext)
+        
+        if self.s[pnext] != self._s_repeat_end:
+            return None
+        pnext += 1
+        
+        return pnext, rep
+        
+    #-----------------------------------------------------------------------
+    # INSTR_JSR_LINE ::=
+    #   SPACE* 'JSR' SPACE+ INSTR_JSR_FUNC_REF
+    #   ( SPACE+ INSTR_JSR_REP )?
+    #   SPACE* COMMENT? NEWLINE
+
+    _s_instr_jsr_opname = "JSR"
+    
+    def m_instr_jsr_line(self, pos):
+        pnext = pos
+
+        jsr_instr = { 'opname': 'JSR', 'subr': None, 'repeat': 1 }
+        
+        pnext = self.m_zmsp(pnext)
+        print [1], pnext
+        
+        l = len(self._s_instr_jsr_opname)
+        if self.s[pnext:pnext+l] != self._s_instr_jsr_opname:
+            return None
+        pnext += l
+        print [2], pnext
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+        print [3], pnext
+        
+        r = self.m_instr_jsr_subr_ref(pnext)
+        if r == None:
+            return None
+        pnext, subr_ref = r
+        jsr_instr['subr'] = subr_ref
+        print [4], pnext, subr_ref
+        
+        r = self.m_omsp(pnext)
+        if r != None:
+            pnext = r
+            r = self.m_instr_jsr_rep(pnext)
+            if r != None:
+                pnext, subr_rep = r
+                jsr_instr['repeat'] = subr_rep
+                print [5], pnext, subr_rep
+
+        pnext = self.m_zmsp(pnext)
+        print [6], pnext
+        
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+        print [7], pnext, comment
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        print [8], pnext
+        
+        return pnext, jsr_instr
+    
+    #-----------------------------------------------------------------------
+    # INSTR_RTS_LINE ::=
+    #   SPACE* 'RTS' SPACE* COMMENT? NEWLINE
+
+    _s_instr_rts_opname = "RTS"
+    
+    def m_instr_rts_line(self, pos):
+        pnext = pos
+
+        rts_instr = { 'opname': 'RTS' }
+        
+        pnext = self.m_zmsp(pnext)
+        
+        l = len(self._s_instr_rts_opname)
+        if self.s[pnext:pnext+l] != self._s_instr_rts_opname:
+            return None
+        pnext += l
+
+        pnext = self.m_zmsp(pnext)
+        
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, rts_instr
+    
+    #-----------------------------------------------------------------------
+    # INSTR_END_LINE ::=
+    #   SPACE* 'END' SPACE* COMMENT? NEWLINE
+
+    _s_instr_end_opname = "END"
+    
+    def m_instr_end_line(self, pos):
+        pnext = pos
+
+        end_instr = { 'opname': 'END' }
+        
+        pnext = self.m_zmsp(pnext)
+        
+        l = len(self._s_instr_end_opname)
+        if self.s[pnext:pnext+l] != self._s_instr_end_opname:
+            return None
+        pnext += l
+
+        pnext = self.m_zmsp(pnext)
+        
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, end_instr
+    
+    #-----------------------------------------------------------------------
+    # SUBR_NAME_DEF_LINE ::=
+    #   SPACE* SUBR_NAME SPACE* ':' SPACE* COMMENT? NEWLINE
+    #
+    # SUBR_DEF_BLOCK ::=
+    #   SUBR_NAME_DEF_LINE
+    #   ( INSTR_CALL_LINE | INSTR_JSR_LINE | EMPTY_LINE )*
+    #   INSTR_RTS_LINE 
+    #
+    # MAIN_DEF_BLOCK ::=
+    #   SUBR_NAME_DEF_LINE
+    #   ( INSTR_CALL_LINE | INSTR_JSR_LINE | EMPTY_LINE )*
+    #   INSTR_END_LINE 
+
+    def m_subr_name_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        r = self.m_subr_name(pnext)
+        if r == None:
+            return None
+        pnext, subr_name = r
+
+        pnext = self.m_zmsp(pnext)
+
+        if self.s[pnext] != ':':
+            return None
+        pnext += 1
+
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+        
+        return pnext, (subr_name, comment)
+    
+
+    # SUBR_DEF_BLOCK ::=
+    #   SUBR_NAME_DEF_LINE
+    #   ( INSTR_CALL_LINE | INSTR_JSR_LINE | EMPTY_LINE )*
+    #   INSTR_RTS_LINE 
+
+    # MAIN_DEF_BLOCK ::=
+    #   SUBR_NAME_DEF_LINE
+    #   ( INSTR_CALL_LINE | INSTR_JSR_LINE | EMPTY_LINE )*
+    #   INSTR_END_LINE 
+
+
+    def m_subr_def_block(self, pos, main = False):
+        pnext = pos
+
+        subr_instrs = []
+
+        r = self.m_subr_name_def_line(pnext)
+        if r == None:
+            return None
+        pnext, (subr_name, comment) = r
+        
+        while True:
+            r = self.m_empty_line(pnext)
+            if r != None:
+                pnext = r
+                continue
+
+            r = self.m_instr_call_line(pnext)
+            if r != None:
+                pnext, instr = r
+                subr_instrs.append(instr)
+                continue
+
+            r = self.m_instr_jsr_line(pnext)
+            if r != None:
+                pnext, instr = r
+                subr_instrs.append(instr)
+                continue
+            
+            break
+
+        if main:
+            r = self.m_instr_end_line(pnext)
+        else:
+            r = self.m_instr_rts_line(pnext)
+
+        if r == None:
+            return None
+        pnext, instr = r
+        subr_instrs.append(instr)
+
+        pnext = self.m_empty_lines(pnext)
+        
+        return pnext, { 'name': subr_name, 'comment': comment, 'instrs': subr_instrs }
+    
+
+    #-----------------------------------------------------------------------
+    # SUBR_SECTION ::= SUBR_SECTION_MARKER SUBR_DEF_BLOCK*
+    # MAIN_SECTION ::= MAIN_SECTION_MARKER MAIN_DEF_BLOCK*
+
+    def m_subr_section(self, pos, main = False):
+        pnext = pos
+
+        subrs = []
+
+        pnext = self.m_empty_lines(pnext)
+
+        print [1]
+        if main:
+            r = self.m_section_marker(pnext, "mains")
+        else:
+            r = self.m_section_marker(pnext, "subroutines")
+
+        if r == None:
+            return None
+        pnext, section_name = r
+        print [2]
+        
+        while True:
+            pnext = self.m_empty_lines(pnext)
+            print [3]
+
+            r = self.m_subr_def_block(pnext, main = main)
+            if r == None:
+                break
+            pnext, subr = r
+            print [4], subr
+            subrs.append(subr)
+
+        pnext = self.m_empty_lines(pnext)
+            
+        return pnext, subrs
+
+
+    #=======================================================================
+    # SEQ ::=
+    #     CONSTANT_SECTION
+    #     CLOCK_SECTION
+    #     PTR_SECTION?
+    #     FUNC_SECTION
+    #     SUBR_SECTION?
+    #     MAIN_SECTION
+
+    def m_seq(self, pos):
+        pnext = pos
+
+        result = { 'constants': [],
+                   'clocks': [],
+                   'pointers': [],
+                   'functions': [],
+                   'subroutines': [],
+                   'mains': [] }
+
+        pnext = self.m_empty_lines(pnext)
+
+        print "[constants]"
+        r = self.m_constant_section(pnext)
+        if r == None:
+            return None
+        pnext, result['constants'] = r
+
+        pnext = self.m_empty_lines(pnext)
+
+        print "[clocks]"
+        r = self.m_clock_section(pnext)
+        if r == None:
+            return None
+        pnext, result['clocks'] = r
+
+        pnext = self.m_empty_lines(pnext)
+
+        print "[pointers]"
+        r = self.m_ptr_section(pnext)
+        if r != None:
+            pnext, result['pointers'] = r
+
+        pnext = self.m_empty_lines(pnext)
+
+        print "[functions]"
+        r = self.m_func_section(pnext)
+        if r == None:
+            return None
+        pnext, result['functions'] = r
+
+        pnext = self.m_empty_lines(pnext)
+
+        print "[subroutines]"
+        r = self.m_subr_section(pnext)
+        if r != None:
+            pnext, result['subroutines'] = r
+
+        pnext = self.m_empty_lines(pnext)
+            
+        print "[mains]"
+        r = self.m_subr_section(pnext, main=True)
+        if r == None:
+            return None
+        pnext, result['mains'] = r
+
+        pnext = self.m_empty_lines(pnext)
+        
+        return result
+
+
+    
