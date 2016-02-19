@@ -141,9 +141,10 @@ def area_stats(hdulist, logtofile=False, selectchannels=None):
     #return out
 
 
-def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''):
+def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = '', polynomfit=True):
     """
     Cut and fit plots accross image (designed for images acquired in scanning mode).
+    If polynomfit is set to False, reverts to average and standard deviation.
     :param cutcolumns: list of columns for display accross column direction
     :param selectchannels: list of selected channels for display (all by default)
     :return:
@@ -168,36 +169,59 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
         #Nlines = dsec[3]
 
         chanvalues = []
-
-        # first-order polynomial fit of scans
-
-        polyscan = np.polyfit(lines, img, 1)
         stddev = np.empty(Nbins)
-        for b in range(Nbins):
-            polyfit = np.poly1d(polyscan[:, b])
-            residuals = img[:,b] - polyfit(lines)
-            stddev[b] = residuals.std()
-            chanvalues.append((polyscan[1, b], polyscan[0, b], stddev[b]))
-            if b in cutcolumns:
-                plt.figure(figY.number)
-                plt.plot(img[:,b])
+        if polynomfit:
+            # first-order polynomial fit of scans, plus dispersion
+            polyscan = np.polyfit(lines, img, 1)
+
+            for b in range(Nbins):
+                polyfit = np.poly1d(polyscan[:, b])
+                residuals = img[:,b] - polyfit(lines)
+                stddev[b] = residuals.std()
+                chanvalues.append((polyscan[1, b], polyscan[0, b], stddev[b]))
+                if b in cutcolumns:
+                    plt.figure(figY.number)
+                    plt.plot(img[:,b])
                 plt.plot(polyfit(lines))
+
+            # plots along line direction
+            plt.figure(figX.number)
+            #p0.plot(polyscan[1, :])
+            plt.subplot(311)
+            plt.plot(polyscan[1, :])
+            plt.ylabel('Constant in polynomial fit')
+            plt.subplot(312)
+            plt.plot(polyscan[0, :])
+            #p1.plot(polyscan[0, :])
+            plt.ylabel('Slope in polynomial fit')
+            plt.subplot(313)
+            plt.plot(stddev)
+            #pdev.plot(stddev)
+            plt.ylabel('Residuals from fit')
+
+        else:
+            # mean and standard deviation
+            meanbin = np.empty(Nbins)
+            for b in range(Nbins):
+                meanbin[b] =  img[:,b].mean()
+                stddev[b] = img[:,b].std()
+                chanvalues.append((meanbin[b], stddev[b]))
+                if b in cutcolumns:
+                    plt.figure(figY.number)
+                    plt.plot(img[:,b])
+                plt.plot(np.full_like(img[:,b], meanbin[b]))
+
+            # plots along line direction
+            plt.figure(figX.number)
+            plt.subplot(311)
+            plt.plot(meanbin)
+            plt.ylabel('Average of column')
+            plt.subplot(312)
+            plt.plot(stddev)
+            plt.ylabel('Dispersion along column')
+
         values.append(chanvalues)
 
-        # plots along line direction
-        plt.figure(figX.number)
-        #p0.plot(polyscan[1, :])
-        plt.subplot(311)
-        plt.plot(polyscan[1, :])
-        plt.ylabel('Constant in polynomial fit')
-        plt.subplot(312)
-        plt.plot(polyscan[0, :])
-        #p1.plot(polyscan[0, :])
-        plt.ylabel('Slope in polynomial fit')
-        plt.subplot(313)
-        plt.plot(stddev)
-        #pdev.plot(stddev)
-        plt.ylabel('Residuals from fit')
 
     # log to file
     rootname = get_image_id(hdulist)
@@ -206,13 +230,19 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
     # header line
     outfile.write("ScanBin\t")
     for name in listchan:
-        outfile.write("%s_P0\t%s_P1\t%s_SD\t" % (name, name, name))
+        if polynomfit:
+            outfile.write("%s_P0\t%s_P1\t%s_SD\t" % (name, name, name))
+        else:
+            outfile.write("%s_MN\t%s_SD\t" % (name, name))
     outfile.write("\n")
     # one line per bin
     for b in range(Nbins):
         outfile.write("%d\t" % b)
         for j in range(len(listchan)):
-            outfile.write("%.2f\t%.4f\t%.2f\t" % values[j][b])
+            if polynomfit:
+                outfile.write("%.2f\t%.4f\t%.2f\t" % values[j][b])
+            else:
+                outfile.write("%.2f\t%.2f\t" % values[j][b])
         outfile.write("\n")
 
     outfile.close()

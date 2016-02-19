@@ -751,7 +751,7 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
-    def read(self, address, n=1, check=True, fake=False):
+    def read(self, address, n=1, check=True, fake=False, verbose=True):
         """
         Read a FPGA register and return its value.
         if n > 1, returns a list of values.
@@ -787,7 +787,8 @@ class FPGA(object):
         # print lines
 
         for line in lines:
-            print line
+            if verbose:
+                print line
             if line == '':
                 continue
             matches = re.match(
