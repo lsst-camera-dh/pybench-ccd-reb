@@ -149,20 +149,25 @@ class FPGA3(FPGA):
             answer = code
         return answer
 
-    def config_sigmadelta(self, channel, continuous=True):
+    def config_sigmadelta(self, channel, gain=3, continuous=True):
         """
-        Configures the 24-bit sigma-delta ADC: readout mode, channel, gain? etc.
+        Configures the 24-bit sigma-delta ADC: readout mode, channel, gain
         :param continuous:
         :return:
         """
-        #TODO: read mode, gain, current, ?
+
         if continuous:
             self.sigmadelta_spi(False, 1, 0xA)
+
         else:
             self.sigmadelta_spi(False, 1, 0x200A)
-        currentconfig = self.sigmadelta_spi(True, 2, 0)
-        newconfig = (currentconfig & 0xfff0) + channel
+
+        # select channel and gain
+        #currentconfig = self.sigmadelta_spi(True, 2, 0)
+        newconfig = (gain << 8) + 0x10 + channel
         self.sigmadelta_spi(False, 2, newconfig)
+        # power on current
+        self.sigmadelta_spi(False, 5, 0x200)
 
     def read_sigmadelta(self, continuous=True):
         """
@@ -173,8 +178,8 @@ class FPGA3(FPGA):
             # could wait here by watching RDY bit, probably not time-critical enough
             answer = self.sigmadelta_spi(True, 3, 0)
         else:
-            # power up and perform conversion
-            self.sigmadelta_spi(False, 1, 0xA)
+            # power up and perform single conversion
+            self.sigmadelta_spi(False, 1, 0x200A)
             # read result
             answer = self.sigmadelta_spi(True, 3, 0)
         
