@@ -60,7 +60,8 @@ class Instrument(Driver):
             self.useCABAC = True
             self.reb.useCABACbias = True
         elif self.hardware == 'REB3':
-            self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
+            self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host,
+                                 stripe_id=[self.stripe], hardware=self.hardware)
             self.useCABAC = False
 
         # then check FPGA version after connecting

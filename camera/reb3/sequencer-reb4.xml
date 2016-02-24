@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sequencer>
+    <sequencer-config>
+        <parameters>
+            <parameter id="ReadLines">
+                <fullname>Number of lines for full readout</fullname>
+                <value>2020</value>
+            </parameter>
+            <parameter id="ReadColumns">
+                <fullname>Number of columns for full readout</fullname>
+                <value>550</value>
+            </parameter>
+            <parameter id="StartLine">
+                <fullname>Starting line for windowed readout</fullname>
+                <value>100</value>
+            </parameter>
+            <parameter id="StartColumn">
+                <fullname>Starting column for windowed readout</fullname>
+                <value>50</value>
+            </parameter>
+            <parameter id="WindowLines">
+                <fullname>Number of lines of the window</fullname>
+                <value>1000</value>
+            </parameter>
+            <parameter id="WindowColumns">
+                <fullname>Number of columns of the window</fullname>
+                <value>256</value>
+            </parameter>
+            <parameter id="EndLine">
+                <fullname>Number of lines after window</fullname>
+                <value>920</value>
+            </parameter>
+            <parameter id="EndColumn">
+                <fullname>Number of columns after window</fullname>
+                <value>244</value>
+            </parameter>
+            <parameter id="ExposureTime">
+                <fullname>Duration of exposure in unit of 25 ms</fullname>
+                <value>80</value>
+            </parameter>
+            <parameter id="clockperiod">
+                <fullname>Clock period</fullname>
+                <value>10 ns</value>
+            </parameter>
+            <parameter id="TimeP">
+                <fullname>Base time element of parallel transfers</fullname>
+                <value>2000 ns</value>
+            </parameter>
+            <parameter id="BufferP">
+                <fullname>Parallel transfer buffer time</fullname>
+                <value>1000 ns</value>
+            </parameter>
+            <parameter id="TimeS">
+                <fullname>Base element of serial transfers</fullname>
+                <value>300 ns</value>
+            </parameter>
+            <parameter id="BufferS">
+                <fullname>Buffer for serial clock crossing</fullname>
+                <value>100 ns</value>
+            </parameter>
+            <parameter id="RampTime">
+                <fullname>ASPIC ramp time</fullname>
+                <value>450 ns</value>
+            </parameter>
+            <parameter id="ISO2">
+                <fullname>Time between ASPIC ramps</fullname>
+                <value>200 ns</value>
+            </parameter>
+        </parameters>
+        <channels>
+            <channel id="P1">
+                <fullname>Parallel clock 1</fullname>
+                <value>8</value>
+            </channel>
+            <channel id="P2">
+                <fullname>Parallel clock 2</fullname>
+                <value>9</value>
+            </channel>
+            <channel id="P3">
+                <fullname>Parallel clock 3</fullname>
+                <value>10</value>
+            </channel>
+            <channel id="P4">
+                <fullname>Parallel clock 4</fullname>
+                <value>11</value>
+            </channel>
+            <channel id="R1">
+                <fullname>Serial clock 1</fullname>
+                <value>4</value>
+            </channel>
+            <channel id="R2">
+                <fullname>Serial clock 2</fullname>
+                <value>5</value>
+            </channel>
+            <channel id="R3">
+                <fullname>Serial clock 3</fullname>
+                <value>6</value>
+            </channel>
+            <channel id="RG">
+                <fullname>Serial reset clock</fullname>
+                <value>7</value>
+            </channel>
+            <channel id="CL">
+                <fullname>ASPIC clamp</fullname>
+                <value>3</value>
+            </channel>
+            <channel id="RST">
+                <fullname>ASPIC integrator reset</fullname>
+                <value>2</value>
+            </channel>
+            <channel id="RD">
+                <fullname>ASPIC ramp-down integration</fullname>
+                <value>1</value>
+            </channel>
+            <channel id="RU">
+                <fullname>ASPIC ramp-up integration</fullname>
+                <value>0</value>
+            </channel>
+            <channel id="SPL">
+                <fullname>ADC sampling trigger</fullname>
+                <value>12</value>
+            </channel>
+            <channel id="SOI">
+                <fullname>Start of image</fullname>
+                <value>13</value>
+            </channel>
+            <channel id="EOI">
+                <fullname>End of image</fullname>
+                <value>14</value>
+            </channel>
+            <channel id="SHU">
+                <fullname>Shutter TTL</fullname>
+                <value>16</value>
+            </channel>
+        </channels>
+        <functions>
+            <function id="Default">
+                <fullname>Default state when not operating</fullname>
+                <clocklist>
+                    <clock ref="P2"/>
+                    <clock ref="P3"/>
+                    <clock ref="CL"/>
+                    <clock ref="RST"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>1us</duration>
+                        <value>111111</value>
+                    </timeslice>
+                </slicelist>
+                <constants/>
+            </function>
+            <function id="TransferLine">
+                <fullname>Single line transfer</fullname>
+                <clocklist>
+                    <clock ref="P1"/>
+                    <clock ref="P2"/>
+                    <clock ref="P3"/>
+                    <clock ref="P4"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>BufferP</duration>
+                        <value>0110</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>TimeP</duration>
+                        <value>0011</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeP</duration>
+                        <value>1001</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>TimeP</duration>
+                        <value>1100</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeP</duration>
+                        <value>0110</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="R1"> 1 </constant>
+                    <constant ref="R2"> 1 </constant>
+                    <constant ref="CL"> 1 </constant>
+                    <constant ref="RST"> 1 </constant>
+                </constants>
+            </function>
+            <function id="ReadPixel">
+                <fullname>Single pixel read</fullname>
+                <clocklist>
+                    <clock ref="RG"/>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                    <clock ref="CL"/>
+                    <clock ref="RST"/>
+                    <clock ref="RD"/>
+                    <clock ref="RU"/>
+                    <clock ref="SPL"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>50 ns</duration>
+                        <value>011000000</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>50 ns</duration>
+                        <value>001000001</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeS</duration>
+                        <value>101011000</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>101111000</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>BufferS</duration>
+                        <value>000111000</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>000100000</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>350 ns</duration>
+                        <value>000100100</value>
+                    </timeslice>
+                    <timeslice id="slice8">
+                        <duration>BufferS</duration>
+                        <value>010100100</value>
+                    </timeslice>
+                    <timeslice id="slice9">
+                        <duration>ISO2</duration>
+                        <value>010000000</value>
+                    </timeslice>
+                    <timeslice id="slice10">
+                        <duration>RampTime</duration>
+                        <value>010000010</value>
+                    </timeslice>
+                    <timeslice id="slice11">
+                        <duration>50 ns</duration>
+                        <value>011000000</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                </constants>
+            </function>
+            <function id="StartOfImage">
+                <fullname>Signals start of frame to be recorded</fullname>
+                <clocklist>
+                    <clock ref="SOI"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>3400 ns</duration>
+                        <value>0</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>100 ns</duration>
+                        <value>1</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>100 ns</duration>
+                        <value>0</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                    <constant ref="R1"> 1 </constant>
+                    <constant ref="R2"> 1 </constant>
+                    <constant ref="CL"> 1 </constant>
+                    <constant ref="RST"> 1 </constant>
+                </constants>
+            </function>
+            <function id="FlushSerial">
+                <fullname>Single pixel fast flush</fullname>
+                <clocklist>
+                    <clock ref="R1"/>
+                    <clock ref="R2"/>
+                    <clock ref="R3"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>TimeS</duration>
+                        <value>010</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>BufferS</duration>
+                        <value>011</value>
+                    </timeslice>
+                    <timeslice id="slice3">
+                        <duration>TimeS</duration>
+                        <value>001</value>
+                    </timeslice>
+                    <timeslice id="slice4">
+                        <duration>BufferS</duration>
+                        <value>101</value>
+                    </timeslice>
+                    <timeslice id="slice5">
+                        <duration>TimeS</duration>
+                        <value>100</value>
+                    </timeslice>
+                    <timeslice id="slice6">
+                        <duration>BufferS</duration>
+                        <value>110</value>
+                    </timeslice>
+                    <timeslice id="slice7">
+                        <duration>50 ns</duration>
+                        <value>010</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                    <constant ref="CL">1</constant>
+                    <constant ref="RST">1</constant>
+                </constants>
+            </function>
+            <function id="EndOfImage">
+                <fullname>Signals end of frame to be recorded</fullname>
+                <clocklist>
+                    <clock ref="EOI"/>
+                </clocklist>
+                <slicelist>
+                    <timeslice id="slice1">
+                        <duration>4200 ns</duration>
+                        <value>0</value>
+                    </timeslice>
+                    <timeslice id="slice2">
+                        <duration>100 ns</duration>
+                        <value>1</value>
+                    </timeslice>
+                   <timeslice id="slice3">
+                        <duration>100 ns</duration>
+                        <value>0</value>
+                    </timeslice>
+                </slicelist>
+                <constants>
+                    <constant ref="P2">1</constant>
+                    <constant ref="P3">1</constant>
+                    <constant ref="R1"> 1 </constant>
+                    <constant ref="R2"> 1 </constant>
+                    <constant ref="CL"> 1 </constant>
+                    <constant ref="RST"> 1 </constant>
+                </constants>
+            </function>
+         </functions>
+    </sequencer-config>
+    <sequencer-routines>
+        <subroutines>
+            <subroutine id="LineWindow">
+                <fullname>Line for windowed readout</fullname>
+                <call ref="TransferLine"/>
+                <call ref="FlushSerial">
+                    <repeat>StartColumn</repeat>
+                </call>
+                <call ref="ReadPixel">
+                    <repeat>WindowColumns</repeat>
+                </call>
+                <call ref="FlushSerial">
+                    <repeat>EndColumn</repeat>
+                </call>
+            </subroutine>                
+            <subroutine id="LineRead">
+                <fullname>Reading a line</fullname>
+                <call ref="TransferLine"/>
+                <call ref="ReadPixel">
+                    <repeat>ReadColumns</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="FlushLine">
+                <fullname>Transfers and dumps whole line</fullname>
+                <call ref="TransferLine"/>
+                <call ref="FlushSerial">
+                    <repeat>ReadColumns</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="BaseFrame">
+                <fullname>Basic operations for readout of a CCD frame</fullname>
+                <call ref="StartOfImage"/>
+                <call ref="LineRead">
+                    <repeat>ReadLines</repeat>
+                </call>
+                <call ref="EndOfImage"/>
+            </subroutine>
+            <subroutine id="WarmUp">
+                <fullname>Warms up ADCs</fullname>
+                <call ref="ReadPixel">
+                    <repeat>256</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="CloseShutter">
+                <fullname>Gives time for shutter to close and warms up ADCs</fullname>
+                <call ref="FlushSerial">
+                    <repeat>50000</repeat>
+                </call>
+                <call ref="WarmUp"/>
+            </subroutine>
+            <subroutine id="ReadFrame">
+                <fullname>Readout and acquisition of a CCD frame</fullname>
+                <call ref="CloseShutter"/>
+                <call ref="BaseFrame"/>
+            </subroutine>
+            <subroutine id="ReadWindow">
+                <fullname>Readout of a windowed frame</fullname>
+                <call ref="FlushLine">
+                    <repeat>StartLine</repeat>
+                </call>
+                <call ref="StartOfImage"/>
+                <call ref="LineWindow">
+                    <repeat>WindowLines</repeat>
+                </call>
+                <call ref="EndOfImage"/>
+                <call ref="FlushLine">
+                    <repeat>EndLine</repeat>
+                </call>
+            </subroutine>
+            <subroutine id="WindowAcquisition">
+                <fullname>One acquisition of a window</fullname>
+                <call ref="CloseShutter"/>
+                <call ref="ReadWindow"/>
+            </subroutine>
+       </subroutines>
+        <mains>
+            <main id="Bias">
+                <fullname>Bias after warm-up</fullname>
+                <call ref="ReadFrame"/>
+            </main>
+            <main id="Window">
+                <fullname>One acquisition of a windowed frame</fullname>
+                <call ref="WindowAcquisition"/>
+            </main>
+       </mains>
+    </sequencer-routines>
+</sequencer>

@@ -56,8 +56,10 @@ class FPGA3(FPGA):
                      'OG_S': 0.0012561}
 
     # mapping of slow ADC (mux8chan, adcmux)
+    # different for REB3 and REB4
     # last digit of parameter name is always the stripe
-    adcmap = {'T_ASPT_0': (0, 2), 'T_ASPB_0': (0, 2),
+    hardwareadcmap = {
+        'REB3': {'T_ASPT_0': (0, 2), 'T_ASPB_0': (0, 2),
               'T_ASPT_1': (0, 6), 'T_ASPB_1': (0, 7),
               'T_ASPT_2': (0, 10), 'T_ASPB_2': (0, 11),
               'CS_T0_0': (0, 0), 'CS_B0_0': (0, 1),
@@ -90,13 +92,15 @@ class FPGA3(FPGA):
               'GD_0': (0, 12), 'GD_1': (5, 12), 'GD_2': (3, 13),
               'ADC5V_0': (4, 12), 'ADC5V_1': (1, 13), 'ADC5V_2': (7, 13),
               'REF2V5_1': (2, 13)
-              }
+              },
+        'REB4':{}
+    }
     # conversion factor for slow ADC
     adcconvert = 0.0012207
 
     # --------------------------------------------------------------------
 
-    def __init__(self, ctrl_host=None, reb_id=2):
+    def __init__(self, ctrl_host=None, reb_id=2, hardware='REB3'):
         FPGA.__init__(self, ctrl_host, reb_id)
         # declare two ASPICs for each stripe even if they will not be used
         self.aspics = {}
@@ -106,6 +110,8 @@ class FPGA3(FPGA):
         self.dacs = {}
         for param in self.dacparams:
             self.dacs[param] = 0
+        self.hardware = hardware
+        self.adcmap = self.hardwareadcmap[self.hardware]
 
     # --------------------------------------------------------------------
 
@@ -432,29 +438,54 @@ class FPGA3(FPGA):
 
    # ----------------------------------------------------------
 
-    def slow_adc_readmux(self, extmux, adcmux):
+    def slow_adc_readmux(self, muxtuple):
         """
         Triggers reading of slow ADC pointed at the given address
-        :param extmux: address on external 8-channel mux
-        :param adcmux: address on internal 16-channel mux
-        :return: int
+        For REB3, muxtuple is:
+        extmux: address on external 8-channel mux
+        adcmux: address on internal 16-channel mux
+        For REB4:
+        muxsam: top-level mux selection
+        muxselect: low-level mux selection
+        adcmux: internal 4-channel mux of the ADC
+        :rtype: int
         """
-        # includes enable bit on 8-channel mux
-        self.write(0x600101, ((extmux & 7) << 5) + (1 << 4) + (adcmux & 0xf))
-        # TODO: check it has not changed again
 
-        raw = self.read(0x601010, 1)[0x601010]
-        value = raw & 0xfff
-        checkextmux = (raw >> 21) & 7
-        checkadcmux = (raw >> 12) & 0xf
-        if (checkextmux != extmux) or (checkadcmux != adcmux):
-            print('Warning: mismatch in slow ADC read %d, %d' % (checkextmux, checkadcmux))
+        if self.hardware == 'REB3':
+            extmux, adcmux = muxtuple
+            # includes enable bit on 8-channel mux
+            self.write(0x600101, ((extmux & 7) << 5) + (1 << 4) + (adcmux & 0xf))
+            # TODO: check it has not changed again
+
+            raw = self.read(0x601010, 1)[0x601010]
+            value = raw & 0xfff
+            checkextmux = (raw >> 21) & 7
+            checkadcmux = (raw >> 12) & 0xf
+            if (checkextmux != extmux) or (checkadcmux != adcmux):
+                print('Warning: mismatch in slow ADC read %d, %d' % (checkextmux, checkadcmux))
+
+        elif self.hardware == 'REB4':
+            # TODO: initialization needs to be done elsewhere
+            # assuming range does not need to be changed for each value individually
+            muxsam, muxselect, adcmux = muxtuple
+            # write to muxes and ADC channel select
+            self.write(0x600101, ((muxsam & 7) << 19) + ((muxselect & 7) << 16) + (1 << 8) + ((adcmux & 0x3) << 5))
+            #  assuming this is how it works, contrary to current FPGA document
+            raw = self.read(0x601010, 1)[0x601010]
+            value = raw & 0xfff
+            checkadcmux = (raw >> 13) & 0x3
+            if checkadcmux != adcmux:
+                print('Warning: mismatch in slow ADC, reading channel %d' %  checkadcmux)
+
+        else:
+            raise ValueError('No slow ADC rules for this hardware type: %s' % self.hardware)
 
         return value
 
     def aspic_temperature_read(self):
         """
         Reads all the ASPIC temperature sensors.
+        Not changed between REB3 and REB4.
         :return: MetaData
         """
         self.write(0x600100, 1)
@@ -479,9 +510,9 @@ class FPGA3(FPGA):
         :type param: string
         :rtype: float
         """
-        extmux, adcmux = self.adcmap[param]
+        muxtuple = self.adcmap[param]
         # convert ADU to V or mA (for current sources)
-        value = self.slow_adc_readmux(extmux, adcmux) * self.adcconvert
+        value = self.slow_adc_readmux(muxtuple) * self.adcconvert
         # resistor bridge for biases
         if param[:2] in self.groups['BIASES']:
             value *= 11

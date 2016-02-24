@@ -79,7 +79,7 @@ def get_fits_dir(datadir):
 
 # ANALYSIS METHODS
 
-def stats_on_files(listfile, listnum, datadir, selectchannels=None):
+def stats_on_files(listfile, listnum=[], datadir='', selectchannels=None):
     """
     Very basic statistics over a list of fits files. Useful for linearity of REB.
     :param listfile: list of files without path
@@ -92,7 +92,10 @@ def stats_on_files(listfile, listnum, datadir, selectchannels=None):
     f = open(fname)
     for num,fitsfile in enumerate(listfile):
         i = open_fits(fitsfile)
-        f.write(listnum[num]+'\t')
+        if listnum:
+            f.write(listnum[num]+'\t')
+        else:
+            f.write(fitsfile+'\t')
         for name in find_channels(i, selectchannels):
             img = i[name].data
             light = img[500:, 20:]
