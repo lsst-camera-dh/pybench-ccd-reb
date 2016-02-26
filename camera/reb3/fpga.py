@@ -59,7 +59,7 @@ class FPGA3(FPGA):
     # different for REB3 and REB4
     # last digit of parameter name is always the stripe
     hardwareadcmap = {
-        'REB3': {'T_ASPT_0': (0, 2), 'T_ASPB_0': (0, 2),
+        'REB3': {'T_ASPT_0': (0, 2), 'T_ASPB_0': (0, 3),
               'T_ASPT_1': (0, 6), 'T_ASPB_1': (0, 7),
               'T_ASPT_2': (0, 10), 'T_ASPB_2': (0, 11),
               'CS_T0_0': (0, 0), 'CS_B0_0': (0, 1),
@@ -93,10 +93,47 @@ class FPGA3(FPGA):
               'ADC5V_0': (4, 12), 'ADC5V_1': (1, 13), 'ADC5V_2': (7, 13),
               'REF2V5_1': (2, 13)
               },
-        'REB4':{}
+        'REB4':{'T_ASPT_0': (0, 2, 0), 'T_ASPB_0': (0, 3, 0),
+              'T_ASPT_1': (0, 6, 0), 'T_ASPB_1': (0, 7, 0),
+              'T_ASPT_2': (0, 2, 1), 'T_ASPB_2': (0, 3, 1),
+              'CS_T0_0': (0, 0, 0), 'CS_B0_0': (0, 1, 0),
+              'CS_T1_0': (1, 0, 0), 'CS_B1_0': (1, 1, 0),
+              'CS_T2_0': (2, 0, 0), 'CS_B2_0': (2, 1, 0),
+              'CS_T3_0': (3, 0, 0), 'CS_B3_0': (3, 1, 0),
+              'CS_T4_0': (4, 0, 0), 'CS_B4_0': (4, 1, 0),
+              'CS_T5_0': (5, 0, 0), 'CS_B5_0': (5, 1, 0),
+              'CS_T6_0': (6, 0, 0), 'CS_B6_0': (6, 1, 0),
+              'CS_T7_0': (7, 0, 0), 'CS_B7_0': (7, 1, 0),
+              'CS_T0_1': (0, 4, 0), 'CS_B0_1': (0, 5, 0),
+              'CS_T1_1': (1, 4, 0), 'CS_B1_1': (1, 5, 0),
+              'CS_T2_1': (2, 4, 0), 'CS_B2_1': (2, 5, 0),
+              'CS_T3_1': (3, 4, 0), 'CS_B3_1': (3, 5, 0),
+              'CS_T4_1': (4, 4, 0), 'CS_B4_1': (4, 5, 0),
+              'CS_T5_1': (5, 4, 0), 'CS_B5_1': (5, 5, 0),
+              'CS_T6_1': (6, 4, 0), 'CS_B6_1': (6, 5, 0),
+              'CS_T7_1': (7, 4, 0), 'CS_B7_1': (7, 5, 0),
+              'CS_T0_2': (0, 0, 1), 'CS_B0_2': (0, 1, 1),
+              'CS_T1_2': (1, 0, 1), 'CS_B1_2': (1, 1, 1),
+              'CS_T2_2': (2, 0, 1), 'CS_B2_2': (2, 1, 1),
+              'CS_T3_2': (3, 0, 1), 'CS_B3_2': (3, 1, 1),
+              'CS_T4_2': (4, 0, 1), 'CS_B4_2': (4, 1, 1),
+              'CS_T5_2': (5, 0, 1), 'CS_B5_2': (5, 1, 1),
+              'CS_T6_2': (6, 0, 1), 'CS_B6_2': (6, 1, 1),
+              'CS_T7_2': (7, 0, 1), 'CS_B7_2': (7, 1, 1),
+              'OD_0': (1, 4, 1), 'OD_1': (6, 4, 1), 'OD_2': (4, 5, 1),
+              'OG_0': (2, 4, 1), 'OG_1': (7, 4, 1), 'OG_2': (5, 5, 1),
+              'RD_0': (3, 4, 1), 'RD_1': (0, 5, 1), 'RD_2': (6, 5, 1),
+              'GD_0': (0, 4, 1), 'GD_1': (5, 4, 1), 'GD_2': (3, 5, 1),
+              'ADC5V_0': (4, 4, 1), 'ADC5V_1': (1, 5, 1), 'ADC5V_2': (7, 5, 1),
+              'REF2V5_1': (2, 5, 1),
+              'PU': (0, 0, 2), 'PL': (0, 1, 2),
+              'SU': (0, 2, 2), 'SL': (0, 3, 2),
+              'RGU': (0, 4, 2), 'RGL': (0, 5, 2),
+              'P12': (0, 6, 2), 'N12': (0, 7, 2)
+              }
     }
     # conversion factor for slow ADC
-    adcconvert = 0.0012207
+    hardwareconvert = {'REB3': 0.0012207, 'REB4': (0.0012207, 0.0024414, 0.0024414)}
 
     # --------------------------------------------------------------------
 
@@ -112,7 +149,8 @@ class FPGA3(FPGA):
             self.dacs[param] = 0
         self.hardware = hardware
         self.adcmap = self.hardwareadcmap[self.hardware]
-
+        self.adcconvert = self.hardwareconvert[self.hardware]
+        
     # --------------------------------------------------------------------
 
     def get_boardID(self):
@@ -438,6 +476,19 @@ class FPGA3(FPGA):
 
    # ----------------------------------------------------------
 
+    def init_slow_adc(self):
+        """
+        Initializes the slow ADC for monitoring if necessary.
+        Values may need to be changed based on CCD type.
+        :return:
+        """
+        if self.hardware == 'REB3':
+            pass
+        elif self.hardware == 'REB4':
+            self.write(0x600101, 0x2060)
+            self.write(0x600101, 0x2220)
+            self.write(0x600101, 0x2420)
+
     def slow_adc_readmux(self, muxtuple):
         """
         Triggers reading of slow ADC pointed at the given address
@@ -455,14 +506,14 @@ class FPGA3(FPGA):
             extmux, adcmux = muxtuple
             # includes enable bit on 8-channel mux
             self.write(0x600101, ((extmux & 7) << 5) + (1 << 4) + (adcmux & 0xf))
-            # TODO: check it has not changed again
-
             raw = self.read(0x601010, 1)[0x601010]
             value = raw & 0xfff
             checkextmux = (raw >> 21) & 7
             checkadcmux = (raw >> 12) & 0xf
             if (checkextmux != extmux) or (checkadcmux != adcmux):
                 print('Warning: mismatch in slow ADC read %d, %d' % (checkextmux, checkadcmux))
+            # convert ADU to V or mA (for current sources)
+            value *=  self.adcconvert
 
         elif self.hardware == 'REB4':
             # TODO: initialization needs to be done elsewhere
@@ -470,12 +521,13 @@ class FPGA3(FPGA):
             muxsam, muxselect, adcmux = muxtuple
             # write to muxes and ADC channel select
             self.write(0x600101, ((muxsam & 7) << 19) + ((muxselect & 7) << 16) + (1 << 8) + ((adcmux & 0x3) << 5))
-            #  assuming this is how it works, contrary to current FPGA document
             raw = self.read(0x601010, 1)[0x601010]
             value = raw & 0xfff
             checkadcmux = (raw >> 13) & 0x3
             if checkadcmux != adcmux:
                 print('Warning: mismatch in slow ADC, reading channel %d' %  checkadcmux)
+            # convert ADU to V or mA (for current sources)
+            value *=  self.adcconvert[adcmux]
 
         else:
             raise ValueError('No slow ADC rules for this hardware type: %s' % self.hardware)
@@ -511,8 +563,8 @@ class FPGA3(FPGA):
         :rtype: float
         """
         muxtuple = self.adcmap[param]
-        # convert ADU to V or mA (for current sources)
-        value = self.slow_adc_readmux(muxtuple) * self.adcconvert
+
+        value = self.slow_adc_readmux(muxtuple)
         # resistor bridge for biases
         if param[:2] in self.groups['BIASES']:
             value *= 11
