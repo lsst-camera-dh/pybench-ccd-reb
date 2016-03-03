@@ -1,10 +1,14 @@
- # REB3 timing for E2V CCD, in new REB sequencer format
-# first proposal
-# (C. Juramy, 20160201)
+# REB3 timing for E2V CCD, in new REB sequencer format
+# simple sample file
+# now with CCS-compatible keywords (hopefully)
+# (C. Juramy, 20160303)
 
-[constants]  # will be substituted in the code at compilation time
-    DetectorLines:    2020      # Number of lines for full readout
-    DetectorColumns:  550       # Number of columns for full readout
+[constants]  # will be substituted in the code at compilation time, if used
+    SegRows:        2002    # Number of rows of the sensor
+    SegCols:         512    # Number of columns of the sensors
+    SerCols:         522    # Size of serial register
+    DetectorCols:    550    # Total number of columns in a full readout
+    DetectorRows:   2020    # Total number of rows in a full readout
     TimeP:            2000 ns   # Base time element of parallel transfers
     BufferP:          1000 ns   # Parallel transfer buffer time
     ISO2:             200 ns    # Time between ASPIC ramps
@@ -33,13 +37,13 @@
     SHU: 16  # Shutter TTL (for testing only)
 
 [pointers]  # can define a pointer to a function or to a repetition number (for subroutines or functions)
-    REP_FUNC    StartColumns      50  # Starting columns before readout window
-    REP_FUNC    WindowColumns    256  # Number of columns of the window
-    REP_FUNC    EndColumns       244  # Number of columns after window (it is up to the user that total columns = 550)
-    REP_FUNC    ExposureTime      80  # Duration of exposure in units of 25 ms
-    REP_SUBR    StartLines       100  # Starting line for windowed readout
-    REP_SUBR    WindowLines     1000  # Number of lines of the window
-    REP_SUBR    EndLines         920  # Number of lines after window (it is up to the user that total lines = 2020)
+    REP_FUNC    PreCols       50  # Number of columns to skip before readout window, including prescan
+    REP_FUNC    ReadCols     256  # Number of columns to read
+    REP_FUNC    PostCols     244  # Number of columns to discard after window (it is up to the user that total columns = 550)
+    REP_FUNC    ExposureTime  80  # Duration of exposure in units of 25 ms
+    REP_SUBR    PreRows       100  # Number of rows to skip before window
+    REP_SUBR    ReadRows     1000  # Number of rows of the window
+    REP_SUBR    PostRows      920  # Number of rows after window (it is up to the user that total lines = 2020)
     REP_SUBR    CleaningNumber     2  # Number of full CCD clears before acquiring a frame
     PTR_FUNC    Exposure    ExposureFlush  # Function to use during exposure (SerialFlush or ExposureFlush)
 
@@ -135,19 +139,19 @@
 [subroutines]
     FlushLine:  # Transfer line and flush it
         CALL    TransferLine
-        CALL    SerialFlush     repeat(DetectorColumns)
+        CALL    SerialFlush     repeat(DetectorCols)
         RTS
 
     WindowLine:  # Line readout
-        CALL    SerialFlush     repeat(@StartColumns)
-        CALL    ReadPixel       repeat(@WindowColumns)
-        CALL    SerialFlush     repeat(@EndColumns)
+        CALL    SerialFlush     repeat(@PreCols)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@PostCols)
         RTS
 
     BaseFrame:  # Operations for readout of a CCD frame (window)
-        JSR     FlushLine       repeat(@StartLines)
-        JSR     WindowLine      repeat(@WindowLines)
-        JSR     FlushLine       repeat(@EndLines)
+        JSR     FlushLine       repeat(@PreRows)
+        JSR     WindowLine      repeat(@ReadRows)
+        JSR     FlushLine       repeat(@PostRows)
         RTS
 
     ReadFrame:  # Readout and acquisition of a CCD frame
@@ -162,14 +166,14 @@
         RTS
 
     ClearCCD:  # Clear CCD once
-        JSR     FlushLine       repeat(DetectorLines)
+        JSR     FlushLine       repeat(DetectorRows)
         RTS
 
     WarmUp:  # Warms up analog electronics and ADCs
         CALL    ReadPixel       repeat(256)  # any other value will mess up the scanning mode
         RTS
 
-    CloseShutter:  # Gives time for shutter to close (testing)
+    CloseShutter:  # Gives time for shutter to close (to be adapted depending on setup)
         CALL    SerialFlush     repeat(50000)
         RTS
 

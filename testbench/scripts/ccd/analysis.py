@@ -49,13 +49,15 @@ def find_channels(hdulist, selectchannels=None):
     """
     rangechannel = []
 
-    for ichan in range(48):
-        name = "CHAN_%d" % ichan
-        if name in hdulist:
+    for h in hdulist:
+        if 'channel' in h.header:
+            ichan = h.header['channel']
             if selectchannels:
                 if ichan not in selectchannels:
                     continue
-            rangechannel.append(name)
+            if 'extname' not in h.header:
+                h.header['extname'] = 'CHAN_%02d' % ichan
+            rangechannel.append(h.header['extname'])
 
     return rangechannel
 
@@ -65,7 +67,10 @@ def get_image_id(hdulist):
     Defines the image identifier that will be used for output files.
     :rtype: string
     """
-    fitsname = hdulist[0].header['FILENAME']
+    try:
+        fitsname = hdulist[0].header['FILENAME']
+    except:
+        fitsname = 'fits.fz'
     return fitsname[:-3]
 
 def get_fits_dir(datadir):
@@ -89,13 +94,13 @@ def stats_on_files(listfile, listnum=[], datadir='', selectchannels=None):
     :return:
     """
     fname = os.path.join(datadir, 'stats.txt')
-    f = open(fname)
-    for num,fitsfile in enumerate(listfile):
-        i = open_fits(fitsfile)
+    f = open(fname, 'a')
+    for num, fitsfile in enumerate(listfile):
+        i = open_fits(os.path.join(datadir, fitsfile))
         if listnum:
-            f.write(listnum[num]+'\t')
+            f.write(listnum[num] + '\t')
         else:
-            f.write(fitsfile+'\t')
+            f.write(fitsfile + '\t')
         for name in find_channels(i, selectchannels):
             img = i[name].data
             light = img[500:, 20:]
@@ -172,8 +177,9 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
         #Nlines = dsec[3]
 
         chanvalues = []
-        stddev = np.empty(Nbins)
+
         if polynomfit:
+            stddev = np.empty(Nbins)
             # first-order polynomial fit of scans, plus dispersion
             polyscan = np.polyfit(lines, img, 1)
 
@@ -185,7 +191,7 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
                 if b in cutcolumns:
                     plt.figure(figY.number)
                     plt.plot(img[:,b])
-                plt.plot(polyfit(lines))
+                    plt.plot(polyfit(lines))
 
             # plots along line direction
             plt.figure(figX.number)
@@ -204,6 +210,7 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
 
         else:
             # mean and standard deviation
+            stddev = np.empty(Nbins)
             meanbin = np.empty(Nbins)
             for b in range(Nbins):
                 meanbin[b] =  img[:,b].mean()
@@ -212,7 +219,7 @@ def cut_scan_plot(hdulist, cutcolumns=[180], selectchannels=None, outputdir = ''
                 if b in cutcolumns:
                     plt.figure(figY.number)
                     plt.plot(img[:,b])
-                plt.plot(np.full_like(img[:,b], meanbin[b]))
+                    plt.plot(np.full_like(img[:,b], meanbin[b]))
 
             # plots along line direction
             plt.figure(figX.number)
