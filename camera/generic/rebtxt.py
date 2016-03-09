@@ -275,7 +275,7 @@ class TxtParser(object):
             repeat, isrepeatpointer, infinite_loop = self.parse_repeat(call_node['repeat'])
             # if direct call
             if call_node['subr'][0] == 'SUBR_NAME':
-                # TODO: this is where we need a compiler
+                # will be compiled later
                 called = self.subroutines[call_node['subr'][1]]
                 if isrepeatpointer:
                     instr = Instruction(opcode=Instruction.OP_JumpSubPointerRepeat,
@@ -289,14 +289,15 @@ class TxtParser(object):
                                 repeat=repeat)
             elif call_node['subr'][0] == 'PTR_SUBR':
                 called = self.pointers[call_node['subr'][1]].address
+                # we have already compiled the pointers
                 if isrepeatpointer:
                     instr = Instruction(opcode=Instruction.OP_JumpPointerSubPointerRepeat,
-                                subroutine=called,
+                                address=called,
                                 infinite_loop=False,
                                 repeat=repeat)
                 else:
                     instr = Instruction(opcode=Instruction.OP_JumpPointerSubroutine,
-                                subroutine=called,
+                                address=called,
                                 infinite_loop=False,
                                 repeat=repeat)
             else:
