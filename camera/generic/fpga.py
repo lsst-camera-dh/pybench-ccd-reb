@@ -77,8 +77,8 @@ class SequencerPointer(object):
     Ptr_Subr_Base = 0x370000
     Rep_Subr_Base = 0x380000
 
-    Mapping_Ptr = bidi.BidiMap(Pointer_types, [Execute_Address, Ptr_Func_Base, Rep_Func_Base,
-                                 Ptr_Subr_Base, Rep_Subr_Base])
+    Mapping_Ptr = dict(zip(Pointer_types, [Execute_Address, Ptr_Func_Base, Rep_Func_Base, Ptr_Subr_Base,
+                                           Rep_Subr_Base]))
 
     def __init__(self, pointertype, name, value=None, target=''):
         """
@@ -102,21 +102,26 @@ class SequencerPointer(object):
         else:
             ptr_address = self.Mapping_Ptr[self.pointer_type]
             self.address = ptr_address
-            if ptr_address < 15:
+            if (ptr_address & 0xF) < 15:
                 # check that this works for automated increment
                 self.Mapping_Ptr[self.pointer_type] += 1
             else:
                 print('Warning: registry for pointers %s is full' % self.pointer_type)
-        if value:
+        if value is not None:
             self.value = value
+            self.target = target
+            #debug
+            print('Setting pointer %s at address %x with value %d' % (self.name, self.address, self.value))
         elif target:
             self.target = target
+            #debug
+            print('Setting pointer %s at address %x with target %s' % (self.name, self.address, self.target))
         else:
             raise ValueError('Badly defined pointer: %s, %s' % (pointertype, name))
 
-        #debug
-        print('Setting pointer %s at address %x with target %d' % (self.name, self.address, self.target))
-
+    def ptr_num(self):
+        # address stripped of base address
+        return self.address & 0xF
 
 class Instruction(object):
 
@@ -445,7 +450,8 @@ class Program_UnAssembled(object):
                 # print addr, instr
 
         # also setting pointers referencing subroutines if there are any
-        for seq_pointer in self.seq_pointers:
+        for ptrname in self.seq_pointers:
+            seq_pointer = self.seq_pointers[ptrname]
             if seq_pointer.name in ['MAIN', 'PTR_SUBR']:
                 if not (subroutines_addr.has_key(seq_pointer.target)):
                     raise ValueError("Pointer to undefined subroutine %s" %
