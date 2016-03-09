@@ -67,6 +67,8 @@ class Program(object):
 
 class SequencerPointer(object):
     Pointer_types = ['MAIN', 'PTR_FUNC', 'REP_FUNC', 'PTR_SUBR', 'REP_SUBR']
+    Exec_pointers = ['PTR_FUNC', 'PTR_SUBR', 'MAIN']
+    Repeat_pointers = ['REP_FUNC', 'REP_SUBR']
 
     Execute_Address = 0x340000
     # these should be incremented when a pointer is added
@@ -78,12 +80,15 @@ class SequencerPointer(object):
     Mapping_Ptr = bidi.BidiMap(Pointer_types, [Execute_Address, Ptr_Func_Base, Rep_Func_Base,
                                  Ptr_Subr_Base, Rep_Subr_Base])
 
-    def __init__(self, pointertype, name, target):
+    def __init__(self, pointertype, name, value=None, target=''):
         """
-        Creates the pointer, associating name and location, and initializing content
+        Creates the pointer, associating name and location, and initializing content.
+        If not available, use target name and compile later.
+        Note that target and value are not expected to match later (for now).
         :param pointertype:
         :param name:
-        :param target: value inside the pointer
+        :param value: value inside the pointer
+        :param target: what we are targeting
         :return:
         """
         if pointertype in self.Pointer_types:
@@ -102,8 +107,15 @@ class SequencerPointer(object):
                 self.Mapping_Ptr[self.pointer_type] += 1
             else:
                 print('Warning: registry for pointers %s is full' % self.pointer_type)
+        if value:
+            self.value = value
+        elif target:
+            self.target = target
+        else:
+            raise ValueError('Badly defined pointer: %s, %s' % (pointertype, name))
 
-        self.target = target
+        #debug
+        print('Setting pointer %s at address %x with target %d' % (self.name, self.address, self.target))
 
 
 class Instruction(object):
@@ -383,6 +395,7 @@ class Program_UnAssembled(object):
         self.subroutines = {}  # key = name, value = subroutine object
         self.subroutines_names = []  # to keep the order
         self.instructions = []  # main program instruction list
+        self.seq_pointers = {}  # pointers (if applicable)
 
     # I/O XML -> separate python file
     # I/O text -> separate python file
@@ -417,20 +430,27 @@ class Program_UnAssembled(object):
                 result.instructions[current_addr] = instr
                 current_addr += 1
 
-        # now setting addresses into JSR_name instructions
-
+        # now setting addresses into JSR/JSREP instructions referring subroutine names
         addrs = result.instructions.keys()
         addrs.sort()
         for addr in addrs:
             instr = result.instructions[addr]
             # print addr, instr
-            if instr.name == "JSR":
+            if instr.name in ['JSR', 'JSREP']:
                 if not (subroutines_addr.has_key(instr.subroutine)):
                     raise ValueError("Undefined subroutine %s" %
                                      instr.subroutine)
                 # instr.subroutine = None
                 instr.address = subroutines_addr[instr.subroutine]
                 # print addr, instr
+
+        # also setting pointers referencing subroutines if there are any
+        for seq_pointer in self.seq_pointers:
+            if seq_pointer.name in ['MAIN', 'PTR_SUBR']:
+                if not (subroutines_addr.has_key(seq_pointer.target)):
+                    raise ValueError("Pointer to undefined subroutine %s" %
+                                     seq_pointer.target)
+                seq_pointer.value = subroutines_addr[seq_pointer.target]
 
         return result
 
@@ -583,14 +603,16 @@ class Sequencer(object):
                  functions={},
                  functions_desc={},
                  program=Program(),
-                 parameters={}):
+                 parameters={},
+                 pointers={}):
         #
         self.channels = channels
         self.channels_desc = channels_desc
         self.functions = functions  # max 16 functions (#0 is special)
         self.functions_desc = functions_desc
         self.program = program  # empty program
-        self.parameters = parameters  # memory of the parameter values set in XML
+        self.parameters = parameters  # memory of the parameter values set in XML/txt
+        self.pointers = pointers  # memory of pointers set in txt
 
     def get_function(self, func):
         if func in range(16):
