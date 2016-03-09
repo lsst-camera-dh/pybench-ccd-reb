@@ -65,18 +65,77 @@ class Program(object):
         return bcs
 
 
+class SequencerPointer(object):
+    Pointer_types = ['MAIN', 'PTR_FUNC', 'REP_FUNC', 'PTR_SUBR', 'REP_SUBR']
+
+    Execute_Address = 0x340000
+    # these should be incremented when a pointer is added
+    Ptr_Func_Base = 0x350000
+    Rep_Func_Base = 0x360000
+    Ptr_Subr_Base = 0x370000
+    Rep_Subr_Base = 0x380000
+
+    Mapping_Ptr = bidi.BidiMap(Pointer_types, [Execute_Address, Ptr_Func_Base, Rep_Func_Base,
+                                 Ptr_Subr_Base, Rep_Subr_Base])
+
+    def __init__(self, pointertype, name, target):
+        """
+        Creates the pointer, associating name and location, and initializing content
+        :param pointertype:
+        :param name:
+        :param target: value inside the pointer
+        :return:
+        """
+        if pointertype in self.Pointer_types:
+            self.pointer_type = pointertype
+        else:
+            raise ValueError('Attempting to create pointer with unknown type: %s' % pointertype)
+        self.name = name
+
+        if self.pointer_type == 'MAIN':
+            self.address = self.Execute_Address
+        else:
+            ptr_address = self.Mapping_Ptr[self.pointer_type]
+            self.address = ptr_address
+            if ptr_address < 15:
+                # check that this works for automated increment
+                self.Mapping_Ptr[self.pointer_type] += 1
+            else:
+                print('Warning: registry for pointers %s is full' % self.pointer_type)
+
+        self.target = target
+
+
 class Instruction(object):
 
     OP_CallFunction          = 0x1
+    OP_CallPointerFunction   = 0x2
+    OP_CallFuncPointerRepeat = 0x3
+    OP_CallPointerFuncPointerRepeat = 0x4
     OP_JumpToSubroutine      = 0x5
+    OP_JumpPointerSubroutine = 0x6
+    OP_JumpSubPointerRepeat  = 0x7
+    OP_JumpPointerSubPointerRepeat = 0x8
     OP_ReturnFromSubroutine  = 0xE
     OP_EndOfProgram          = 0xF
 
-    OP_names = ["CALL", "JSR", "RTS", "END"]
+    OP_names = ["CALL", 'CALLP', 'CALLREP', 'CALLPREP',
+                "JSR", 'JSP', 'JSREP', 'JSPREP',
+                "RTS", "END"]
 
     OP_codes = bidi.BidiMap(OP_names,
-                            [OP_CallFunction, OP_JumpToSubroutine, OP_ReturnFromSubroutine, OP_EndOfProgram])
-
+                            [OP_CallFunction,
+                             OP_CallPointerFunction,
+                             OP_CallFuncPointerRepeat,
+                             OP_CallPointerFuncPointerRepeat,
+                             OP_JumpToSubroutine,
+                             OP_JumpPointerSubroutine,
+                             OP_JumpSubPointerRepeat,
+                             OP_JumpPointerSubPointerRepeat,
+                             OP_ReturnFromSubroutine,
+                             OP_EndOfProgram])
+    Call_codes = [OP_CallFunction, OP_CallPointerFunction, OP_CallFuncPointerRepeat, OP_CallPointerFuncPointerRepeat]
+    Jsr_codes = [OP_JumpToSubroutine, OP_JumpPointerSubroutine, OP_JumpSubPointerRepeat, OP_JumpPointerSubPointerRepeat]
     SubAddressShift = 16
 
     pattern_CALL = re.compile(
@@ -114,15 +173,17 @@ class Instruction(object):
         self.name = None
 
         if opcode in self.OP_names:
+            # by name
             self.name = opcode
             self.opcode = self.OP_codes[opcode]
         elif self.OP_codes.has_key(opcode):
+            # by opcode value
             self.opcode = opcode
             self.name = self.OP_codes[opcode]
         else:
             raise ValueError("Invalid FPGA OPcode " + opcode.__repr__())
 
-        if self.opcode == self.OP_CallFunction:
+        if self.opcode in self.Call_codes:
             if function_id not in range(16):
                 raise ValueError("Invalid Function ID")
             if infinite_loop not in [0, 1, True, False]:
@@ -136,7 +197,7 @@ class Instruction(object):
                 self.infinite_loop = False
                 self.repeat = int(repeat) & 0x3fffff
 
-        elif self.opcode == self.OP_JumpToSubroutine:
+        elif self.opcode in self.Jsr_codes:
             if address is not None:
                 self.address = int(address) & 0x3ff
             elif subroutine is not None:
@@ -145,20 +206,19 @@ class Instruction(object):
                 raise ValueError("Invalid JSR instruction: " +
                                  "no address or subroutine to jump")
 
-            # self.infinite_loop = bool(infinite_loop)
             self.repeat = int(repeat) & 0xffff
 
     def __repr__(self):
         s = ""
         s += "%-4s" % self.name
 
-        if self.opcode == self.OP_CallFunction:
+        if self.opcode in self.Call_codes:
             s += "    %-11s" % ("func(%d)" % self.function_id)
             if self.infinite_loop:
                 s += "    " + "repeat(infinity)"
             else:
                 s += "    " + ("repeat(%d)" % self.repeat)
-        elif self.opcode == self.OP_JumpToSubroutine:
+        elif self.opcode in self.Jsr_codes:
             if self.address is not None:
                 s += "    %-11s" % ("0x%03x" % self.address)
             else:
@@ -177,7 +237,7 @@ class Instruction(object):
         # Opcode
         bc |= (self.opcode & 0xf) << 28
 
-        if self.opcode == self.OP_CallFunction:
+        if self.opcode in self.Call_codes:
             bc |= (self.function_id & 0xf) << 24
 
             if self.infinite_loop:
@@ -185,7 +245,7 @@ class Instruction(object):
             else:
                 bc |= (self.repeat & 0x3fffff)
 
-        elif self.opcode == self.OP_JumpToSubroutine:
+        elif self.opcode in self.Jsr_codes:
             if self.address == None:
                 raise ValueError("Unassembled JSR instruction. No bytecode")
 
@@ -209,7 +269,7 @@ class Instruction(object):
         Return None for an empty string.
         Raise an exception if the syntax is wrong.
         """
-
+        # TODO: still missing the new instructions
         # looking for a comment part and remove it
 
         pos = s.find('#')
@@ -269,12 +329,18 @@ class Instruction(object):
         # Opcode
         opcode = (bc >> 28)
         if opcode not in [cls.OP_CallFunction,
+                          cls.OP_CallPointerFunction,
+                          cls.OP_CallFuncPointerRepeat,
+                          cls.OP_CallPointerFuncPointerRepeat,
                           cls.OP_JumpToSubroutine,
+                          cls.OP_JumpPointerSubroutine,
+                          cls.OP_JumpSubPointerRepeat,
+                          cls.OP_JumpPointerSubPointerRepeat,
                           cls.OP_ReturnFromSubroutine,
                           cls.OP_EndOfProgram]:
             raise ValueError("Invalid FPGA bytecode (invalid opcode)")
 
-        if opcode == cls.OP_CallFunction:
+        if opcode in cls.Call_codes:
             function_id = (bc >> 24) & 0xf
             infinite_loop = (bc & (1 << 23)) != 0
             # print infinite_loop
@@ -293,7 +359,7 @@ class Instruction(object):
                                    function_id=function_id,
                                    repeat=repeat)
 
-        elif opcode == cls.OP_JumpToSubroutine:
+        elif opcode == cls.Jsr_codes:
             address = (bc >> cls.SubAddressShift) & 0x3ff
             # print address
             repeat = bc & ((1 << cls.SubAddressShift) - 1)
@@ -319,7 +385,7 @@ class Program_UnAssembled(object):
         self.instructions = []  # main program instruction list
 
     # I/O XML -> separate python file
-    # I/O text
+    # I/O text -> separate python file
 
     def compile(self):
         """
@@ -995,9 +1061,29 @@ class FPGA(object):
 
     # --------------------------------------------------------------------
 
+    def send_pointer(self, seqpointer):
+        """
+        Writes one pointer object to the FPGA. It knows its own address.
+        :ptype seqpointer: SequencerPointer
+        :return:
+        """
+        self.write(seqpointer.address, seqpointer.target)
+
+    def send_pointers(self, allpointers):
+        """
+        Sends all pointers.
+        :param allpointers:
+        :return:
+        """
+        for seqpointer in allpointers:
+            self.send_pointer(seqpointer)
+
+    # --------------------------------------------------------------------
+
     def send_sequencer(self, seq, clear=True):
         """
         Load the functions and the program at once.
+        Plus pointers now (empty if does not apply).
         """
         # self.send_program(seq.program, clear = clear)
         print >> sys.stderr, "Loading the sequencer program..."
@@ -1007,6 +1093,8 @@ class FPGA(object):
         print >> sys.stderr, "Loading the sequencer functions..."
         self.send_functions(seq.functions)
         print >> sys.stderr, "Loading the sequencer functions done."
+
+        self.send_pointer(seq.pointers)
 
     def dump_sequencer(self):
         """
