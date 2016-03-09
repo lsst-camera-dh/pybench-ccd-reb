@@ -107,18 +107,24 @@ class TxtParser(object):
         # tuple of lists of tuples
         for param in pointers_node:
             pointertype = param[0]
-            fullname = param[3]
             name = param[1]
-            value = param[2]
+            content = param[2]
 
-            param_dict = {'value': value, 'type': pointertype}
+            param_dict = {'value': content, 'type': pointertype}
 
-            if fullname != None:
+            try:
+                fullname = param[3]
                 param_dict['fullname'] = fullname
+            except:
+                param_dict['fullname'] = ''
 
             self.pointers_desc[name] = dict(param_dict)
 
-            self.pointers[name] = SequencerPointer(pointertype, name, value)
+            if pointertype in SequencerPointer.Exec_pointers:
+                # will compile later
+                self.pointers[name] = SequencerPointer(pointertype, name, target=content)
+            elif pointertype in SequencerPointer.Repeat_pointers:
+                self.pointers[name] = SequencerPointer(pointertype, name, value=content)
 
     def parse_functions(self, functions_node):
         # list of dictionaries
@@ -234,7 +240,7 @@ class TxtParser(object):
         """
         # list of dictionaries
         # print "        call"
-        if call_node['opname'] == 'JSR':
+        if call_node['opname'] == 'RTS':
             instr = Instruction(opcode=Instruction.OP_ReturnFromSubroutine)
         elif call_node['opname'] == 'END':
             instr = Instruction(opcode=Instruction.OP_EndOfProgram)
@@ -289,7 +295,7 @@ class TxtParser(object):
                                 repeat=repeat)
             elif call_node['subr'][0] == 'PTR_SUBR':
                 called = self.pointers[call_node['subr'][1]].address
-                # we have already compiled the pointers
+                # we have already the addresses of the pointers
                 if isrepeatpointer:
                     instr = Instruction(opcode=Instruction.OP_JumpPointerSubPointerRepeat,
                                 address=called,
@@ -350,9 +356,19 @@ class TxtParser(object):
 
         # parse the pointers
         self.parse_pointers(result['pointers'])
+        # initializing main to address 0 (as it would be by default)
+        if 'Main' not in self.pointers:
+            self.pointers['Main'] = SequencerPointer('MAIN', 'Main', value=0)
 
         # parse the sequencer functions
         self.parse_functions(result['functions'])
+        # compiling pointers to functions
+        for seq_pointer in self.pointers:
+            if seq_pointer.name == 'PTR_FUNC':
+                if not self.functions_desc.has_key(seq_pointer.target):
+                    raise ValueError("Pointer to undefined function %s" %
+                                     seq_pointer.target)
+                seq_pointer.value = self.functions_desc[seq_pointer.target]['idfunc']
 
         # Parse all subroutines
         self.parse_subroutines(result['subroutines'])
@@ -361,26 +377,18 @@ class TxtParser(object):
         # Parse all 'mains' 
         self.parse_mains(result['mains'])
         print "MAINS", self.mains_names
+        # we will use 0x340000 (now in pointers) to point to the right one
 
-        # we will use 0x340000 to point to the right one.
-        #allsubs = dict(self.mains)
-        #allsubs.update(self.subroutines)
-        #allsubsnames = self.mains_names + self.subroutines_names
-
-        # Produce a minimal main (a jump (JSR) and end-of-program (END))
-        # It points to the first 'main'.
-
-        #supermain = [Instruction(opcode=Instruction.OP_JumpToSubroutine,
-        #                         subroutine=self.mains_names[0]),
-        #             Instruction(opcode=Instruction.OP_EndOfProgram)]
-
-        # Create the unassembled program
+        # group for compilation (the right routine terminations are included)
+        allsubs = dict(self.mains)
+        allsubs.update(self.subroutines)
+        allsubsnames = self.mains_names + self.subroutines_names
 
         self.prg = Program_UnAssembled()
 
         self.prg.subroutines = allsubs  # key = name, value = subroutine object
         self.prg.subroutines_names = allsubsnames  # to keep the order
-        self.prg.instructions = supermain  # main program instruction list
+        self.prg.seq_pointers = self.pointers  # to be compiled for the missing subroutine references
 
         return ( self.prg,
                  self.functions_desc,
@@ -395,12 +403,6 @@ class TxtParser(object):
 
         return self.parse_result(result)
 
-    def validate_file(self, xmlfile):
-        """
-        To implement. DTD/schema available???
-        """
-        return True
-
 
 # @classmethod
 # def fromxmlfile(cls, xmlfile):
@@ -410,10 +412,7 @@ def fromtxtfile(txtfile):
     Raise an exception if the syntax is wrong.
     """
 
-    channels = {}
-    channels_desc = {}
     functions = {}
-    functions_desc = {}
     parameters = {}
 
     parser = TxtParser()
@@ -433,18 +432,19 @@ def fromtxtfile(txtfile):
         functions[v['idfunc']] = v['function']
 
     for k in parameters_desc:
-        parameter_string = parameters_desc[k]['value']
-        try:
-            parameters[k] = int(parameter_string)
-        except:
-            parameters[k] = parameter_string
+        if isinstance(parameters_desc[k]['value'], tuple):
+            parameters[k] = '%d %s' % parameters_desc[k]['value']
+        else:
+            # should be just an int
+            parameters[k] = parameters_desc[k]['value']
 
     seq = Sequencer(channels=channels,
                     channels_desc=channels_desc,
                     functions=functions,
                     functions_desc=functions_desc,
                     program=program,
-                    parameters=parameters)
+                    parameters=parameters,
+                    pointers=prg.seq_pointers)
 
     return seq
 
