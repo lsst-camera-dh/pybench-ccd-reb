@@ -105,26 +105,27 @@ class TxtParser(object):
 
     def parse_pointers(self, pointers_node):
         # tuple of lists of tuples
-        for param in pointers_node:
-            pointertype = param[0]
-            name = param[1]
-            content = param[2]
+        for pointer_list in pointers_node:
+            for param in pointer_list:
+                pointertype = param[0]
+                name = param[1]
+                content = param[2]
 
-            param_dict = {'value': content, 'type': pointertype}
+                param_dict = {'value': content, 'type': pointertype}
 
-            try:
-                fullname = param[3]
-                param_dict['fullname'] = fullname
-            except:
-                param_dict['fullname'] = ''
+                try:
+                    fullname = param[3]
+                    param_dict['fullname'] = fullname
+                except:
+                    param_dict['fullname'] = ''
 
-            self.pointers_desc[name] = dict(param_dict)
+                self.pointers_desc[name] = dict(param_dict)
 
-            if pointertype in SequencerPointer.Exec_pointers:
-                # will compile later
-                self.pointers[name] = SequencerPointer(pointertype, name, target=content)
-            elif pointertype in SequencerPointer.Repeat_pointers:
-                self.pointers[name] = SequencerPointer(pointertype, name, value=content)
+                if pointertype in SequencerPointer.Exec_pointers:
+                    # will compile later
+                    self.pointers[name] = SequencerPointer(pointertype, name, target=content)
+                elif pointertype in SequencerPointer.Repeat_pointers:
+                    self.pointers[name] = SequencerPointer(pointertype, name, value=content)
 
     def parse_functions(self, functions_node):
         # list of dictionaries
@@ -149,16 +150,13 @@ class TxtParser(object):
 
             # analyzing constants
             constants = {}
-            for const in func['constants']:
-                # list of tuples
-                # print const
-                channel = const[0]
-                # print channel
-                # print const.xpath('text()')
-                value = const[1]
-                # print value
-                constants[channel] = value
-            # print constants
+            if func['constants'] is not None:
+                for const in func['constants']:
+                    # list of tuples
+                    channel = const[0]
+                    value = const[1]
+                    constants[channel] = value
+                # print constants
 
             # analyzing slices
             channel_position = {}
@@ -228,9 +226,9 @@ class TxtParser(object):
         elif reptuple[0] == 'INTEGER':
             return reptuple[1], False, False
         elif reptuple[0] == 'CONSTANT_NAME':
-            return self.parameters_desc[reptuple[1]], False, False
+            return self.parameters[reptuple[1]], False, False
         elif reptuple[0] in ['REP_SUBR', 'REP_FUNC']:
-            return self.pointers[reptuple[1]].address, True, False
+            return self.pointers[reptuple[1]].ptr_num(), True, False
         elif reptuple[0] == 'INFINITY':
             return 1, False, True
 
@@ -262,7 +260,7 @@ class TxtParser(object):
                                 repeat=repeat)
             # if pointer to function
             elif call_node['func'][0] == 'PTR_FUNC':
-                called_id = self.pointers[call_node['func'][1]].address
+                called_id = self.pointers[call_node['func'][1]].ptr_num()
                 if isrepeatpointer:
                     instr = Instruction(opcode=Instruction.OP_CallPointerFuncPointerRepeat,
                                 function_id=called_id,
@@ -276,13 +274,13 @@ class TxtParser(object):
             else:
                 raise ValueError('Unknown function call: %s' % call_node['func'][0])
 
-        elif call_node['opname'] == 'RTS':
+        elif call_node['opname'] == 'JSR':
             # looks up repetitions and if it is a pointer
             repeat, isrepeatpointer, infinite_loop = self.parse_repeat(call_node['repeat'])
             # if direct call
             if call_node['subr'][0] == 'SUBR_NAME':
                 # will be compiled later
-                called = self.subroutines[call_node['subr'][1]]
+                called = call_node['subr'][1]
                 if isrepeatpointer:
                     instr = Instruction(opcode=Instruction.OP_JumpSubPointerRepeat,
                                 subroutine=called,
@@ -294,7 +292,7 @@ class TxtParser(object):
                                 infinite_loop=False,
                                 repeat=repeat)
             elif call_node['subr'][0] == 'PTR_SUBR':
-                called = self.pointers[call_node['subr'][1]].address
+                called = self.pointers[call_node['subr'][1]].ptr_num()
                 # we have already the addresses of the pointers
                 if isrepeatpointer:
                     instr = Instruction(opcode=Instruction.OP_JumpPointerSubPointerRepeat,
@@ -363,7 +361,8 @@ class TxtParser(object):
         # parse the sequencer functions
         self.parse_functions(result['functions'])
         # compiling pointers to functions
-        for seq_pointer in self.pointers:
+        for ptrname in self.pointers:
+            seq_pointer = self.pointers[ptrname]
             if seq_pointer.name == 'PTR_FUNC':
                 if not self.functions_desc.has_key(seq_pointer.target):
                     raise ValueError("Pointer to undefined function %s" %
