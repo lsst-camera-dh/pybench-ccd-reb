@@ -66,6 +66,7 @@ class Program(object):
 
 
 class SequencerPointer(object):
+
     Pointer_types = ['MAIN', 'PTR_FUNC', 'REP_FUNC', 'PTR_SUBR', 'REP_SUBR']
     Exec_pointers = ['PTR_FUNC', 'PTR_SUBR', 'MAIN']
     Repeat_pointers = ['REP_FUNC', 'REP_SUBR']
@@ -119,9 +120,21 @@ class SequencerPointer(object):
         else:
             raise ValueError('Badly defined pointer: %s, %s' % (pointertype, name))
 
+    def __repr__(self):
+        s = "%s %s -> " % (self.pointer_type, self.name)
+        if self.value is not None:
+            s += "%d " % self.value
+        else:
+            s += " Undef "
+        if self.target:
+            s += '(%s)' % self.target
+
+        return s
+
     def ptr_num(self):
         # address stripped of base address
         return self.address & 0xF
+
 
 class Instruction(object):
 
@@ -227,7 +240,7 @@ class Instruction(object):
 
     def __repr__(self):
         s = ""
-        s += "%-4s" % self.name
+        s += "%-8s" % self.name
 
         if self.opcode in self.Call_codes:
             s += "    %-11s" % ("func(%d)" % self.function_id)
