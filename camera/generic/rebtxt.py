@@ -354,9 +354,6 @@ class TxtParser(object):
 
         # parse the pointers
         self.parse_pointers(result['pointers'])
-        # initializing main to address 0 (as it would be by default)
-        if 'Main' not in self.pointers:
-            self.pointers['Main'] = SequencerPointer('MAIN', 'Main', value=0)
 
         # parse the sequencer functions
         self.parse_functions(result['functions'])
@@ -377,6 +374,9 @@ class TxtParser(object):
         self.parse_mains(result['mains'])
         print "MAINS", self.mains_names
         # we will use 0x340000 (now in pointers) to point to the right one
+        # initializing Main pointer if does not exist in file
+        if 'Main' not in self.pointers:
+            self.pointers['Main'] = SequencerPointer('MAIN', 'Main', target=self.mains_names[0])
 
         # group for compilation (the right routine terminations are included)
         allsubs = dict(self.mains)
@@ -451,10 +451,6 @@ def fromtxtfile(txtfile):
 Sequencer.fromtxtfile = staticmethod(fromtxtfile)
 
 
-# tree = etree.parse('sequencer-soi.xml')
-
-
-# P = XMLParser()
-# pr,fu = P.parse_file('sequencer-soi.xml')
-
+# f = 'lsst/camera/reb3/sequencer-reb3.txt'
+# seq = Sequencer.fromtxtfile(f)
 

@@ -103,7 +103,7 @@ class SequencerPointer(object):
             ptr_address = self.Mapping_Ptr[self.pointer_type]
             self.address = ptr_address
             if (ptr_address & 0xF) < 15:
-                # check that this works for automated increment
+                # this increments the base address for the next instance of the class
                 self.Mapping_Ptr[self.pointer_type] += 1
             else:
                 print('Warning: registry for pointers %s is full' % self.pointer_type)
