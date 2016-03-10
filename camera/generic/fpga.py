@@ -452,7 +452,7 @@ class Program_UnAssembled(object):
         # also setting pointers referencing subroutines if there are any
         for ptrname in self.seq_pointers:
             seq_pointer = self.seq_pointers[ptrname]
-            if seq_pointer.name in ['MAIN', 'PTR_SUBR']:
+            if seq_pointer.pointer_type in ['MAIN', 'PTR_SUBR']:
                 if not (subroutines_addr.has_key(seq_pointer.target)):
                     raise ValueError("Pointer to undefined subroutine %s" %
                                      seq_pointer.target)
