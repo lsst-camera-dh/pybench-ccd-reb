@@ -363,7 +363,7 @@ class TxtParser(object):
         # compiling pointers to functions
         for ptrname in self.pointers:
             seq_pointer = self.pointers[ptrname]
-            if seq_pointer.name == 'PTR_FUNC':
+            if seq_pointer.pointer_type == 'PTR_FUNC':
                 if not self.functions_desc.has_key(seq_pointer.target):
                     raise ValueError("Pointer to undefined function %s" %
                                      seq_pointer.target)
