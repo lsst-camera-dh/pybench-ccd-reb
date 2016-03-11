@@ -211,21 +211,14 @@ class REB3(reb.REB):
         :param offset: offset at the first sample
         """
         self.fpga.increment(offset)
-
-        self.memorized_sequence = self.seqname
-        self.select_subroutine('Window')
-        self.imgcols = self.seq.parameters['WindowColumns']
-        self.imglines = self.seq.parameters['WindowLines']
+        self.window_sequence(True)
 
     def stop_increment(self):
         """
         Returns to normal configuration after increment().
         """
         self.fpga.stop_increment()
-
-        self.select_subroutine(self.memorized_sequence)
-        self.imgcols = self.seq.parameters['ReadColumns']
-        self.imglines = self.seq.parameters['ReadLines']
+        self.window_sequence(False)
 
  # --------------------------------------------------------------------
 

@@ -495,6 +495,22 @@ class REB(object):
             else:
                 self.select_subroutine(self.memorized_sequence)
 
+    def window_sequence(self, on=True):
+        """
+        Reduces to a window or goes back to previous full size sequence.
+        :param on:
+        :return:
+        """
+        if on:
+            self.memorized_sequence = self.seqname
+            self.select_subroutine('Window')
+            self.imgcols = self.seq.parameters['WindowColumns']
+            self.imglines = self.seq.parameters['WindowLines']
+        else:
+            self.select_subroutine(self.memorized_sequence)
+            self.imgcols = self.seq.parameters['ReadColumns']
+            self.imglines = self.seq.parameters['ReadLines']
+
     # --------------------------------------------------------------------
 
     def make_img_name(self):
