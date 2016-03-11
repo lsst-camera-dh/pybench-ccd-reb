@@ -13,15 +13,19 @@ generic object.
 from reb import *
 import rebtxt
 
+
 class REBplus(REB):
+
     # =======================================================================
-    # These become the possible targets of the Exposure pointer
+    # These parameters now save the functions that can be targets of the Exposure pointer
+    # to set light or dark exposure
     REB.exposuresub = "ExposureFlush"
     REB.darksub = "SerialFlush"
 
     # ===================================================================
 
     def __init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0]):
+
         REB.__init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0])
         # parameters are the same as the parent at initialization
         # will be filled when loading the sequencer

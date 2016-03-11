@@ -10,6 +10,7 @@
 __author__ = 'juramy'
 
 import lsst.camera.generic.reb as reb
+from lsst.camera.generic.rebplus import *
 import time
 import os
 import logging
@@ -17,14 +18,15 @@ import fpga
 import astropy.io.fits as pyfits
 
 
-class REB3(reb.REB):
+class REB3(REBplus):
 
     xmldir = "/home/lsst/lsst/py/camera/reb3/"
 
     def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0], hardware='REB3'):
-        reb.REB.__init__(self, rriaddress, ctrl_host, stripe_id)
+
+        REBplus.__init__(self, rriaddress, ctrl_host, stripe_id)
         self.fpga = fpga.FPGA3(ctrl_host, rriaddress, hardware)
-        self.xmlfile = "sequencer-reb3.xml"
+        self.xmlfile = "sequencer-reb3.txt"
         self.exposure_unit = 0.025  # duration of the elementary exposure subroutine in s
         self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
 
