@@ -72,18 +72,26 @@ def get_sequencer_hdu(seq):
 def get_sequencer_string(seq):
     """
     Builds a string table representation of the sequencer content in seq.
-    :param seq: Sequencer
+    :ptype seq: Sequencer
     :return: N.array
     """
     reprarray = N.zeros(shape=(0,), dtype=N.dtype('a73'))
+
+    # all functions
     for ifunc in seq.functions:
         reprfunc = seq.functions[ifunc].__repr__()
         for l in reprfunc.splitlines():
             if l:
                 reprarray = N.append(reprarray, l.expandtabs(8))
+
+    # splitting the subroutine stack into array lines
     reprprog = seq.program.__repr__()
     for l in reprprog.splitlines():
         reprarray = N.append(reprarray, l)
+
+    # adding the pointer values if any
+    for p in seq.pointers:
+        reprarray = N.append(reprarray, seq.pointers[p].__repr__())
 
     return reprarray
 
@@ -462,7 +470,7 @@ class REB(object):
         Executes the currently loaded sequence.
         """
         self.wait_end_sequencer()
-        if self.seqname != 'Wait':
+        if self.seqname not in ['Wait', 'InfiniteWait']:
             self.update_filetag()
         self.tstamp = utc_now_isoformat()
         self.fpga.start()

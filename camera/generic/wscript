@@ -25,6 +25,7 @@ def build(ctx):
                   'aspic.py',
                   'rebxml.py',
                   'rebtxt.py',
+                  'rebplus.py',
                   'bidi.py',
                   'grammar.py'],
         install_path = '${PYTHONDIR}/lsst/camera/generic')
