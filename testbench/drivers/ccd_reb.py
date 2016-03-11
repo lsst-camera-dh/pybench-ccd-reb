@@ -427,36 +427,37 @@ class Instrument(Driver):
         """
         return self.reb.make_img_name()
 
-    def set_amplifier_size(self, cols, rows, precols=0, postcols=0, prerows=0, postrows=0):
+    def set_window(self, on, precols=0, cols=256, postcols=0, prerows=0, rows=1000, postrows=0):
         """
-        Sets the dimensions of the image. This affects how the image is reconstituted,
-        and is written to the sequencer only if pointers are implemented.
-        (Otherwise has to be loaded by hand).
+        Sets to window acquisition and frame size, or goes back to original size.
+        Window coordinates are only loaded if pointers are implemented, otherwise they will be loaded from the
+        XML file anyway.
         """
         if issubclass(self.reb, rebplus.REBplus):
-            self.reb.set_window(precols, cols, postcols, prerows, rows, postrows)
-        else:
-            self.reb.imgcols = cols
-            self.reb.imglines = rows
+            if on:
+                self.reb.set_window(precols, cols, postcols, prerows, rows, postrows)
+            else:
+                self.reb.window_sequence(False)
 
-    def get_amplifier_size(self, window=False):
+        else:
+            self.reb.window_sequence(on)
+
+    def get_amplifier_size(self):
         """
-        Gets the dimension of the image data (from a single amplifier). Only read from the XML, unless
+        Gets the dimension of the image data (from a single amplifier). Only read from the REB object, unless
         pointers are implemented.
         :param window:
         :return:
         """
+        # Note : still have not found if this is used anywhere
+
         if issubclass(self.reb, rebplus.REBplus):
             cols = self.reb.get_pointer('ReadCols')
             lines = self.reb.get_pointer('ReadRows')
 
         else:
-            if window:
-                lines = self.reb.seq.parameters['WindowLines']
-                cols = self.reb.seq.parameters['WindowColumns']
-            else:
-                cols = self.reb.seq.parameters['ReadColumns']
-                lines = self.reb.seq.parameters['ReadLines']
+            lines = self.reb.imglines
+            cols = self.reb.imgcols
 
         return cols, lines
 
