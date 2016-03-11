@@ -1108,7 +1108,15 @@ class FPGA(object):
         :ptype seqpointer: SequencerPointer
         :return:
         """
-        self.write(seqpointer.address, seqpointer.target)
+        self.write(seqpointer.address, seqpointer.value)
+
+    def read_pointer(self, seqpointer):
+        """
+        Reads a pointer object from the FPGA
+        :param seqpointer:
+        :return:
+        """
+        return self.read(seqpointer.address)[seqpointer.address]
 
     def send_pointers(self, allpointers):
         """
@@ -1117,7 +1125,7 @@ class FPGA(object):
         :return:
         """
         for seqpointer in allpointers:
-            self.send_pointer(seqpointer)
+            self.send_pointer(allpointers[seqpointer])
 
     # --------------------------------------------------------------------
 
