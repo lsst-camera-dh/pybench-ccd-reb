@@ -10,6 +10,7 @@ import lsst.camera.reb1.reb1 as reb1
 import lsst.camera.wreb.wreb as wreb
 import lsst.camera.reb3.reb3 as reb3
 from lsst.camera.generic.reb import *
+import lsst.camera.generic.rebplus as rebplus
 
 from driver import Driver
 import logging
@@ -59,16 +60,19 @@ class Instrument(Driver):
             self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = True
             self.reb.useCABACbias = True
-        elif self.hardware == 'REB3':
+        elif self.hardware in ['REB3', 'REB4']:
             self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host,
                                  stripe_id=[self.stripe], hardware=self.hardware)
             self.useCABAC = False
+        else:
+            raise ValueError('Unknown type of hardware: %s' % self.hardware)
 
         # then check FPGA version after connecting
         checkversion = self.reb.fpga.get_version()
         if self.version != checkversion:
-            raise ValueError('Wrong version of the FPGA firmware: reading %x instead of %x' % (checkversion,
-                                                                                               self.version))
+            raise ValueError('Wrong version of the FPGA firmware: reading %x instead of %x'
+                             % (checkversion, self.version))
+
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
@@ -423,30 +427,37 @@ class Instrument(Driver):
         """
         return self.reb.make_img_name()
 
-    #TODO: integrate these functions with the upgraded sequencer file
-    def set_amplifier_size(self, cols, lines):
+    def set_amplifier_size(self, cols, rows, precols=0, postcols=0, prerows=0, postrows=0):
         """
-        Sets the dimensions of the image. This affects how the image is reconstituted, not the sequencer (yet).
-        :param cols: int
-        :param lines: int
-        :return:
+        Sets the dimensions of the image. This affects how the image is reconstituted,
+        and is written to the sequencer only if pointers are implemented.
+        (Otherwise has to be loaded by hand).
         """
-        self.reb.imgcols = cols
-        self.reb.imglines = lines
+        if issubclass(self.reb, rebplus.REBplus):
+            self.reb.set_window(precols, cols, postcols, prerows, rows, postrows)
+        else:
+            self.reb.imgcols = cols
+            self.reb.imglines = rows
 
     def get_amplifier_size(self, window=False):
         """
-        Gets the dimension of the image data (from a single amplifier). Currently read from the XML, until
-        it is changed.
+        Gets the dimension of the image data (from a single amplifier). Only read from the XML, unless
+        pointers are implemented.
         :param window:
         :return:
         """
-        if window:
-            lines = self.reb.seq.parameters['WindowLines']
-            cols = self.reb.seq.parameters['WindowColumns']
+        if issubclass(self.reb, rebplus.REBplus):
+            cols = self.reb.get_pointer('ReadCols')
+            lines = self.reb.get_pointer('ReadRows')
+
         else:
-            cols = self.reb.seq.parameters['ReadColumns']
-            lines = self.reb.seq.parameters['ReadLines']
+            if window:
+                lines = self.reb.seq.parameters['WindowLines']
+                cols = self.reb.seq.parameters['WindowColumns']
+            else:
+                cols = self.reb.seq.parameters['ReadColumns']
+                lines = self.reb.seq.parameters['ReadLines']
+
         return cols, lines
 
     def conv_to_fits(self, imgname, channels=None, displayborders=False):
