@@ -66,8 +66,9 @@ class REBplus(REB):
 
     def set_pointer(self, pointername, newtarget):
         """
-        Set a pointer to a new target and writes it.
+        Sets a pointer to a new target and writes it.
         Needs a loaded sequencer.
+        Note that this does not check that the sequencer is not running, needs to be done above.
         :param pointername:
         :param newtarget:
         :return:
@@ -199,4 +200,37 @@ class REBplus(REB):
             else:
                 self.set_exposure_time(exptime)
                 self.set_pointer('Exposure', self.exposuresub)
+
+    # --------------------------------------------------------------------
+
+    def set_window(self, precols, readcols, postcols, prerows, readrows, postrows):
+        """
+        Now with pointers, can also change window parameters at any time (almost).
+        :param on:
+        :return:
+        """
+        self.wait_end_sequencer()
+
+        self.set_pointer('PreCols', precols)
+        self.set_pointer('ReadCols', readcols)
+        self.set_pointer('PostCols', postcols)
+        self.set_pointer('PreRows', prerows)
+        self.set_pointer('ReadRows', readrows)
+        self.set_pointer('PostRows', postrows)
+        self.imgcols = readcols
+        self.imglines = readrows
+
+    def window_sequence(self, on=True):
+        """
+        Overloads basic function.
+        Reduces to a window or goes back to previous full size sequence.
+        Now with pointers, can also change window parameters at any time.
+        :param on:
+        :return:
+        """
+        if on:
+            self.set_window(precols=100, readcols=256, postcols=244, prerows=100, readrows=1000, postrows=920)
+        else:
+            self.set_window(precols=0, readcols=self.seq.parameters['DetectorCols'], postcols=0,
+                            prerows=0, readrows=self.seq.parameters['DetectorRows'], postrows=0)
 
