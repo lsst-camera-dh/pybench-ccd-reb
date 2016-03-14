@@ -22,11 +22,13 @@ class REB3(REBplus):
 
     xmldir = "/home/lsst/lsst/py/camera/reb3/"
 
-    def __init__(self, rriaddress = 2, ctrl_host = None, stripe_id=[0], hardware='REB3'):
+    def __init__(self, bcfile):
 
-        REBplus.__init__(self, rriaddress, ctrl_host, stripe_id)
-        self.fpga = fpga.FPGA3(ctrl_host, rriaddress, hardware)
-        self.xmlfile = "sequencer-reb3.txt"
+        REBplus.__init__(self, bcfile)
+        # self.config holds the desired running configuration, not updated to reflect current values
+        # (those are in ASPIC objects and in FPGA)
+        self.fpga = fpga.FPGA3(ctrl_host=None, reb_id=self.config.reb_id, hardware=self.config.hardware)
+        self.xmlfile = self.config.xmlfile
         self.exposure_unit = 0.025  # duration of the elementary exposure subroutine in s
         self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
 
