@@ -8,11 +8,12 @@ This takes REB as a parent and overloads the REB methods that depend on pointers
 plus adds in pointer manipulation.
 To be used as parent in specific REB-derived classes instead of the original REB
 generic object.
+Now also using the configuration file and object.
 """
 
 from reb import *
 import rebtxt
-
+import rebbcf
 
 class REBplus(REB):
 
@@ -24,9 +25,15 @@ class REBplus(REB):
 
     # ===================================================================
 
-    def __init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0]):
+    def __init__(self, bcfile):
 
-        REB.__init__(self, reb_id=2,  ctrl_host=None, stripe_id=[0])
+        self.config = rebbcf.REBconfig(bcf_fname=bcfile)
+
+        reb_id = self.config.reb_id
+        ctrl_host = None  # would be self.config.ipaddress if it was used
+        stripe_id = self.config.stripes.keys()
+
+        REB.__init__(self, reb_id,  ctrl_host, stripe_id)
         # parameters are the same as the parent at initialization
         # will be filled when loading the sequencer
         # keeping 'xmlfile' as name for sequencer file
