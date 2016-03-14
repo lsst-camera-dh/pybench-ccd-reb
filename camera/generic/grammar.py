@@ -1335,7 +1335,7 @@ class SeqParser(object):
         return pnext, ("ADDRESS", address)
         
     
-    _s_inf = "Inf"
+    _s_inf = "infinity"
 
     def m_instr_call_rep_ref_dir(self, pos):
         pnext = pos
