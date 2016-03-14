@@ -982,18 +982,17 @@ class FPGA(object):
         Load the program <program> into the FPGA program memory.
         """
 
-        # Second, clear the whole memory to avoid mixing with remains
-        # of the previous programs
-
-        if clear:
-            self.clear_program()
-
-        # Load the instructions
-
         instrs = program.instructions
         addrs = instrs.keys()
         addrs.sort()
 
+        # Clear the whole memory to avoid mixing with remains
+        # of the previous programs
+        # now limited to likely addresses to gain time
+        if clear:
+            self.clear_program(addrs[-1]+16)
+
+        # Load the instructions
         for addr in addrs:
             self.send_program_instruction(addr, instrs[addr])
 
@@ -1019,12 +1018,13 @@ class FPGA(object):
 
         return prg
 
-    def clear_program(self):
+    def clear_program(self, max_address=0):
         """
         Clear the FPGA sequencer program memory.
+        Option: limit to a likely block of addresses.
         """
         prg_addr = self.program_base_addr
-        for i in xrange(self.program_mem_size):
+        for i in xrange(max_address and max_address or self.program_mem_size):
             self.write(prg_addr + i, 0)
 
             # --------------------------------------------------------------------
@@ -1143,7 +1143,9 @@ class FPGA(object):
         self.send_functions(seq.functions)
         print >> sys.stderr, "Loading the sequencer functions done."
 
-        self.send_pointer(seq.pointers)
+        print >> sys.stderr, "Loading the pointers..."
+        self.send_pointers(seq.pointers)
+        print >> sys.stderr, "Loading the pointers done."
 
     def dump_sequencer(self):
         """
@@ -1332,3 +1334,4 @@ class FPGA(object):
         config.update(self.get_board_temperatures())
 
         return config
+        

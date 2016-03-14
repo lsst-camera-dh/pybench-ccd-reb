@@ -57,8 +57,9 @@ class REBplus(REB):
 
         # ! change of name compared to XML
         # also change of convention: everything is a window now
-        self.imglines = self.seq.parameters['ReadRows']
-        self.imgcols = self.seq.parameters['ReadCols']
+        self.imglines = self.seq.pointers['ReadRows'].value
+        self.imgcols = self.seq.pointers['ReadCols'].value
+        # this will always be true as long as we don't move to a separate non-window frame
 
         try:
             self.exptime = self.get_exposure_time()

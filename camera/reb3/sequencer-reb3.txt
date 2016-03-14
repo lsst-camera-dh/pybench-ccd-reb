@@ -149,17 +149,24 @@
         CALL    SerialFlush     repeat(@PostCols)
         RTS
 
-    BaseFrame:  # Operations for readout of a CCD frame (window)
+    WarmUp:  # Warms up analog electronics and ADCs
+        CALL    ReadPixel       repeat(256)  # any other value will mess up the scanning mode
+        RTS
+
+    ReadFrame:  # Readout and acquisition of a CCD frame (window)
+        JSR     WarmUp
         JSR     FlushLine       repeat(@PreRows)
+        CALL    StartOfImage
         JSR     WindowLine      repeat(@ReadRows)
+        CALL    EndOfImage
         JSR     FlushLine       repeat(@PostRows)
         RTS
 
-    ReadFrame:  # Readout and acquisition of a CCD frame
+    FakeFrame:  # Readout of a CCD frame (window) with no data output
         JSR     WarmUp
-        CALL    StartOfImage
-        JSR     BaseFrame
-        CALL    EndOfImage
+        JSR     FlushLine       repeat(@PreRows)
+        JSR     WindowLine      repeat(@ReadRows)
+        JSR     FlushLine       repeat(@PostRows)
         RTS
 
     Exposure25ms:  # Repeat exposure function for 25 ms
@@ -168,10 +175,6 @@
 
     ClearCCD:  # Clear CCD once
         JSR     FlushLine       repeat(DetectorRows)
-        RTS
-
-    WarmUp:  # Warms up analog electronics and ADCs
-        CALL    ReadPixel       repeat(256)  # any other value will mess up the scanning mode
         RTS
 
     CloseShutter:  # Gives time for shutter to close (to be adapted depending on setup)
@@ -197,10 +200,10 @@
 
     PseudoAcquisition:  # Simulates acquisition without storing image (for debugging)
         JSR     AcquireFrame
-        JSR     WarmUp
-        JSR     BaseFrame
+        JSR     FakeFrame
         END
 
     InfiniteWait:  # Slow flushing on infinite loop
         CALL    SlowFlush   repeat(Inf)
         END
+        
