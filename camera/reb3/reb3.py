@@ -157,6 +157,9 @@ class REB3(REBplus):
             self.fpga.send_function(0, self.seq.get_function(0))
         else:
             self.load_sequencer(self.xmlfile)
+        
+        # sets window size to full frame by default
+        self.window_sequence(False)
 
         self.fpga.enable_bss(True)
         print('BSS can be powered on now.')
