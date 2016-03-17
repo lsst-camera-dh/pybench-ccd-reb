@@ -9,6 +9,9 @@ from fpga import *
 import grammar
 
 class TxtParser(object):
+
+    time_units = {'ns': 1e-9, 'us': 1e-6, 'ms': 1e-3, 's': 1}
+
     def __init__(self):
 
         self.channels_desc = {}
@@ -28,7 +31,7 @@ class TxtParser(object):
 
     def process_number(self, s):
         ss = s.strip()
-        if s == 'Inf':
+        if s == 'infinity':
             return 'Inf'
         try:
             value = int(ss)
@@ -48,18 +51,12 @@ class TxtParser(object):
             value, unit = s
 
         try:
-            ckperiod = self.parameters['clockperiod'][0]
+            ckperiod = self.parameters['clockperiod'][0] * self.time_units[self.parameters['clockperiod'][1]]
         except:
-            ckperiod = 10
+            ckperiod = 10e-9
 
-        if unit == 'ns':
-            duration = value/ckperiod
-        elif unit == 'us':
-            duration = value*1000/ckperiod
-        elif unit == 'ms':
-            duration = value*1e6/ckperiod
-        elif unit == 's':
-            duration = value*1e9/ckperiod
+        if unit in self.time_units:
+            duration = value * self.time_units[unit] / ckperiod
         else:
             raise ValueError('Unable to parse unit %s' % unit)
 
@@ -432,7 +429,8 @@ def fromtxtfile(txtfile):
 
     for k in parameters_desc:
         if isinstance(parameters_desc[k]['value'], tuple):
-            parameters[k] = '%d %s' % parameters_desc[k]['value']
+            # converts to value in seconds
+            parameters[k] = parameters_desc[k]['value'][0] * parser.time_units[parameters_desc[k]['value'][1]]
         else:
             # should be just an int
             parameters[k] = parameters_desc[k]['value']

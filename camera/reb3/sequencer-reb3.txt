@@ -17,6 +17,7 @@
     RampTime:         460 ns    # ASPIC ramp time
     RampBuffer:       360 ns    # should be RampTime minus BufferS
     clockperiod:      10 ns     # FPGA clock period (required by the interpreter)
+    ElemExposure:     25 ms     # Duration of the elementary exposure subroutine
 
 [clocks]  # clock channels
     P1:   8  # Parallel clock 1
