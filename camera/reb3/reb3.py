@@ -5,7 +5,7 @@
 # Testing REB3
 #
 # Usage:
-# import lsst.camera.reb3.reb3 as reb3
+# from lsst.camera.reb3.reb3 import *
 
 __author__ = 'juramy'
 
@@ -28,47 +28,33 @@ class REB3(REBplus):
         # self.config holds the desired running configuration, not updated to reflect current values
         # (those are in ASPIC objects and in FPGA)
         self.fpga = fpga.FPGA3(ctrl_host=None, reb_id=self.config.reb_id, hardware=self.config.hardware)
-        self.xmlfile = self.config.xmlfile
-        self.exposure_unit = 0.025  # duration of the elementary exposure subroutine in s
-        self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
 
      # --------------------------------------------------------------------
 
-    def send_aspic_config(self, params):
+    def config_aspic(self):
         """
-        Sets ASPIC parameters, writes to ASPIC, then checks readback.
-        Notes: if params is empty, this simply rewrites the same parameters in the ASPIC objects and updates config.
+        Sets ASPIC parameters from self.config, writes to ASPIC, then checks readback.
         """
         for s in self.stripes:
-            for param in iter(params):
-                self.fpga.set_aspic_value(param, params[param], s)
+            # from config file
+            self.fpga.apply_aspic_config(self.config.stripes[s].aspic_dict, s)
             self.fpga.get_aspic_config(s, check=True)
 
-    def get_aspic_config(self):
+    def set_biases(self, listparams, on):
         """
-        Reads ASPIC configurations from the SPI readback.
-        :return:
-        """
-        config = self.fpga.get_aspic_config(self.stripes[0])
-        if len(self.stripes) > 1:
-            for stripe in self.stripes[1:]:
-                config.update(self.fpga.get_aspic_config(stripe))
-
-        return config
-
-    def config_aspic(self):
-        settings = {"GAIN": 0b1, "RC": 0b101, "AF1": False, "TM": False, "CLS": 0}
-        self.send_aspic_config(settings)
-
-    def set_biases(self, params):
-        """
-        Manages safe changes in bias values from CABAC, or sets alternative biases.
-        :param params: dict
+        Manages safe changes in bias values, based on desired values in self.config.
+        :ptype listparams: list
+        :ptype on: bool
         :return:
         """
         # simultaneous activation works fine if all new values are valid (not checked here)
         for s in self.stripes:
-            self.fpga.set_bias_voltages(params, s)
+            if on:
+                # selects the parameters to change
+                dictparams = {key:value for key,value in self.config.stripes[s].bias_dict.items() if key in listparams}
+            else:
+                dictparams = dict(zip(listparams, [0] * len(listparams)))
+            self.fpga.set_bias_voltages(dictparams, s)
 
     def get_biases(self):
         """
@@ -80,6 +66,23 @@ class REB3(REBplus):
             for s in self.stripes[1:]:
                 config.update(self.fpga.get_bias_voltages(s), readback=True)
         return config
+
+    def power_clocks(self, on):
+        """
+        Powers on or shuts down all clock rails, loading values from self.config when powering on.
+        :param on:
+        :return:
+        """
+        if on:
+            rails = {"SL":self.config.clock_rails['sclk_lower'],
+                     "SU": self.config.clock_rails['sclk_upper'],
+                     "RGL": self.config.clock_rails['rg_lower'],
+                     "RGU": self.config.clock_rails['rg_upper'],
+                     "PL": self.config.clock_rails['pclk_lower'],
+                     "PU": self.config.clock_rails['pclk_upper']}
+        else:
+            rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
+        self.fpga.set_clock_voltages(rails)
 
     def set_parameter(self, param, value, stripe = 0, location = 3):
         """
@@ -134,24 +137,21 @@ class REB3(REBplus):
         """
 
         # starting drain voltages
-
-        self.set_biases({'OD': 29, 'RD': 18, 'GD': 24})
+        self.set_biases(['OD', 'RD', 'GD'], on=True)
 
         time.sleep(0.5)
 
         #starting OG voltage
-        og = {"OG": 3.}
-        self.set_biases(og)
+        self.set_biases(['OG'], on=True)
 
-        time.sleep(0.5)
+        time.sleep(0.2)
 
         #settings clock rails
-        rails = {"SL": 0.5, "SU": 9.5, "RGL": 0, "RGU": 12, "PL": 0, "PU": 9.0}
-        self.fpga.set_clock_voltages(rails)
+        self.power_clocks(on=True)
 
         #puts current on CS gate
-        dacOS = 0xfff
         for s in self.stripes:
+            dacOS = self.config.stripes[s].bias_dict['CSGATE']
             self.fpga.set_current_source(dacOS, s)
 
         #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
@@ -175,29 +175,25 @@ class REB3(REBplus):
         # This works, but it is common to all stripes  
         self.fpga.enable_bss(False)
 
-        # clock rails first (in V)
-        rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
-        self.fpga.set_clock_voltages(rails)
+        # clock rails first
+        self.power_clocks(on=False)
 
         #sets the default sequencer clock states to 0
         self.fpga.send_function(0, fpga.Function(name="default state", timelengths={0: 2, 1: 0}, outputs={0: 0, 1: 0}))
 
         #shuts current on CS gate
-        dacOS = 0
         for s in self.stripes:
-            self.fpga.set_current_source(dacOS, s)
-
+            self.fpga.set_current_source(0, s)
 
         time.sleep(0.1)
 
         # shuts OG voltage
-        og = {"OG": 0}
-        self.set_biases(og)
+        self.set_biases(['OG'], on=False)
 
         time.sleep(0.5)
 
         #shutting drain voltages
-        self.set_biases({'OD': 0, 'RD': 0, 'GD': 0})
+        self.set_biases(['OD', 'RD', 'GD'], on=False)
 
         time.sleep(0.5)
         print('CCD shutdown complete on REB3.')
@@ -287,26 +283,26 @@ if __name__ == "__main__":
     logging.basicConfig(filename = logfile,
                         level = logging.DEBUG,
                         format = '%(asctime)s: %(message)s')
-    #r = reb3.REB3(rriaddress=0x2, stripe_id=[1])
-    r = REB3(rriaddress=0x2, stripe_id=[1])
+
+    r = REB3(bcfile='reb3.bcf')
     # here power on power supplies
     r.REBpowerup()
     time.sleep(0.1)
     r.CCDpowerup()
     r.config_aspic()
-    #r.load_sequencer('sequencer-scan.xml')
+    #r.load_sequencer('sequencer-reb3.txt')
     #r.select_subroutine("Bias")
     #r.execute_sequence()
-    #reb3.save_to_fits(r)
+    #save_to_fits(r)
 
     #r.increment()
     #r.execute_sequence()
-    #reb3.save_to_fits(r)
+    #save_to_fits(r)
     #r.stop_increment()
     
     #recovery from FPGA power down (no CCD)
     #r.set_stripes([0,1,2])
-    #r.read_sequencer_file('sequencer-scan.xml')
+    #r.read_sequencer_file('sequencer-reb3.txt')
     #r.select_subroutine("Bias")
     #r.config_aspic()
     
