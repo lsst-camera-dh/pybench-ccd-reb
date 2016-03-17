@@ -44,7 +44,8 @@ class stripe(object):
     stripe_map = {'a':0, 'b':1, 'c':2}
 
     def __init__(self, stripe_addr, stripe_dict):
-        self.stripe_dict = stripe_dict
+        self.aspic_dict = stripe_dict['aspic']
+        self.bias_dict = stripe_dict['bias']
         self.name = stripe_addr
         self.loc = self.stripe_map[stripe_addr]  # 0,1,2, used to send to FPGA
 
@@ -96,32 +97,33 @@ class REBconfig(ConfigParser):
             #self.reg_backend = gige.gige(self.reb_id, ipaddr, iface=self.iface, image=True)
         
         # Process from config file
-        self.clock_rails = []
+        self.clock_rails = {}
         for key, val in self.items("global"):
             key = key.split("/")
             if (key[0] == "clock_rails"):
-                self.clock_rails.append((key[1], val))
+                self.clock_rails[key[1]] = float(val)
                 
         # 1 REB has THREE (3) stripes, A => Left, B => Middle, C=> Right
         self.stripes = {}
 
-        # Gets passed to stripe object
-        stripe_dict = {
-            'aspic' : [],
-            'bias'  : []
-            }
         self.stripes_enabled = 0
         
         # Process from config file
         for s in self.get('board', 'stripes_enabled').split(','):
             s = s.strip()
+            # Gets passed to stripe object
+            stripe_dict = {'aspic' : {}, 'bias'  : {} }
 
-            for k in stripe_dict:
-                stripe_dict[k] = []
-            
             for key, value in self.items("stripe_%s" % (s)):
                 keys = key.split("/")
-                stripe_dict[keys[0]].append((keys[1], value))
+                # converts to numerical value here
+                if keys[0] == 'aspic':
+                    stripe_dict['aspic'][keys[1]] = int(value, 16)
+                elif keys[0] == 'bias':
+                    if keys[1] == 'CSGATE':
+                        stripe_dict['bias'][keys[1]] = int(value, 16)
+                    else:
+                        stripe_dict['bias'][keys[1]] = float(value)
 
             sobj = stripe(s, stripe_dict)
             self.stripes[sobj.loc] = sobj  # save them by location for compatibility

@@ -27,16 +27,27 @@ class REBplus(REB):
 
     def __init__(self, bcfile):
 
-        self.config = rebbcf.REBconfig(bcf_fname=bcfile)
+        self.read_config_file(bcfile)
 
         reb_id = self.config.reb_id
         ctrl_host = None  # would be self.config.ipaddress if it was used
         stripe_id = self.config.stripes.keys()
 
         REB.__init__(self, reb_id,  ctrl_host, stripe_id)
+
         # parameters are the same as the parent at initialization
         # will be filled when loading the sequencer
-        # keeping 'xmlfile' as name for sequencer file
+        # keeping 'xmlfile' as name for sequencer file, loading it from config file
+
+    def read_config_file(self, bcfile):
+        """
+        Reads configuration file to self.config.
+        Does not actually update the basic REB configuration (address, etc.).
+        :param bcfile:
+        :return:
+        """
+        self.config = rebbcf.REBconfig(bcf_fname=bcfile)
+        self.xmlfile = self.config.xmlfile
 
     def read_sequencer_file(self, xmlfile):
         """
@@ -46,6 +57,9 @@ class REBplus(REB):
         self.xmlfile = xmlfile
 
         self.seq = rebtxt.fromtxtfile(os.path.join(self.xmldir, self.xmlfile))
+
+        self.exposure_unit = self.seq.parameters['ElemExposure']  # in s
+        self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
 
     def load_sequencer(self, xmlfile=None):
         """
