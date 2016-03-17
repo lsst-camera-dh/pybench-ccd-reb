@@ -11,6 +11,7 @@ generic object.
 Now also using the configuration file and object.
 """
 
+import os.path
 from reb import *
 import rebtxt
 import rebbcf
@@ -34,7 +35,7 @@ class REBplus(REB):
         stripe_id = self.config.stripes.keys()
 
         REB.__init__(self, reb_id,  ctrl_host, stripe_id)
-
+        self.xmlfile = self.config.xmlfile  # has been overwritten by REB initializer
         # parameters are the same as the parent at initialization
         # will be filled when loading the sequencer
         # keeping 'xmlfile' as name for sequencer file, loading it from config file
@@ -46,8 +47,11 @@ class REBplus(REB):
         :param bcfile:
         :return:
         """
-        self.config = rebbcf.REBconfig(bcf_fname=bcfile)
+        # expecting configuration file in same directory as 'xmlfile'
+        bcf_fname=os.path.join(self.xmldir, bcfile)
+        self.config = rebbcf.REBconfig(bcf_fname)
         self.xmlfile = self.config.xmlfile
+        # TODO: add stripes enable?
 
     def read_sequencer_file(self, xmlfile):
         """

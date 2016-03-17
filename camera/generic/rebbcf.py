@@ -120,10 +120,12 @@ class REBconfig(ConfigParser):
                 if keys[0] == 'aspic':
                     stripe_dict['aspic'][keys[1]] = int(value, 16)
                 elif keys[0] == 'bias':
-                    if keys[1] == 'CSGATE':
+                    if keys[1] == 'csgate':
                         stripe_dict['bias'][keys[1]] = int(value, 16)
                     else:
                         stripe_dict['bias'][keys[1]] = float(value)
 
             sobj = stripe(s, stripe_dict)
             self.stripes[sobj.loc] = sobj  # save them by location for compatibility
+            
+
