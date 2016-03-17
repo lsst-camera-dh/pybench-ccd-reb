@@ -360,6 +360,7 @@ class Instrument(Driver):
     def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
+        Use set_parameter instead if there is no CABAC.
         """
         if self.useCABAC:
             self.reb.send_cabac_config(params)
@@ -378,20 +379,6 @@ class Instrument(Driver):
             logging.info("REB: attempting to send CABAC reset, not in use")
 
     # --------------------------------------------------------------------
-
-    def get_aspic_config(self):
-        """
-        Reads ASPIC configuration (dummy if ASPIC2).
-        """
-        return self.reb.get_aspic_config()
-
-    def send_aspic_config(self, params):
-        """
-        Sets ASPIC parameters defined in the params dictionary and writes to ASPIC, then checks the readback.
-        If it is programmable (not REB1 / ASPIC2).
-        """
-        self.reb.send_aspic_config(params)
-        logging.info("REB: sent ASPIC values")
 
     def config_aspic(self):
         """
