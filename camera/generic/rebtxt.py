@@ -172,7 +172,7 @@ class TxtParser(object):
 
             islice = 0
             for timeslice in func['slices']:
-                duration = self.process_value(timeslice[0])
+                duration = int(self.process_value(timeslice[0]))
 
                 if islice == 0:
                     timelengths[islice] = duration - 1  # FPGA adds one to duration of first slice
