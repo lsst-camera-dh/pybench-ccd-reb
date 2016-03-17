@@ -51,7 +51,7 @@ class REB3(REBplus):
         for s in self.stripes:
             if on:
                 # selects the parameters to change
-                dictparams = {key:value for key,value in self.config.stripes[s].bias_dict.items() if key in listparams}
+                dictparams = {key:value for key,value in self.config.stripes[s].bias_dict.items() if key.upper() in listparams}
             else:
                 dictparams = dict(zip(listparams, [0] * len(listparams)))
             self.fpga.set_bias_voltages(dictparams, s)
@@ -151,7 +151,7 @@ class REB3(REBplus):
 
         #puts current on CS gate
         for s in self.stripes:
-            dacOS = self.config.stripes[s].bias_dict['CSGATE']
+            dacOS = self.config.stripes[s].bias_dict['csgate']
             self.fpga.set_current_source(dacOS, s)
 
         #load sequencer if not done, else rewrite default state of sequencer (to avoid reloading all functions)
