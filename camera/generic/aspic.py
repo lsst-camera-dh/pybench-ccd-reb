@@ -136,7 +136,7 @@ class ASPIC(object):
         self.Gain = aspic_dict['gain']
         self.RC = aspic_dict['rc']
         self.TM = aspic_dict['transparent_mode']
-        self.AF1 = aspic_dict['af1']
+        self.AF1 = aspic_dict['af']
         self.Clamps = aspic_dict['clamp']
 
     def write_all_registers(self):

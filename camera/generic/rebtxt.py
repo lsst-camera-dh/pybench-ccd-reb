@@ -56,7 +56,7 @@ class TxtParser(object):
             ckperiod = 10e-9
 
         if unit in self.time_units:
-            duration = value * self.time_units[unit] / ckperiod
+            duration = int(value * self.time_units[unit] / ckperiod)
         else:
             raise ValueError('Unable to parse unit %s' % unit)
 
@@ -172,7 +172,7 @@ class TxtParser(object):
 
             islice = 0
             for timeslice in func['slices']:
-                duration = int(self.process_value(timeslice[0]))
+                duration = self.process_value(timeslice[0])
 
                 if islice == 0:
                     timelengths[islice] = duration - 1  # FPGA adds one to duration of first slice
