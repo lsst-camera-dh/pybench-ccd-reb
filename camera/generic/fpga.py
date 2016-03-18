@@ -642,6 +642,85 @@ class Sequencer(object):
 
         return self.functions[func_id]
 
+    def pointer_value(self, typeptr, numptr):
+        """
+        Returns the pointer content for a given pointer type and number.
+        :param typeptr:
+        :param numptr:
+        :return:
+        """
+        value = 0
+        for pname in self.pointers:
+            p = self.pointers[pname]
+            if p.pointer_type == typeptr and p.ptr_num() == numptr:
+                value = p.value
+                break
+
+        return value
+
+    def recurse_time(self, start_address, clockperiod, recurse_level=0):
+        """
+        Auxiliary for recursivity in timing().
+        :param start_adress:
+        :return:
+        """
+        current_address = start_address
+        total_time = 0
+        strlevel = '\t' * recurse_level
+
+        while current_address in self.program.instructions:
+            instr = self.program.instructions[current_address]
+            if instr.opcode in instr.Call_codes:
+                # parse repetitions, look up function
+                if instr.opcode in [instr.OP_CallFunction, instr.OP_CallPointerFunction]:
+                    repetitions = instr.repeat
+                else:
+                    repetitions = self.pointer_value('REP_FUNC', instr.repeat)
+                if instr.opcode in [instr.OP_CallFunction, instr.OP_CallFuncPointerRepeat]:
+                    funcnum = instr.function_id
+                else:
+                    funcnum = self.pointer_value('PTR_FUNC', instr.function_id)
+                instr_time = self.functions[funcnum].total_time() * repetitions * clockperiod
+                total_time += instr_time
+
+            elif instr.opcode in instr.Jsr_codes:
+                # parse repetitions, look up new address, iterate
+                if instr.opcode in [instr.OP_JumpToSubroutine, instr.OP_JumpPointerSubroutine]:
+                    repetitions = instr.repeat
+                else:
+                    repetitions = self.pointer_value('REP_SUBR', instr.repeat)
+                if instr.opcode in [instr.OP_JumpToSubroutine, instr.OP_JumpSubPointerRepeat]:
+                    target_address = instr.address
+                else:
+                    target_address = self.pointer_value('PTR_SUBR', instr.address)
+                instr_time = self.recurse_time(target_address, clockperiod, recurse_level=recurse_level+1) \
+                             * repetitions
+                total_time += instr_time
+
+            else:
+                print('%s%s  run total: %f us' % (strlevel, instr.__repr__(), total_time))
+                break
+
+            # print here to get total after breakout for calls to subroutines
+            print('%s%s  run time: %f us  run total: %f us' % (strlevel, instr.__repr__(), instr_time, total_time))
+            current_address += 1
+
+        return total_time
+
+    def timing(self, subr):
+        """
+        Computes timing for a given subroutine, with breakout by instruction.
+        :param subr:
+        :return:
+        """
+        # will need this, converts to us
+        p = self.parameters['clockperiod'] * 1e6
+
+        if subr not in self.program.subroutines:
+            print('Unknown subroutine name: %s' % subr)
+
+        start_address = self.program.subroutines[subr]
+        return self.recurse_time(start_address, p)
 
 ## -----------------------------------------------------------------------
 
@@ -714,6 +793,13 @@ class Function(object):
 
         return None
 
+    def total_time(self):
+        """
+        Returns total duration of functions (expressed as clock cycles).
+        Takes into account additionnal cycles at beginning and end.
+        :return:
+        """
+        return sum(self.timelengths.itervalues())+3
 
 ## -----------------------------------------------------------------------
 
