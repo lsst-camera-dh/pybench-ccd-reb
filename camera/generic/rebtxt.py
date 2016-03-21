@@ -392,10 +392,8 @@ class TxtParser(object):
                  self.channels_desc )
 
     def parse_file(self, txtfile):
-        # TODO: manage includes here (parse each file and fuse dictionaries ?)
-        s = open(txtfile, 'r').read()
-        seq = grammar.SeqParser(s)
-        result = seq.m_seq(0)
+        # parser manages includes of other files and fuses dictionaries
+        result = grammar.parse_file(txtfile)
 
         return self.parse_result(result)
 
