@@ -47,7 +47,7 @@
     REP_SUBR    PostRows      920  # Number of rows after window (it is up to the user that total lines = 2020)
     REP_SUBR    CleaningNumber     2  # Number of full CCD clears before acquiring a frame
     PTR_FUNC    Exposure    ExposureFlush  # Function to use during exposure (SerialFlush or ExposureFlush)
-#    MAIN        Main        Bias  # Default main program
+    MAIN        Main        Bias  # Default main program
 
 [functions]
     Default:  # Default state when not operating
