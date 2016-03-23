@@ -61,8 +61,7 @@ class Instrument(Driver):
             self.useCABAC = True
             self.reb.useCABACbias = True
         elif self.hardware in ['REB3', 'REB4']:
-            self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host,
-                                 stripe_id=[self.stripe], hardware=self.hardware)
+            self.reb = reb3.REB3(self.bcfile)
             self.useCABAC = False
         else:
             raise ValueError('Unknown type of hardware: %s' % self.hardware)
