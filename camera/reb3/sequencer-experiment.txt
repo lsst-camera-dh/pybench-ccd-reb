@@ -11,34 +11,30 @@
 [clocks]  # clock channels
 
 [pointers]  # can define a pointer to a function or to a repetition number (for subroutines or functions)
+    PTR_FUNC    ReadoutPixel    ReadPixel  # Points to the readout function we want to use
 
 [functions]
-    ReverseTransferLine:  # Reverse single line transfer (for pumping)
-      clocks:          P1, P2, P3, P4, RG
-      slices:
-         BufferP     = 0,  1,  1,  0,  1
-         TimeP       = 1,  1,  0,  0,  1
-         TimeP       = 1,  0,  0,  1,  1
-         TimeP       = 0,  0,  1,  1,  1
-         TimeP       = 0,  1,  1,  0,  0
-      constants:     S1=1, S2=1, CL=1, RST=1
-
-    ExposureTransferLine:  # Line transfer with open shutter (testing)
-      clocks:          P1, P2, P3, P4, RG
-      slices:
-         BufferP     = 0,  1,  1,  0,  1
-         TimeP       = 0,  0,  1,  1,  1
-         TimeP       = 1,  0,  0,  1,  1
-         TimeP       = 1,  1,  0,  0,  1
-         TimeP       = 0,  1,  1,  0,  0
-      constants:     S1=1, S2=1, CL=1, RST=1, SHU=1
-
-    ExposureReadPixel:  # Single pixel read with open shutter (testing)
+    ReadRD:  # Simulated pixel signal with RG
       clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
       slices:
          TimeS       = 1,  0,  1,  0,  1,  1,  0,  0,  0
          BufferS     = 1,  0,  1,  1,  1,  1,  0,  0,  0
-         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 1,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 1,  0,  0,  1,  0,  0,  0,  0,  0
+         RampBuffer  = 1,  0,  0,  1,  0,  0,  1,  0,  0
+         BufferS     = 1,  1,  0,  1,  0,  0,  1,  0,  0
+         ISO2        = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
+      constants:     P2=1, P3=1
+
+    ReadNoReset:  # Transfer pixel content without resetting and reads
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 0,  0,  1,  0,  0,  0,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
          BufferS     = 0,  0,  0,  1,  0,  0,  0,  0,  0
          RampBuffer  = 0,  0,  0,  1,  0,  0,  1,  0,  0
          BufferS     = 0,  1,  0,  1,  0,  0,  1,  0,  0
@@ -46,81 +42,17 @@
          RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
          BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
          50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
-      constants:     P2=1, P3=1, SHU=1
-
-    ExposureSerialRebin1:  # First function of serial rebinning with open shutter
-      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
-      slices:
-         TimeS       = 1,  0,  1,  0,  1,  1,  0,  0,  0
-         BufferS     = 1,  0,  1,  1,  1,  1,  0,  0,  0
-         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
-         BufferS     = 0,  0,  0,  1,  0,  0,  0,  0,  0
-         RampBuffer  = 0,  0,  0,  1,  0,  0,  1,  0,  0
-         BufferS     = 0,  1,  0,  1,  0,  0,  1,  0,  0
-         TimeS       = 0,  1,  0,  0,  0,  0,  0,  0,  0
-         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
-      constants:     P2=1, P3=1, SHU=1
-
-    ExposureSerialRebin2:  # Middle function of serial rebinning with open shutter
-      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
-      slices:
-         TimeS       = 0,  0,  1,  0,  0,  0,  0,  0,  0
-         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
-         TimeS       = 0,  0,  0,  1,  0,  0,  0,  0,  0
-         BufferS     = 0,  1,  0,  1,  0,  0,  0,  0,  0
-         TimeS       = 0,  1,  0,  0,  0,  0,  0,  0,  0
-         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
-      constants:     P2=1, P3=1, SHU=1
-
-    ExposureSerialRebin3:  # Last function of serial rebinning with open shutter
-      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
-      slices:
-         TimeS       = 0,  0,  1,  0,  0,  0,  0,  0,  0
-         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
-         TimeS       = 0,  0,  0,  1,  0,  0,  0,  0,  0
-         BufferS     = 0,  1,  0,  1,  0,  0,  0,  0,  0
-         ISO2        = 0,  1,  0,  0,  0,  0,  0,  0,  0
-         RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
-         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
-         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
-      constants:     P2=1, P3=1, SHU=1
-
+      constants:     P2=1, P3=1
 
 [subroutines]
-    PumpLine:  # Pumps line back and forth
-        CALL    TransferLine
-        CALL    ReverseTransferLine
+    WindowLine:  # Line readout with option for read function (overwrites parent file)
+        CALL    SerialFlush       repeat(@PreCols)
+        CALL    @ReadoutPixel     repeat(@ReadCols)
+        CALL    SerialFlush       repeat(@PostCols)
         RTS
 
-    ExposureWindowLine:  # Line transfer and readout with open shutter (testing)
-        CALL    ExposureFlush       repeat(@PreCols)
-        CALL    ExposureReadPixel   repeat(@ReadCols)
-        CALL    ExposureFlush       repeat(@PostCols)
-        RTS
-
-    Rebin2:  # Serial rebinning of 2 pixels
-        CALL    ExposureSerialRebin1
-        CALL    ExposureSerialRebin3
-        RTS
-
-    Rebin3: # Serial rebinning of 3 pixels
-        CALL    ExposureSerialRebin1
-        CALL    ExposureSerialRebin2
-        CALL    ExposureSerialRebin3
+    WarmUp:  # Warms up analog electronics and ADCs
+        CALL    @ReadoutPixel       repeat(256)  # any other value will mess up the scanning mode
         RTS
 
 [mains]
-    PocketPump:  # One acquisition with pocket pumping after exposure
-        JSR     AcquireFrame
-        JSR     PumpLine        repeat(1000)
-        JSR     ReadFrame
-        END
-
-    IlluminatedAcquisition:  # Acquiring data with open shutter, uniform exposure
-        JSR     ExposureWindowLine     repeat(5000)
-        CALL    StartOfImage
-        JSR     ExposureWindowLine     repeat(@ReadRows)
-        CALL    EndOfImage
-        JSR     ClearCCD               repeat(@CleaningNumber)
-        END
-

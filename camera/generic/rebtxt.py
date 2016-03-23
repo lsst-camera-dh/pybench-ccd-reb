@@ -126,14 +126,19 @@ class TxtParser(object):
 
     def parse_functions(self, functions_node):
         # list of dictionaries
-        idfunc = 0
+        idfunc = 1
         for func in functions_node:
             fullname = func['comment']
             name = func['name']
 
             func_dict = {}
 
-            func_dict['idfunc'] = idfunc
+            if name == 'Default':  # reserved name
+                func_dict['idfunc'] = 0
+            else:
+                func_dict['idfunc'] = idfunc
+                idfunc += 1
+
             if fullname != None:
                 func_dict['fullname'] = fullname
 
@@ -208,7 +213,6 @@ class TxtParser(object):
 
             self.functions_desc[name]['function'] = function
             self.functions[name] = function
-            idfunc += 1
 
     def parse_repeat(self, reptuple):
         """
@@ -423,6 +427,7 @@ def fromtxtfile(txtfile):
                              for v in channels_desc.values()])
 
     for k, v in functions_desc.iteritems():
+        # re-index the function dictionary by function number
         functions[v['idfunc']] = v['function']
 
     for k in parameters_desc:

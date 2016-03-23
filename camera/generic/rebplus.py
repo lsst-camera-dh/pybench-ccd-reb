@@ -65,7 +65,7 @@ class REBplus(REB):
         self.exposure_unit = self.seq.parameters['ElemExposure']  # in s
         self.min_exposure = int(0.1 / self.exposure_unit)  # minimal shutter opening time (not used for darks)
 
-    def load_sequencer(self, xmlfile=None):
+    def load_sequencer(self, xmlfile=''):
         """
         Loads all sequencer content.
         :return:
@@ -93,6 +93,25 @@ class REBplus(REB):
 
         # select a subroutine to fill self.seqname
         self.select_subroutine('Bias')
+
+    def reload_function_from_file(self, funcname, xmlfile=''):
+        """
+        Reload a function (by name) from the file. Defaults to the previously loaded file.
+        :param xmlfile:
+        :return:
+        """
+        if xmlfile:
+            seqload = rebtxt.fromtxtfile(os.path.join(self.xmldir, xmlfile))
+        # otherwise assumes it is the current sequencer file
+        else:
+            seqload = rebtxt.fromtxtfile(os.path.join(self.xmldir, self.xmlfile))
+
+        # looks up ID of function to overwrite
+        funcnum = self.seq.functions_desc[funcname]['idfunc']
+        # looks up new function object
+        newfunc = seqload.functions_desc[funcname]['function']
+
+        self.fpga.send_function(function_id=funcnum, function=newfunc)
 
     def set_pointer(self, pointername, newtarget):
         """
