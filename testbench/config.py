@@ -67,7 +67,8 @@ config = {
     #      'hardware'    : 'REB3',
     #      'reb_id'      : 0x2,
     #      'stripe'      : 1,
-    #      'xmlfile'     : 'sequencer-reb3.xml',
+    #      'xmlfile'     : 'sequencer-reb3.txt',
+    #      'bcfile'      : 'reb3.bcf',
     #      'version'     : 0xb0200103
     #      },
     # ---------------------------------------------------------------------
