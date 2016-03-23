@@ -50,7 +50,7 @@ class FPGA3(FPGA):
 
     # mapping for bias conversions
     convertbiases = {"OD": 0.00880585,
-                     "GD": 0.0088833,
+                     "GD": 0.00873525,
                      "RD": 0.0061035,
                      "OG": 0.00240885,
                      'OG_S': 0.0012561}
@@ -660,13 +660,13 @@ class FPGA3(FPGA):
             # bottom ASPIC
             self.aspics['bottom'][s].set_aspic_fromdict(aspic_dict)
             AspicData = self.aspics['bottom'][s].write_all_registers()
-            for address in range(2):
+            for address in range(3):
                 self.write_spi(0xB00000, s, 1, AspicData[address], True)
         if loc == 2 or loc == 3:
             # top ASPIC
             self.aspics['top'][s].set_aspic_fromdict(aspic_dict)
             AspicData = self.aspics['top'][s].write_all_registers()
-            for address in range(2):
+            for address in range(3):
                 self.write_spi(0xB00000, s, 2, AspicData[address], True)
 
     def reset_aspic(self, s=0):

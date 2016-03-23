@@ -51,7 +51,7 @@ class REB3(REBplus):
         for s in self.stripes:
             if on:
                 # selects the parameters to change
-                dictparams = {key:value for key,value in self.config.stripes[s].bias_dict.items() if key.upper() in listparams}
+                dictparams = {key.upper():value for key,value in self.config.stripes[s].bias_dict.items() if key.upper() in listparams}
             else:
                 dictparams = dict(zip(listparams, [0] * len(listparams)))
             self.fpga.set_bias_voltages(dictparams, s)
@@ -110,7 +110,7 @@ class REB3(REBplus):
 
         else:
             print("Warning: unidentified parameter for the REB: %s" % param)
-
+    # TODO: make it default to the current stripe(s)
     # --------------------------------------------------------------------
 
     def REBpowerup(self):
@@ -294,6 +294,8 @@ if __name__ == "__main__":
     #r.select_subroutine("Bias")
     #r.execute_sequence()
     #save_to_fits(r)
+    #import lsst.testbench.scripts.ccd.analysis as analysis
+    #analysis.stats_on_files(['0x0020160323162805.fz'], datadir='/data/frames/20160323')
 
     #r.increment()
     #r.execute_sequence()
