@@ -163,17 +163,6 @@ class REB1(reb.REB):
 
     # --------------------------------------------------------------------
 
-    def send_aspic_config(self, params):
-        pass
-
-    def get_aspic_config(self, s=0):
-        """
-        Dummy read of the ASPIC parameters.
-        :param s:
-        :return: lsst.camera.generic.fpga.MetaData()
-        """
-        return self.fpga.get_aspic_config(s)
-
     def config_aspic(self):
         pass
 

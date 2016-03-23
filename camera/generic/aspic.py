@@ -126,6 +126,19 @@ class ASPIC(object):
             raise ValueError("No ASPIC parameter with this name: "+ param)
         return reg
 
+    def set_aspic_fromdict(self, aspic_dict):
+        """
+        Configure fully ASPIC from bcf-style dictionary.
+        Use write_all_registers afterwards to get the registers.
+        :param aspic_dict:
+        :return:
+        """
+        self.Gain = aspic_dict['gain']
+        self.RC = aspic_dict['rc']
+        self.TM = aspic_dict['transparent_mode']
+        self.AF1 = aspic_dict['af']
+        self.Clamps = aspic_dict['clamp']
+
     def write_all_registers(self):
         """
         Takes values in the object and writes them in register format.

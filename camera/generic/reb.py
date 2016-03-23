@@ -72,18 +72,26 @@ def get_sequencer_hdu(seq):
 def get_sequencer_string(seq):
     """
     Builds a string table representation of the sequencer content in seq.
-    :param seq: Sequencer
+    :ptype seq: Sequencer
     :return: N.array
     """
     reprarray = N.zeros(shape=(0,), dtype=N.dtype('a73'))
+
+    # all functions
     for ifunc in seq.functions:
         reprfunc = seq.functions[ifunc].__repr__()
         for l in reprfunc.splitlines():
             if l:
                 reprarray = N.append(reprarray, l.expandtabs(8))
+
+    # splitting the subroutine stack into array lines
     reprprog = seq.program.__repr__()
     for l in reprprog.splitlines():
         reprarray = N.append(reprarray, l)
+
+    # adding the pointer values if any
+    for p in seq.pointers:
+        reprarray = N.append(reprarray, seq.pointers[p].__repr__())
 
     return reprarray
 
@@ -462,7 +470,7 @@ class REB(object):
         Executes the currently loaded sequence.
         """
         self.wait_end_sequencer()
-        if self.seqname != 'Wait':
+        if self.seqname not in ['Wait', 'InfiniteWait']:
             self.update_filetag()
         self.tstamp = utc_now_isoformat()
         self.fpga.start()
@@ -486,6 +494,22 @@ class REB(object):
                 self.select_subroutine(name)
             else:
                 self.select_subroutine(self.memorized_sequence)
+
+    def window_sequence(self, on=True):
+        """
+        Reduces to a window or goes back to previous full size sequence.
+        :param on:
+        :return:
+        """
+        if on:
+            self.memorized_sequence = self.seqname
+            self.select_subroutine('Window')
+            self.imgcols = self.seq.parameters['WindowColumns']
+            self.imglines = self.seq.parameters['WindowLines']
+        else:
+            self.select_subroutine(self.memorized_sequence)
+            self.imgcols = self.seq.parameters['ReadColumns']
+            self.imglines = self.seq.parameters['ReadLines']
 
     # --------------------------------------------------------------------
 
