@@ -649,20 +649,22 @@ class FPGA3(FPGA):
             reg = self.aspics['top'][s].set_aspic_fromstring(param, value)
             self.write_spi(0xB00000, s, 2, reg, True)
 
-    def apply_aspic_config(self, s=0, loc=3):
+    def apply_aspic_config(self, aspic_dict, s=0, loc=3):
         """
-        Apply all stored settings to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
+        Apply settings from dict to the ASPIC(s) designed by the stripe s (amongst 0,1,2) and the location
         (1 for bottom, 2 for top, 3 for both).
         """
         self.check_location(s, loc)
 
         if loc == 1 or loc == 3:
             # bottom ASPIC
+            self.aspics['bottom'][s].set_aspic_fromdict(aspic_dict)
             AspicData = self.aspics['bottom'][s].write_all_registers()
             for address in range(2):
                 self.write_spi(0xB00000, s, 1, AspicData[address], True)
         if loc == 2 or loc == 3:
             # top ASPIC
+            self.aspics['top'][s].set_aspic_fromdict(aspic_dict)
             AspicData = self.aspics['top'][s].write_all_registers()
             for address in range(2):
                 self.write_spi(0xB00000, s, 2, AspicData[address], True)

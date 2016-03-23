@@ -17,6 +17,7 @@
     RampTime:         460 ns    # ASPIC ramp time
     RampBuffer:       360 ns    # should be RampTime minus BufferS
     clockperiod:      10 ns     # FPGA clock period (required by the interpreter)
+    ElemExposure:     25 ms     # Duration of the elementary exposure subroutine
 
 [clocks]  # clock channels
     P1:   8  # Parallel clock 1
@@ -40,12 +41,13 @@
     REP_FUNC    PreCols       50  # Number of columns to skip before readout window, including prescan
     REP_FUNC    ReadCols     256  # Number of columns to read
     REP_FUNC    PostCols     244  # Number of columns to discard after window (it is up to the user that total columns = 550)
-    REP_FUNC    ExposureTime  80  # Duration of exposure in units of 25 ms
+    REP_SUBR    ExposureTime  80  # Duration of exposure in units of 25 ms
     REP_SUBR    PreRows       100  # Number of rows to skip before window
     REP_SUBR    ReadRows     1000  # Number of rows of the window
     REP_SUBR    PostRows      920  # Number of rows after window (it is up to the user that total lines = 2020)
     REP_SUBR    CleaningNumber     2  # Number of full CCD clears before acquiring a frame
     PTR_FUNC    Exposure    ExposureFlush  # Function to use during exposure (SerialFlush or ExposureFlush)
+    MAIN        Main        Bias  # Default main program
 
 [functions]
     Default:  # Default state when not operating
@@ -148,17 +150,24 @@
         CALL    SerialFlush     repeat(@PostCols)
         RTS
 
-    BaseFrame:  # Operations for readout of a CCD frame (window)
+    WarmUp:  # Warms up analog electronics and ADCs
+        CALL    ReadPixel       repeat(256)  # any other value will mess up the scanning mode
+        RTS
+
+    ReadFrame:  # Readout and acquisition of a CCD frame (window)
+        JSR     WarmUp
         JSR     FlushLine       repeat(@PreRows)
+        CALL    StartOfImage
         JSR     WindowLine      repeat(@ReadRows)
+        CALL    EndOfImage
         JSR     FlushLine       repeat(@PostRows)
         RTS
 
-    ReadFrame:  # Readout and acquisition of a CCD frame
+    FakeFrame:  # Readout of a CCD frame (window) with no data output
         JSR     WarmUp
-        CALL    StartOfImage
-        JSR     BaseFrame
-        CALL    EndOfImage
+        JSR     FlushLine       repeat(@PreRows)
+        JSR     WindowLine      repeat(@ReadRows)
+        JSR     FlushLine       repeat(@PostRows)
         RTS
 
     Exposure25ms:  # Repeat exposure function for 25 ms
@@ -167,10 +176,6 @@
 
     ClearCCD:  # Clear CCD once
         JSR     FlushLine       repeat(DetectorRows)
-        RTS
-
-    WarmUp:  # Warms up analog electronics and ADCs
-        CALL    ReadPixel       repeat(256)  # any other value will mess up the scanning mode
         RTS
 
     CloseShutter:  # Gives time for shutter to close (to be adapted depending on setup)
@@ -196,10 +201,10 @@
 
     PseudoAcquisition:  # Simulates acquisition without storing image (for debugging)
         JSR     AcquireFrame
-        JSR     WarmUp
-        JSR     BaseFrame
+        JSR     FakeFrame
         END
 
     InfiniteWait:  # Slow flushing on infinite loop
-        CALL    SlowFlush   repeat(Inf)
+        CALL    SlowFlush   repeat(infinity)
         END
+        

@@ -34,7 +34,10 @@ class SeqParser(object):
 
     # DURATION_UNIT ::= ( 'ns' | 'us' | 'ms' | 's' )
     _p_duration_unit = "(ns|us|ms|s)"
-    
+
+    # FILE ::= [0-9A-Za-z\_\-\.\\\\]*
+    _p_file = "([0-9A-Za-z\_\-\.\/]*)"
+
     #-----------------------------------------------------------------------
 
     def __init__(self, s):
@@ -50,6 +53,7 @@ class SeqParser(object):
         self.p_address = re.compile("^" + self._p_address)
         self.p_name =    re.compile("^" + self._p_name)
         self.p_duration_unit = re.compile("^" + self._p_duration_unit)
+        self.p_file = re.compile("^" + self._p_file)
 
     #=======================================================================
 
@@ -269,11 +273,85 @@ class SeqParser(object):
     #=======================================================================
 
     #-----------------------------------------------------------------------
+    # FILE_NAME ::= FILE
+    # INCLUDE_DEF_LINE ::= SPACE* FILE_NAME SPACE* COMMENT? NEWLINE
+    # INCLUDE_SECTION_MARKER ::= '[includes]' SPACE* COMMENT? NEWLINE
+
+    def m_file_name(self,pos):
+        pnext = pos
+
+        matches = self.p_file.search(self.s[pnext:])
+        if matches == None:
+            return None
+
+        l = matches.end()
+        name = matches.group(1)
+        pnext = pnext + l
+
+        return (pnext, name)
+
+    def m_include_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        r = self.m_file_name(pnext)
+        if r == None:
+            return None
+        pnext, constant_name = r
+
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        return pnext, (constant_name, comment)
+
+    #-----------------------------------------------------------------------
+    # INCLUDE_SECTION ::=
+    #   INCLUDE_SECTION_MARKER ( EMPTY_LINE | INCLUDE_DEF_LINE )*
+
+    def m_include_section(self, pos):
+        pnext = pos
+
+        include_defs = []
+
+        r = self.m_section_marker(pnext, "includes")
+        if r == None:
+            return None
+        pnext, section_name = r
+
+        while True:
+            r = self.m_empty_line(pnext)
+            if r != None:
+                pnext = r
+                continue
+
+            r = self.m_include_def_line(pnext)
+            if r != None:
+                pnext, constant_def = r
+                include_defs.append(constant_def)
+                continue
+
+            break
+
+        return pnext, include_defs
+
+    #=======================================================================
+
+    #-----------------------------------------------------------------------
     # CONSTANT_NAME ::= NAME
     # CONSTANT_VALUE ::= DURATION_VALUE | INTEGER
     # CONSTANT_DEF_LINE ::=
     #   SPACE* CONSTANT_NAME SPACE* ':' CONSTANT_VALUE SPACE* COMMENT? NEWLINE
-    # 
+    #
     # CONSTANT_SECTION_MARKER ::= '[constants]' SPACE* COMMENT? NEWLINE
     #
     # CONSTANT_SECTION ::=
@@ -331,7 +409,7 @@ class SeqParser(object):
         if r == None:
             return None
         pnext = r
-        
+
         return pnext, (constant_name, constant_value, comment)
 
     #-----------------------------------------------------------------------
@@ -685,6 +763,61 @@ class SeqParser(object):
         
         return pnext, ('PTR_SUBR', ptr_subr_name, subr, comment)
 
+    #-----------------------------------------------------------------------
+    # MAIN_DEF_LINE ::=
+    # SPACE* 'MAIN' SPACE+ PTR_SUBR_NAME SPACE+ (SUBR_NAME | ADDRESS) SPACE* COMMENT? NEWLINE
+    #
+
+    _s_main_def_keyword = "MAIN"
+
+    def m_main_def_line(self, pos):
+        pnext = pos
+
+        pnext = self.m_zmsp(pnext)
+
+        l = len(self._s_main_def_keyword)
+        if ( self.s[pnext:pnext+l] != self._s_main_def_keyword ):
+            return None
+        pnext = pnext + l
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_ptr_subr_name(pnext)
+        if r == None:
+            return None
+        pnext, ptr_subr_name = r
+
+        r = self.m_omsp(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        r = self.m_subr_name(pnext)
+        if r != None:
+            pnext, subr = r
+        else:
+            r = self.m_address(pnext)
+            if r == None:
+                return None
+            pnext, subr = r
+
+        pnext = self.m_zmsp(pnext)
+
+        comment = ''
+        r = self.m_comment(pnext)
+        if r != None:
+            pnext, comment = r
+
+        r = self.m_newline(pnext)
+        if r == None:
+            return None
+        pnext = r
+
+        return pnext, ('MAIN', ptr_subr_name, subr, comment)
+
 
     # PTR_SECTION_MARKER ::= '[pointers]' SPACE* COMMENT? NEWLINE
     #
@@ -702,6 +835,7 @@ class SeqParser(object):
         rep_subr_defs = []
         ptr_func_defs = []
         ptr_subr_defs = []
+        main_def = []
 
         r = self.m_section_marker(pnext, "pointers")
         if r == None:
@@ -738,9 +872,14 @@ class SeqParser(object):
                 ptr_subr_defs.append(ptr_subr_def)
                 continue
             
+            r = self.m_main_def_line(pnext)
+            if r != None:
+                pnext, ptr_subr_def = r
+                main_def.append(ptr_subr_def)
+                continue
             break
 
-        return pnext, (rep_func_defs, rep_subr_defs, ptr_func_defs, ptr_subr_defs)
+        return pnext, (rep_func_defs, rep_subr_defs, ptr_func_defs, ptr_subr_defs, main_def)
     
     #=======================================================================
     #
@@ -1335,7 +1474,7 @@ class SeqParser(object):
         return pnext, ("ADDRESS", address)
         
     
-    _s_inf = "Inf"
+    _s_inf = "infinity"
 
     def m_instr_call_rep_ref_dir(self, pos):
         pnext = pos
@@ -1882,12 +2021,22 @@ class SeqParser(object):
     def m_seq(self, pos):
         pnext = pos
 
-        result = { 'constants': [],
+        result = { 'includes': [],
+                   'constants': [],
                    'clocks': [],
                    'pointers': [],
                    'functions': [],
                    'subroutines': [],
                    'mains': [] }
+
+        pnext = self.m_empty_lines(pnext)
+
+        print "[includes]"
+        r = self.m_include_section(pnext)
+        if r == None:
+            result['includes'] = []  # keep it optional
+        else:
+            pnext, result['includes'] = r
 
         pnext = self.m_empty_lines(pnext)
 
@@ -1940,4 +2089,76 @@ class SeqParser(object):
         return result
 
 
-    
+def merge_section_tuples(stronglist, weaklist, index=0):
+    """
+    Manages the merge of two sections of results when the sections are lists of tuples.
+    :param stronglist:
+    :param weaklist:
+    :return:
+    """
+    stronger_defs = [constant_def[index] for constant_def in stronglist]
+    for constant_def in weaklist:
+        if constant_def[index] not in stronger_defs:
+            stronglist.append(constant_def)
+
+
+def merge_section_dicts(stronglist, weaklist, fieldname):
+    """
+    Manages the merge of two sections of results when the sections are lists of dicts.
+    :param stronglist:
+    :param weaklist:
+    :return:
+    """
+    stronger_defs = [constant_def[fieldname] for constant_def in stronglist]
+    for constant_def in weaklist:
+        if constant_def[fieldname] not in stronger_defs:
+            stronglist.append(constant_def)
+
+
+def merge_result(stronger, weaker):
+    """
+    Merges two 'result' from the parser, giving priority to the first.
+    This modifies the content of the stronger result.
+    :param stronger:
+    :param weaker:
+    :return:
+    """
+    # includes are managed in the parse_file() function, NOT merged
+    merge_section_tuples(stronger['constants'], weaker['constants'])
+    merge_section_tuples(stronger['clocks'], weaker['clocks'])
+
+    # tuple of lists, one list per type of pointers
+    for i in range(5):
+        merge_section_tuples(stronger['pointers'][i], weaker['pointers'][i], 1)
+
+    merge_section_dicts(stronger['functions'], weaker['functions'], 'name')
+    merge_section_dicts(stronger['subroutines'], weaker['subroutines'], 'name')
+    merge_section_dicts(stronger['mains'], weaker['mains'], 'name')
+
+
+def parse_file(txtfile):
+    """
+    Parses input file, manages 'includes' section.
+    :param txtfile:
+    :return:
+    """
+    sfile = open(txtfile, 'r')
+    s = sfile.read()
+    sfile.close()
+
+    seq = SeqParser(s)
+    result = seq.m_seq(0)
+
+    # child values overwrite parents in case of conflict, with inheritance order from [includes]
+    # manages recursivity (even though it is a terribly dangerous idea)
+
+    # includes section is a list of tuples (file, comment)
+    for parentfile in reversed(result['includes']):
+        parentname = parentfile[0]
+        print('Including sequencer file: %s ' % parentname)
+        parentresult = parse_file(parentname)
+        merge_result(result, parentresult)
+
+    return result
+
+

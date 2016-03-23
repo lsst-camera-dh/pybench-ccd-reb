@@ -10,6 +10,7 @@ import lsst.camera.reb1.reb1 as reb1
 import lsst.camera.wreb.wreb as wreb
 import lsst.camera.reb3.reb3 as reb3
 from lsst.camera.generic.reb import *
+import lsst.camera.generic.rebplus as rebplus
 
 from driver import Driver
 import logging
@@ -59,16 +60,19 @@ class Instrument(Driver):
             self.reb = wreb.WREB(rriaddress=self.reb_id, ctrl_host=self.host, stripe_id=[self.stripe])
             self.useCABAC = True
             self.reb.useCABACbias = True
-        elif self.hardware == 'REB3':
+        elif self.hardware in ['REB3', 'REB4']:
             self.reb = reb3.REB3(rriaddress=self.reb_id, ctrl_host=self.host,
                                  stripe_id=[self.stripe], hardware=self.hardware)
             self.useCABAC = False
+        else:
+            raise ValueError('Unknown type of hardware: %s' % self.hardware)
 
         # then check FPGA version after connecting
         checkversion = self.reb.fpga.get_version()
         if self.version != checkversion:
-            raise ValueError('Wrong version of the FPGA firmware: reading %x instead of %x' % (checkversion,
-                                                                                               self.version))
+            raise ValueError('Wrong version of the FPGA firmware: reading %x instead of %x'
+                             % (checkversion, self.version))
+
         self.reb.xmlfile = self.xmlfile
         self.read_sequencer_file(self.xmlfile)
         self.reb.exptime = self.reb.get_exposure_time()
@@ -356,6 +360,7 @@ class Instrument(Driver):
     def send_cabac_config(self, params):
         """
         Sets CABAC parameters defined in the params dictionay and writes to CABAC, then checks the readback.
+        Use set_parameter instead if there is no CABAC.
         """
         if self.useCABAC:
             self.reb.send_cabac_config(params)
@@ -374,20 +379,6 @@ class Instrument(Driver):
             logging.info("REB: attempting to send CABAC reset, not in use")
 
     # --------------------------------------------------------------------
-
-    def get_aspic_config(self):
-        """
-        Reads ASPIC configuration (dummy if ASPIC2).
-        """
-        return self.reb.get_aspic_config()
-
-    def send_aspic_config(self, params):
-        """
-        Sets ASPIC parameters defined in the params dictionary and writes to ASPIC, then checks the readback.
-        If it is programmable (not REB1 / ASPIC2).
-        """
-        self.reb.send_aspic_config(params)
-        logging.info("REB: sent ASPIC values")
 
     def config_aspic(self):
         """
@@ -423,30 +414,38 @@ class Instrument(Driver):
         """
         return self.reb.make_img_name()
 
-    #TODO: integrate these functions with the upgraded sequencer file
-    def set_amplifier_size(self, cols, lines):
+    def set_window(self, on, precols=0, cols=256, postcols=0, prerows=0, rows=1000, postrows=0):
         """
-        Sets the dimensions of the image. This affects how the image is reconstituted, not the sequencer (yet).
-        :param cols: int
-        :param lines: int
-        :return:
+        Sets to window acquisition and frame size, or goes back to original size.
+        Window coordinates are only loaded if pointers are implemented, otherwise they will be loaded from the
+        XML file anyway.
         """
-        self.reb.imgcols = cols
-        self.reb.imglines = lines
+        if issubclass(self.reb, rebplus.REBplus):
+            if on:
+                self.reb.set_window(precols, cols, postcols, prerows, rows, postrows)
+            else:
+                self.reb.window_sequence(False)
 
-    def get_amplifier_size(self, window=False):
+        else:
+            self.reb.window_sequence(on)
+
+    def get_amplifier_size(self):
         """
-        Gets the dimension of the image data (from a single amplifier). Currently read from the XML, until
-        it is changed.
+        Gets the dimension of the image data (from a single amplifier). Only read from the REB object, unless
+        pointers are implemented.
         :param window:
         :return:
         """
-        if window:
-            lines = self.reb.seq.parameters['WindowLines']
-            cols = self.reb.seq.parameters['WindowColumns']
+        # Note : still have not found if this is used anywhere
+
+        if issubclass(self.reb, rebplus.REBplus):
+            cols = self.reb.get_pointer('ReadCols')
+            lines = self.reb.get_pointer('ReadRows')
+
         else:
-            cols = self.reb.seq.parameters['ReadColumns']
-            lines = self.reb.seq.parameters['ReadLines']
+            lines = self.reb.imglines
+            cols = self.reb.imgcols
+
         return cols, lines
 
     def conv_to_fits(self, imgname, channels=None, displayborders=False):
