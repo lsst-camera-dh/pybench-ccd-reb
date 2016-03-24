@@ -44,6 +44,21 @@
          50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
       constants:     P2=1, P3=1
 
+    ReadReverse:  # Clocks in reverse direction and reads as usual
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 1,  0,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 1,  1,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 0,  1,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         RampBuffer  = 0,  1,  0,  0,  0,  0,  1,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  1,  0,  0
+         ISO2        = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         RampTime    = 0,  0,  0,  1,  0,  0,  0,  1,  0
+         BufferS     = 0,  0,  1,  1,  0,  0,  0,  0,  0
+         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
+      constants:     P2=1, P3=1
+
 [subroutines]
     WindowLine:  # Line readout with option for read function (overwrites parent file)
         CALL    SerialFlush       repeat(@PreCols)
@@ -55,4 +70,30 @@
         CALL    @ReadoutPixel       repeat(256)  # any other value will mess up the scanning mode
         RTS
 
+    SerialReverseBlock:  # creates artificial stripes of light and empty pixels
+        CALL    ReadPixel         repeat(20)
+        CALL    ReadReverse       repeat(10)
+
+    SerialReverseLine:
+        CALL    SerialFlush         repeat(@PreCols)
+        JSR     SerialReverseBlock  repeat(8)
+        CALL    ReadPixel           repeat(16)
+        CALL    SerialFlush         repeat(160)
+        CALL    SerialFlush         repeat(@PostCols)
+        RTS
+
+    MemoryFrame:
+        JSR     WarmUp
+        JSR     FlushLine         repeat(@PreRows)
+        CALL    StartOfImage
+        JSR     SerialReverseLine repeat(@ReadRows)
+        CALL    EndOfImage
+        JSR     FlushLine         repeat(@PostRows)
+        RTS
+
 [mains]
+    Memory:
+        JSR     AcquireFrame
+        JSR     MemoryFrame
+        END
+
