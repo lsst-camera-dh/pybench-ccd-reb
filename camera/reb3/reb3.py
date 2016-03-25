@@ -289,7 +289,7 @@ if __name__ == "__main__":
     r.REBpowerup()
     time.sleep(0.1)
     r.CCDpowerup()
-    r.config_aspic()
+    #r.config_aspic()
     #r.load_sequencer('sequencer-reb3.txt')
     #r.select_subroutine("Bias")
     #r.execute_sequence()

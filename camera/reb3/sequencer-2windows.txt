@@ -11,10 +11,11 @@
 [clocks]  # clock channels
 
 [pointers]  # can define a pointer to a function or to a repetition number (for subroutines or functions)
-    REP_SUBR    Read2Frame  TwoSeparateWindows  # Points to the appropriate window subroutine
+    PTR_SUBR    Read2Frame  TwoSeparateWindows  # Points to the appropriate window subroutine
     REP_FUNC    ReadCols      10  # Columns to read for a subarray
     REP_FUNC    PreCols      150  # Columns to skip before first subarray, including prescan
     REP_FUNC    PostCols     390  # Columns after first subarray (it is up to the user that total columns = 550)
+    REP_FUNC    MidCols      150  # Columns between two subarrays if they overlap in rows
     REP_FUNC    PreCols2     310  # Columns to skip before second subarray, including prescan
     REP_FUNC    PostCols2    230  # Columns after second subarray (it is up to the user that total columns = 550)
     REP_SUBR    ExposureTime  80  # Duration of exposure in units of 25 ms
@@ -38,7 +39,7 @@
         CALL    SerialFlush     repeat(@PostCols2)
         RTS
 
-    TwoWindowsLine:
+    TwoWindowsLine:  # Line with both subarrays
         CALL    SerialFlush     repeat(@PreCols)
         CALL    ReadPixel       repeat(@ReadCols)
         CALL    SerialFlush     repeat(@MidCols)

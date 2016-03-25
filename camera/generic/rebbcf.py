@@ -38,7 +38,7 @@ from ConfigParser import ConfigParser
         2 ASPICS
         5 DACs
 '''
-class stripe(object):
+class Stripe(object):
 
     # equivalence between stripe names and locations
     stripe_map = {'a':0, 'b':1, 'c':2}
@@ -106,10 +106,14 @@ class REBconfig(ConfigParser):
         # 1 REB has THREE (3) stripes, A => Left, B => Middle, C=> Right
         self.stripes = {}
 
-        self.stripes_enabled = 0
-        
-        # Process from config file
+        self.stripes_enabled = []
+        # Process enabled list from config file
         for s in self.get('board', 'stripes_enabled').split(','):
+            s = s.strip()
+            self.stripes_enabled.append(Stripe.stripe_map[s])  # use location number
+            
+        # Parse configuration for all stripes
+        for s in ['a', 'b', 'c']:
             s = s.strip()
             # Gets passed to stripe object
             stripe_dict = {'aspic' : {}, 'bias'  : {} }
@@ -125,7 +129,7 @@ class REBconfig(ConfigParser):
                     else:
                         stripe_dict['bias'][keys[1]] = float(value)
 
-            sobj = stripe(s, stripe_dict)
-            self.stripes[sobj.loc] = sobj  # save them by location for compatibility
+            sobj = Stripe(s, stripe_dict)
+            self.stripes[sobj.loc] = sobj  # save them by location number for compatibility
             
 

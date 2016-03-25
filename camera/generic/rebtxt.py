@@ -101,6 +101,12 @@ class TxtParser(object):
                                       for v in self.channels_desc.values()])
 
     def parse_pointers(self, pointers_node):
+        #re-initialize address list
+        SequencerPointer.Ptr_Func_Base = 0x350000
+        SequencerPointer.Rep_Func_Base = 0x360000
+        SequencerPointer.Ptr_Subr_Base = 0x370000
+        SequencerPointer.Rep_Subr_Base = 0x380000
+ 
         # tuple of lists of tuples
         for pointer_list in pointers_node:
             for param in pointer_list:
