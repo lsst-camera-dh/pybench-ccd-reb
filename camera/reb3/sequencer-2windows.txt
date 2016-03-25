@@ -1,0 +1,76 @@
+# REB3 sequence, in new REB sequencer format
+# Covers all cases for two independent windows defined in the frame
+# (Note that it covers also one single window with the right values)
+# (C. Juramy, 20160325)
+
+[includes]  # inheritance from other files (in increasing priority order, current file last)
+    camera/reb3/sequencer-reb3.txt
+
+[constants]  # will be substituted in the code at compilation time
+
+[clocks]  # clock channels
+
+[pointers]  # can define a pointer to a function or to a repetition number (for subroutines or functions)
+    REP_SUBR    Read2Frame  TwoSeparateWindows  # Points to the appropriate window subroutine
+    REP_FUNC    ReadCols      10  # Columns to read for a subarray
+    REP_FUNC    PreCols      150  # Columns to skip before first subarray, including prescan
+    REP_FUNC    PostCols     390  # Columns after first subarray (it is up to the user that total columns = 550)
+    REP_FUNC    PreCols2     310  # Columns to skip before second subarray, including prescan
+    REP_FUNC    PostCols2    230  # Columns after second subarray (it is up to the user that total columns = 550)
+    REP_SUBR    ExposureTime  80  # Duration of exposure in units of 25 ms
+    REP_SUBR    ReadRows      10  # Number of rows to read a subarray
+    REP_SUBR    PreRows      500  # Number of rows to skip before subarrays
+    REP_SUBR    MidRows     1000  # Number of rows between subarrays (space or overlap depending on geometry)
+    REP_SUBR    PostRows     500  # Number of rows after subarrays (it is up to the user that total rows = 2020)
+
+[functions]
+
+[subroutines]
+    Window1Line:  # Line readout, first subarray only
+        CALL    SerialFlush     repeat(@PreCols)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@PostCols)
+        RTS
+
+    Window2Line:  # Line readout, second subarray only
+        CALL    SerialFlush     repeat(@PreCols2)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@PostCols2)
+        RTS
+
+    TwoWindowsLine:
+        CALL    SerialFlush     repeat(@PreCols)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@MidCols)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@PostCols)
+        RTS
+
+    TwoSeparateWindows:  # No overlap in rows between frames
+        JSR     WarmUp
+        JSR     FlushLine        repeat(@PreRows)
+        CALL    StartOfImage
+        JSR     Window1Line      repeat(@ReadRows)
+        JSR     FlushLine        repeat(@MidRows)
+        JSR     Window2Line      repeat(@ReadRows)
+        CALL    EndOfImage
+        JSR     FlushLine        repeat(@PostRows)
+        RTS
+
+    TwoLevelWindows:  # Overlap in rows between frames
+        JSR     WarmUp
+        JSR     FlushLine        repeat(@PreRows)
+        CALL    StartOfImage
+        JSR     Window1Line      repeat(@ReadRows)
+        JSR     TwoWindowsLine   repeat(@MidRows)
+        JSR     Window2Line      repeat(@ReadRows)
+        CALL    EndOfImage
+        JSR     FlushLine        repeat(@PostRows)
+        RTS
+
+[mains]
+    Acquisition:  # One acquisition (exposure or dark)
+        JSR     AcquireFrame
+        JSR     @Read2Frame
+        END
+
