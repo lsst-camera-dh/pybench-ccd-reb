@@ -34,11 +34,14 @@ class FPGA0(FPGA):
         Instruction.OP_JumpToSubroutine = 0x2
         Instruction.OP_ReturnFromSubroutine = 0x3
         Instruction.OP_EndOfProgram = 0x4
+        Instruction.OP_names = ["CALL", "JSR", "RTS", "END"]
         Instruction.OP_codes = bidi.BidiMap(Instruction.OP_names,
                                             [Instruction.OP_CallFunction,
                                              Instruction.OP_JumpToSubroutine,
                                              Instruction.OP_ReturnFromSubroutine,
                                              Instruction.OP_EndOfProgram])
+        Instruction.Call_codes = [Instruction.OP_CallFunction]
+        Instruction.Jsr_codes = [Instruction.OP_JumpToSubroutine]
         Instruction.SubAddressShift = 18
 
     # --------------------------------------------------------------------

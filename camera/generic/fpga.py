@@ -135,6 +135,16 @@ class SequencerPointer(object):
         # address stripped of base address
         return self.address & 0xF
 
+    @classmethod
+    def init_addresses(cls):
+        """
+        Initialize addresses for all pointers to the base values.
+        :return:
+        """
+        cls.Ptr_Func_Base = 0x350000
+        cls.Rep_Func_Base = 0x360000
+        cls.Ptr_Subr_Base = 0x370000
+        cls.Rep_Subr_Base = 0x380000
 
 class Instruction(object):
 
