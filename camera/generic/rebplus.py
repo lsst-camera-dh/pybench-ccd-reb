@@ -21,8 +21,8 @@ class REBplus(REB):
     # =======================================================================
     # These parameters now save the functions that can be targets of the Exposure pointer
     # to set light or dark exposure
-    REB.exposuresub = "ExposureFlush"
-    REB.darksub = "SerialFlush"
+    exposuresub = "ExposureFlush"
+    darksub = "SerialFlush"
 
     # ===================================================================
 
