@@ -1,4 +1,5 @@
 # Operations common to various EO tests
+import os.path
 
 from lsst.testbench.bench import Bench
 
@@ -32,13 +33,19 @@ Bench.CCDready = CCDready
 def set_ccdID(self, manu, manutype, sernum):
     self.reb.set_sensorID(self, manu, manutype, sernum)
 
+Bench.set_ccdID = set_ccdID
+
+def make_eo_directory(self, testtype):
+    # should take CCD info from self.reb
+    pass
+
 def make_eo_filename(self, testtype, imgtype):
     #TODO: see in TS code, take from stored values in B.reb
     pass
 
 def acquire_eotest(self, expname, exptime, fitsname):
     """
-    Runs the CCD, acquire and save image. fitsname should include the directory if not
+    Runs the CCD, acquire and save image. fitsname should include the directory if not using default.
     :param self:
     :return:
     """

@@ -19,7 +19,7 @@
     REP_FUNC    PreCols2     310  # Columns to skip before second subarray, including prescan
     REP_FUNC    PostCols2    230  # Columns after second subarray (it is up to the user that total columns = 550)
     REP_SUBR    ExposureTime  80  # Duration of exposure in units of 25 ms
-    REP_SUBR    ReadRows      10  # Number of rows to read a subarray
+    REP_SUBR    ReadRows      10  # Number of rows to read a subarray (non-overlapping)
     REP_SUBR    PreRows      500  # Number of rows to skip before subarrays
     REP_SUBR    MidRows     1000  # Number of rows between subarrays (space or overlap depending on geometry)
     REP_SUBR    PostRows     500  # Number of rows after subarrays (it is up to the user that total rows = 2020)
@@ -39,15 +39,23 @@
         CALL    SerialFlush     repeat(@PostCols2)
         RTS
 
-    TwoWindowsLine:  # Line with both subarrays
+    TwoWindowsLine:  # Line with both subarrays, with first array row-wise also first in line
         CALL    SerialFlush     repeat(@PreCols)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@MidCols)
+        CALL    ReadPixel       repeat(@ReadCols)
+        CALL    SerialFlush     repeat(@PostCols2)
+        RTS
+
+    TwoWindowsLineSwap:  # Line with both subarrays, with second array row-wise first in line
+        CALL    SerialFlush     repeat(@PreCols2)
         CALL    ReadPixel       repeat(@ReadCols)
         CALL    SerialFlush     repeat(@MidCols)
         CALL    ReadPixel       repeat(@ReadCols)
         CALL    SerialFlush     repeat(@PostCols)
         RTS
 
-    TwoSeparateWindows:  # No overlap in rows between frames
+    TwoSeparateWindows:  # No overlap in rows between subarrays
         JSR     WarmUp
         JSR     FlushLine        repeat(@PreRows)
         CALL    StartOfImage
@@ -58,12 +66,23 @@
         JSR     FlushLine        repeat(@PostRows)
         RTS
 
-    TwoLevelWindows:  # Overlap in rows between frames
+    TwoLevelWindows:  # Overlap in rows between subarrays, with first array row-wise also first in line
         JSR     WarmUp
         JSR     FlushLine        repeat(@PreRows)
         CALL    StartOfImage
         JSR     Window1Line      repeat(@ReadRows)
         JSR     TwoWindowsLine   repeat(@MidRows)
+        JSR     Window2Line      repeat(@ReadRows)
+        CALL    EndOfImage
+        JSR     FlushLine        repeat(@PostRows)
+        RTS
+
+    TwoLevelWindowsSwap:  # Overlap in rows between subarrays, with second array row-wise first in line
+        JSR     WarmUp
+        JSR     FlushLine        repeat(@PreRows)
+        CALL    StartOfImage
+        JSR     Window1Line      repeat(@ReadRows)
+        JSR     TwoWindowsLineSwap   repeat(@MidRows)
         JSR     Window2Line      repeat(@ReadRows)
         CALL    EndOfImage
         JSR     FlushLine        repeat(@PostRows)

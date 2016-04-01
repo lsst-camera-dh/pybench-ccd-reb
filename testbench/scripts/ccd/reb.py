@@ -102,7 +102,7 @@ def append_kvc(exthdu, keys, values, comments):
         exthdu.header[key] = (values[key], comments[key])
 
 
-def conv_to_fits(self, channels=None, borders=False, imgname=None):
+def conv_to_fits(self, channels=None, borders=False, imgname=None, cleanup=False):
     """
     Converts the given raw image to FITS data.
     :rtype: pyfits.HDUlist
@@ -116,6 +116,9 @@ def conv_to_fits(self, channels=None, borders=False, imgname=None):
         logging.info("Did not find the expected raw file: %s " % rawfile)
 
     hdulist = self.reb.conv_to_fits(rawfile, channels, displayborders=borders)
+
+    if cleanup:
+        os.remove(rawfile)
 
     return hdulist
 
@@ -175,7 +178,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     self.reb.set_testtype('LINEARITY')
     fitsdir = os.path.join(self.reb.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), localdir)
     if not os.path.isdir(fitsdir):
-            os.makedirs(fitsdir)
+        os.makedirs(fitsdir)
 
     # list of values
     listdB = range(start, start6)
@@ -232,4 +235,50 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     f.close()
     
 Bench.linearity_scan = linearity_scan
+
+
+def stability_monitor(self, iterate, channels):
+    """
+    Acquires repetitive data to monitor the stability.
+    :param self:
+    :param iterate:
+    :return:
+    """
+    self.reb.set_testtype('STABILITY')
+    self.reb.config_sequence('Acquisition', exptime=15.0)
+    self.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
+
+    fitsdir = os.path.join(self.reb.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), 'stability')
+    if not os.path.isdir(fitsdir):
+        os.makedirs(fitsdir)
+
+    memfile = os.path.join(fitsdir, 'log.txt')
+    f = open(memfile, 'a')
+    f.write('File\tVoltPre\tVoltPost\n')
+
+    for irepeat in xrange(iterate):
+        m = self.execute_reb_sequence(delaytime=0, withmeta=True)
+        i = self.conv_to_fits(channels=channels, borders=True, cleanup=True)  # need to manage disk space
+
+        k1 = self.Vkeithley.v1
+        i[0].header['VOLT1'] = k1
+        k2 = self.Vkeithley.v2
+        i[0].header['VOLT2'] = k2
+
+        self.save_to_fits(i, m)
+
+        f.write('%s\t%f\t%f\t' % (i[0].header['FILENAME'], k1, k2))
+        for name in find_channels(i, selectchannels=channels):
+            img = i[name].data
+            # stats on whole frame plus on 'stable' section
+            light = img[500:, 20:]
+            f.write('%10.2f\t%4.2f\t%10.2f\t%4.2f\t' % (img.mean(), img.std(), light.mean(), light.std()))
+        f.write('\n')
+        i.close()
+
+        # option 2: acquire baseline file and reference file
+    f.close()
+
+Bench.stability_monitor = stability_monitor
+
 

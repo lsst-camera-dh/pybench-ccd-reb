@@ -72,7 +72,7 @@ def get_image_id(hdulist):
         fitsname = 'fits.fz'
     return fitsname[:-3]
 
-def get_fits_dir(datadir):
+def get_fits_indir(datadir):
     """
     Finds all fits file in the directory, returns a list with complete path.
     :param datadir:
@@ -373,7 +373,7 @@ def xmemory_on_files(datadir, outname, sourcechan=None):
     Applies xtalk_memory over all files in a directory (offline version of linearity_scan in scripts.ccd.reb)
     :return:
     """
-    listfile = get_fits_dir(datadir)
+    listfile = get_fits_indir(datadir)
     outf = open(outname, 'w')
     outf.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
 
