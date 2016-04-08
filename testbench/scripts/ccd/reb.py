@@ -162,7 +162,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname=''):
     #hdulist.append(seqhdu)
 
     hdulist.writeto(fitsname, clobber=True, checksum=True)
-    logging.info("Wrote FITS file "+fitsname)
+    print("Wrote FITS file "+fitsname)
 
 Bench.save_to_fits = save_to_fits
 
@@ -246,7 +246,7 @@ def stability_monitor(self, iterate, channels):
     """
     self.reb2.set_testtype('STABILITY')
     self.reb2.config_sequence('Acquisition', exptime=15.0)
-    self.reb2.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
+    self.reb2.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
 
     fitsdir = os.path.join(self.reb2.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), 'stability')
     if not os.path.isdir(fitsdir):
@@ -265,7 +265,7 @@ def stability_monitor(self, iterate, channels):
         k2 = self.Vkeithley.v2
         i[0].header['VOLT2'] = k2
         s = '%d' % self.reb2.stripe
-        ttop = m['reb_ope']['values']['T_ASPT' + s]
+        ttop = m['reb_ope']['values']['T_ASPT_' + s]
         tbottom = m['reb_ope']['values']['T_ASPB_' + s]
 
         self.save_to_fits(i, m)
@@ -279,7 +279,6 @@ def stability_monitor(self, iterate, channels):
         f.write('\n')
         i.close()
 
-        # option 2: acquire baseline file and reference file
     f.close()
 
 Bench.stability_monitor = stability_monitor

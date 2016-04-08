@@ -32,7 +32,7 @@ class REBplus(REB):
 
         reb_id = self.config.reb_id
         ctrl_host = None  # would be self.config.ipaddress if it was used
-        stripe_id = self.config.stripes.keys()
+        stripe_id = self.config.stripes_enabled
 
         REB.__init__(self, reb_id,  ctrl_host, stripe_id)
         self.xmlfile = self.config.xmlfile  # has been overwritten by REB initializer
@@ -52,7 +52,6 @@ class REBplus(REB):
         self.config = rebbcf.REBconfig(bcf_fname)
         self.xmlfile = self.config.xmlfile
         # stripes will be set when loading the REB object
-
 
     def read_sequencer_file(self, xmlfile):
         """
