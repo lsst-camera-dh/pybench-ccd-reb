@@ -43,7 +43,7 @@ class REBplus(REB):
     def read_config_file(self, bcfile):
         """
         Reads configuration file to self.config.
-        Does not actually update the basic REB configuration (address, etc.).
+        Does not actually update the basic REB configuration (address, stripes, etc.).
         :param bcfile:
         :return:
         """
@@ -51,7 +51,8 @@ class REBplus(REB):
         bcf_fname=os.path.join(self.xmldir, bcfile)
         self.config = rebbcf.REBconfig(bcf_fname)
         self.xmlfile = self.config.xmlfile
-        # TODO: add stripes enable?
+        # stripes will be set when loading the REB object
+
 
     def read_sequencer_file(self, xmlfile):
         """

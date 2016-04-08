@@ -59,18 +59,18 @@ config = {
     #    },
     #
     # ---------------------------------------------------------------------
-    # REB (version 3)
+    # REB (version 3 and more)
     #
     #
-    # 'reb': {
-    #      'driver'      : 'ccd_reb',
-    #      'hardware'    : 'REB3',
-    #      'reb_id'      : 0x2,
-    #      'stripe'      : 1,
-    #      'xmlfile'     : 'sequencer-reb3.txt',
-    #      'bcfile'      : 'reb3.bcf',
-    #      'version'     : 0xb0200103
-    #      },
+    'reb2': {
+         'driver'      : 'ccd_reb',
+         'hardware'    : 'REB3',
+         'reb_id'      : 0x2,
+         'stripe'      : 2,
+         'xmlfile'     : 'sequencer-reb3.txt',
+         'bcfile'      : 'reb3.bcf',
+         'version'     : 0xb0200103
+         },
     # ---------------------------------------------------------------------
     # =====================================================================
     #  Image display

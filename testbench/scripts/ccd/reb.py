@@ -16,28 +16,28 @@ from lsst.testbench.scripts.ccd.analysis import *
 
 B = Bench()  # singleton
 
-B.register('reb')  # connect to the REB
+B.register('reb2')  # connect to the REB
 B.register('attenuator')
 B.register('Vkeithley')
 B.Vkeithley.setup(1)
 
 #load_sequencer(self, filename=None):
-# B.reb.load_sequencer(filename)
+# B.reb2.load_sequencer(filename)
 
 # def initialize_REB(self):
-#B.reb.REBpowerup()
+#B.reb2.REBpowerup()
 
 
 # def shutdown_REB(self):
-# B.reb.REBshutdown()
+# B.reb2.REBshutdown()
 
 # def powerup_CCD(self):
-# B.reb.CCDpowerup()
-# B.reb.set_parameter('RGU', 5)
+# B.reb2.CCDpowerup()
+# B.reb2.set_parameter('RGU', 5)
 
 #def shutdown_CCD(self):
-# B.reb.wait_end_sequencer()
-# B.reb.CCDshutdown()
+# B.reb2.wait_end_sequencer()
+# B.reb2.CCDshutdown()
 
 def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withmeta=True):
     """
@@ -47,25 +47,25 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withmeta=True
     :return: dict
     """
     if name and exptime:
-        self.reb.config_sequence(name, exptime)
+        self.reb2.config_sequence(name, exptime)
     elif name:
-        self.reb.reb.select_subroutine(name)
-        self.reb.reb.shutdelay = 0
-        self.reb.reb.exptime = 0
+        self.reb2.reb.select_subroutine(name)
+        self.reb2.reb.shutdelay = 0
+        self.reb2.reb.exptime = 0
 
     # this waits until the sequencer stops...
-    self.reb.wait_end_sequencer()
+    self.reb2.wait_end_sequencer()
 
     # Here execute, for all instruments, the pre_exposure functions
     self.pre_exposure(exptime)
     
     # ... then send the execute sequence command 
-    self.reb.execute_sequence()
+    self.reb2.execute_sequence()
     # delay for clear before exposure
     time.sleep(delaytime)
 
     # delay for exposure
-    time.sleep(self.reb.reb.exptime)
+    time.sleep(self.reb2.reb.exptime)
 
     # Here execute, for all instruments, the post_exposure functions
     self.post_exposure()
@@ -77,13 +77,13 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withmeta=True
     if withmeta:
         # meta from all instruments
         meta = self.get_meta()
-        # additionnal meta from REB, removed temporarily for speed
-        #keys, values, comments = self.reb.get_meta_operating()
-        #meta['reb_ope'] = {'extname': 'CCD_COND',
-        #                   'keys': keys,
-        #                   'values': values,
-        #                   'comments': comments,
-        #                   'data': []}  # added data for compatibility with the rest of the meta
+        # additionnal meta from REB, can be removed for speed
+        keys, values, comments = self.reb2.get_meta_operating()
+        meta['reb_ope'] = {'extname': 'CCD_COND',
+                           'keys': keys,
+                           'values': values,
+                           'comments': comments,
+                           'data': []}  # added data for compatibility with the rest of the meta
     return meta
 
 Bench.execute_reb_sequence = execute_reb_sequence
@@ -110,12 +110,12 @@ def conv_to_fits(self, channels=None, borders=False, imgname=None, cleanup=False
     if imgname:
         rawfile = imgname
     else:
-        rawfile = self.reb.make_img_name()
+        rawfile = self.reb2.make_img_name()
 
     if not os.path.isfile(rawfile):
         logging.info("Did not find the expected raw file: %s " % rawfile)
 
-    hdulist = self.reb.conv_to_fits(rawfile, channels, displayborders=borders)
+    hdulist = self.reb2.conv_to_fits(rawfile, channels, displayborders=borders)
 
     if cleanup:
         os.remove(rawfile)
@@ -130,7 +130,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname=''):
     Saves the given FITS HDUlist to a file with auxiliary headers for instruments parameters.
     """
     if not fitsname:
-        fitsname = self.reb.make_fits_name(self.reb.make_img_name(), compressed=True)
+        fitsname = self.reb2.make_fits_name(self.reb2.make_img_name(), compressed=True)
 
     primaryhdu = hdulist[0]
 
@@ -156,7 +156,7 @@ def save_to_fits(self, hdulist, meta={}, fitsname=''):
 
     # Sequencer content, removed for speed
     #seqhdu = pyfits.TableHDU.from_columns([pyfits.Column(format='A73',
-    #                                                     array=self.reb.get_meta_sequencer(),
+    #                                                     array=self.reb2.get_meta_sequencer(),
     #                                                     ascii=True)])
     #seqhdu.header['EXTNAME'] = 'SEQUENCER'
     #hdulist.append(seqhdu)
@@ -175,8 +175,8 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     :return:
     """
 
-    self.reb.set_testtype('LINEARITY')
-    fitsdir = os.path.join(self.reb.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), localdir)
+    self.reb2.set_testtype('LINEARITY')
+    fitsdir = os.path.join(self.reb2.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), localdir)
     if not os.path.isdir(fitsdir):
         os.makedirs(fitsdir)
 
@@ -244,17 +244,17 @@ def stability_monitor(self, iterate, channels):
     :param iterate:
     :return:
     """
-    self.reb.set_testtype('STABILITY')
-    self.reb.config_sequence('Acquisition', exptime=15.0)
-    self.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
+    self.reb2.set_testtype('STABILITY')
+    self.reb2.config_sequence('Acquisition', exptime=15.0)
+    self.reb2.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
 
-    fitsdir = os.path.join(self.reb.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), 'stability')
+    fitsdir = os.path.join(self.reb2.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), 'stability')
     if not os.path.isdir(fitsdir):
         os.makedirs(fitsdir)
 
     memfile = os.path.join(fitsdir, 'log.txt')
     f = open(memfile, 'a')
-    f.write('File\tVoltPre\tVoltPost\n')
+    f.write('File\tVoltPre\tVoltPost\tTaspicT\tTaspicB\n')
 
     for irepeat in xrange(iterate):
         m = self.execute_reb_sequence(delaytime=0, withmeta=True)
@@ -264,10 +264,13 @@ def stability_monitor(self, iterate, channels):
         i[0].header['VOLT1'] = k1
         k2 = self.Vkeithley.v2
         i[0].header['VOLT2'] = k2
+        s = '%d' % self.reb2.stripe
+        ttop = m['reb_ope']['values']['T_ASPT' + s]
+        tbottom = m['reb_ope']['values']['T_ASPB_' + s]
 
         self.save_to_fits(i, m)
 
-        f.write('%s\t%f\t%f\t' % (i[0].header['FILENAME'], k1, k2))
+        f.write('%s\t%f\t%f\t%f\t%f\t' % (i[0].header['FILENAME'], k1, k2, ttop, tbottom))
         for name in find_channels(i, selectchannels=channels):
             img = i[name].data
             # stats on whole frame plus on 'stable' section
