@@ -601,29 +601,30 @@ class FPGA3(FPGA):
     #TODO: heaters (not urgent ?)
     # ----------------------------------------------------------
 
-    def get_aspic_config(self, s=0, check=False):
+    def get_aspic_config(self, s=0, check=False, readback=True):
         """
         Read ASPIC configurations for the given stripe and updates objects in class.
         If check is true then it checks that the readback is the same as the expected value.
+        If readback is set to False then it only reads from objects, does not update.
         :param s:
         """
         self.check_location(s)
 
-        topconfig = {}
-        bottomconfig = {}
+        if readback:
+            topconfig = {}
+            bottomconfig = {}
+            for address in range(3):
+                # send for reading top ASPIC
+                self.write_spi(0xB00000, s, 2, address << 16)
+                # read answer
+                topconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
+                # send for reading bottom ASPIC
+                self.write_spi(0xB00000, s, 1, address << 16)
+                # read answer
+                bottomconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
 
-        for address in range(3):
-            # send for reading top ASPIC
-            self.write_spi(0xB00000, s, 2, address << 16)
-            # read answer
-            topconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
-            # send for reading bottom ASPIC
-            self.write_spi(0xB00000, s, 1, address << 16)
-            # read answer
-            bottomconfig[address] = self.read(0xB00010 + s, 1)[0xB00010 + s]
-
-        self.aspics['top'][s].read_all_registers(topconfig, True)
-        self.aspics['bottom'][s].read_all_registers(bottomconfig, True)
+            self.aspics['top'][s].read_all_registers(topconfig, check)
+            self.aspics['bottom'][s].read_all_registers(bottomconfig, check)
 
         keyst, configt, comt = self.aspics['top'][s].get_header("%dT" % s)
         keysb, configb, comb = self.aspics['bottom'][s].get_header("%dB" % s)
@@ -688,8 +689,12 @@ class FPGA3(FPGA):
         config.update(self.get_clock_voltages())
         config.update(self.get_bias_voltages(s, readback=False))
         config.update(self.get_current_source(s, readback=False)) # readback with slow ADC
-        config.update(self.slow_adc_stripe(s))
-        config.update(self.get_aspic_config(s, check=False))
+        # do not want to stop for reading errors here
+        try:
+            config.update(self.slow_adc_stripe(s))
+        except:
+            print("Warning: error while reading slow ADC")
+        config.update(self.get_aspic_config(s, check=False, readback=False))
 
         return config
 

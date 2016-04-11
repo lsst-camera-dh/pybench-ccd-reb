@@ -1426,8 +1426,16 @@ class FPGA(object):
         """
         Output for header.
         """
-        config = self.get_input_voltages_currents()
-        config.update(self.get_board_temperatures())
+        # do not want to stop for reading errors here
+        try:
+            config = self.get_input_voltages_currents()
+        except:
+            print("Warning: error while reading power supply voltages and currents")
+            config = MetaData([])
+        try:
+            config.update(self.get_board_temperatures())
+        except:
+            print("Warning: error while reading board temperatures")
 
         return config
         
