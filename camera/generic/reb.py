@@ -179,7 +179,7 @@ def make_fits_name(fitstopdir, imgstr, compressed=True):
     """
     fitsdir = os.path.join(fitstopdir, time.strftime('%Y%m%d', time.gmtime()))
     if not os.path.isdir(fitsdir):
-        os.mkdir(fitsdir)
+        os.makedirs(fitsdir)
 
     rootname = os.path.splitext(os.path.basename(imgstr))[0]
 

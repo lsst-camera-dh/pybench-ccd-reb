@@ -458,13 +458,18 @@ class Instrument(Driver):
         """
         return conv_to_fits(imgname, self.reb.imgcols, self.reb.imglines, self.reb.nchannels, channels, displayborders)
 
-    def make_fits_name(self, imgstr, compressed=True):
+    def make_fits_name(self, imgstr, compressed=True, fitsdir=''):
         """
-        Builds a complete FITS file path. imgstr should be the name of the file without the extension.
+        Builds a complete FITS file path, based on the file name imgstr.
         :param imgstr: string
         :return: string
         """
-        return make_fits_name(self.reb.fitstopdir, imgstr, compressed)
+        if fitsdir:
+            rootname = os.path.splitext(os.path.basename(imgstr))[0]
+            return os.path.join(fitsdir, rootname + (compressed and '.fz' or '.fits'))
+        else:
+            return make_fits_name(self.reb.fitstopdir, imgstr, compressed)
+        # TODO: add eotest-style directories?
 
     def set_testtype(self, name):
         """

@@ -74,7 +74,8 @@ def setup_BSS(self):
         self.bss.send('*RST')
         # reset is apparently needed before configuring (otherwise error 16 pops up)
         self.bss.setup(voltage=-60)
-        self.bss.setup_current_measure(2e-5)
+        # self.bss.setup_current_measure(2e-5)
+        self.bss.setup_current_measure(2e-4)
         logging.info('Done BSS setup')
     else:
         logging.info('Could not perform BSS setup, was already ON')
