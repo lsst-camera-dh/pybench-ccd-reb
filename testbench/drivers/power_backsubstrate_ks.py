@@ -384,7 +384,7 @@ class Instrument(Driver):
 
     def setup_current_measure(self, currentrange=2e-5):
         """
-        Setups the current measurement and does the zero correct.
+        Setup the current measurement and does the zero correct.
         """
         #self.send("*RST")
         self.send("SYST:ZCH ON")
