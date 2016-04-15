@@ -129,7 +129,9 @@ class REB3(REBplus):
 
         # configure ASPIC with default values
         self.config_aspic()
-
+        
+        # initialize slow ADC (does something only for REB4)
+        self.fpga.init_slow_adc()
 
     def CCDpowerup(self):
         """
@@ -160,8 +162,8 @@ class REB3(REBplus):
         else:
             self.load_sequencer(self.xmlfile)
         
-        # sets window size to full frame by default
-        self.window_sequence(False)
+        # sets window size to full frame by default (not a good idea actually)
+        #self.window_sequence(False)
 
         self.fpga.enable_bss(True)
         print('BSS can be powered on now.')

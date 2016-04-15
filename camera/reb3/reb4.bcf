@@ -1,0 +1,66 @@
+; REB3/REB4 for E2V Normal Mode
+;===============================================================================
+; History:
+;===============================================================================
+; 29-OCT-2015: JK: Initial Values
+; 14-MAR-2016: CJ: Translated for LPNHE use. Keeping keywords identical to keep
+; compatibility, added 'hardware'.
+;===============================================================================
+
+[board]
+id = 0
+iface = eth0
+row = 2020
+col = 550
+ssf = sequencer-reb3.txt
+hardware = REB4
+stripes_enabled = a,b,c
+
+;===============================================================================
+[global]
+clock_rails/sclk_upper = 9.5
+clock_rails/sclk_lower = 0.5
+clock_rails/pclk_upper = 9.0
+clock_rails/pclk_lower = 0
+clock_rails/rg_upper   = 12
+clock_rails/rg_lower   = 0
+
+;===============================================================================
+[stripe_a]
+aspic/transparent_mode = 0
+aspic/AF               = 0
+aspic/clamp            = 0x0
+aspic/gain             = 1
+aspic/rc               = 5
+bias/GD                = 24.0
+bias/RD                = 18.0
+bias/OD                = 29.0
+bias/OG                = 3.0
+bias/CSGATE            = 0xfff
+
+;===============================================================================
+[stripe_b]
+aspic/transparent_mode = 0
+aspic/AF               = 0
+aspic/clamp            = 0x0
+aspic/gain             = 1
+aspic/rc               = 5
+bias/GD                = 24.0
+bias/RD                = 18.0
+bias/OD                = 29.0
+bias/OG                = 3.0
+bias/CSGATE            = 0xfff
+
+;===============================================================================
+[stripe_c]
+aspic/transparent_mode = 0
+aspic/AF               = 0
+aspic/clamp            = 0x0
+aspic/gain             = 1
+aspic/rc               = 5
+bias/GD                = 24.0
+bias/RD                = 18.0
+bias/OD                = 29.0
+bias/OG                = 3.0
+bias/CSGATE            = 0xfff
+

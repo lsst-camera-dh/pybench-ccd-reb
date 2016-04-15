@@ -124,7 +124,7 @@ def area_stats(hdulist, logtofile=False, selectchannels=None):
     for name in find_channels(hdulist, selectchannels):
         hdr = hdulist[name].header
         img = hdulist[name].data
-        imgcols = 512
+        imgcols = 512  # TODO: adapt to frame size
         colstart = 10
         imglines = 2002
         light = img[:imglines, colstart:colstart+imgcols].flatten()
