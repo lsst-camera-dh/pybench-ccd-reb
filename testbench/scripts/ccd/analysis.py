@@ -15,6 +15,9 @@ import astropy.io.fits as pyfits
 
 # USAGE
 
+# datadir = '/Users/nayman/Documents/REB/REB4/SLACtest/reb_4_16'
+# stats_on_files(os.listdir(datadir), datadir=datadir)
+
 #s2 = pyfits.open('/Users/nayman/Documents/REB/REB3/LPNHEtest/20151014/0x0020151014134249.fits')
 #s2[0].header['width'] = 256  # if missing from header (older files)
 #s2[0].header['height'] = 1000
@@ -108,6 +111,26 @@ def stats_on_files(listfile, listnum=[], datadir='', selectchannels=None):
         f.write('\n')
     f.close()
     print('Wrote stats for list to %s' % fname)
+
+
+def basicplot_file(txtfile, datadir='', datacols=None, ylabel=''):
+    """
+    Basic interface to display data from columns in a text file.
+    :param txtfile:
+    :ptype datacols: tuple
+    :param datadir:
+    :return:
+    """
+    buf = np.loadtxt(os.path.join(datadir,txtfile), skiprows=1, usecols=datacols)
+
+    fig = plt.figure(figsize=(8,5))
+    if ylabel:
+        plt.ylabel(ylabel)
+
+    for ncol in range(buf.shape[1]):
+        plt.plot(buf[:, ncol])
+
+    plt.show()
 
 
 def area_stats(hdulist, logtofile=False, selectchannels=None):
