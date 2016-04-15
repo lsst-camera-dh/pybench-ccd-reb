@@ -266,8 +266,12 @@ def stability_monitor(self, iterate, channels):
         k2 = self.Vkeithley.v2
         i[0].header['VOLT2'] = k2
         s = '%d' % self.reb2.stripe
-        ttop = m['reb_ope']['values']['T_ASPT_' + s]
-        tbottom = m['reb_ope']['values']['T_ASPB_' + s]
+        try:
+            ttop = m['reb_ope']['values']['T_ASPT_' + s]
+            tbottom = m['reb_ope']['values']['T_ASPB_' + s]
+        except:
+            ttop = 0
+            tbottom = 0
 
         self.save_to_fits(i, m, fitsname=self.reb2.make_fits_name(imgstr=rawfile, compressed=True, fitsdir=fitsdir))
 

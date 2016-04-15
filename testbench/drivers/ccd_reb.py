@@ -519,7 +519,7 @@ class Instrument(Driver):
 
         # comments : meaning of the keys
         comments = {
-            'DATE-OBS': 'Date of the observation (image acquisition), UTC',
+            'DATE-OBS': 'Date of the observation, UTC',
             'ORIGIN': 'Which site acquired the data',
             'TSTAND': 'Which Test stand at the site was used',
             'INSTRUME': 'CCD Controller type',
@@ -535,7 +535,7 @@ class Instrument(Driver):
             'IMGTYPE': 'Image type',
             'SEQNUM': 'Sequence number',
             'EXPTIME': '[s] Exposure Time in seconds',
-            'SHUT_DEL': '[ms] Delay between shutter close command and readout',
+            'SHUT_DEL': '[ms] Between shutter close command and readout',
             'CTRLCFG': 'Controller configuration file',
             'IMAGETAG': 'Image tag',
             'CCDGAIN': 'Estimate of overall system gain in e/DN',

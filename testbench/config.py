@@ -64,7 +64,7 @@ config = {
     #
     'reb2': {
          'driver'      : 'ccd_reb',
-         'hardware'    : 'REB3',
+         'hardware'    : 'REB4',
          'reb_id'      : 0x2,
          'stripe'      : 2,
          'xmlfile'     : 'sequencer-reb3.txt',
