@@ -513,7 +513,7 @@ class FPGA3(FPGA):
             if (checkextmux != extmux) or (checkadcmux != adcmux):
                 print('Warning: mismatch in slow ADC read %d, %d' % (checkextmux, checkadcmux))
             # convert ADU to V or mA (for current sources)
-            value *=  self.adcconvert
+            value *=  self.hardwareconvert
 
         elif self.hardware == 'REB4':
             # TODO: initialization needs to be done elsewhere
@@ -527,7 +527,7 @@ class FPGA3(FPGA):
             if checkadcmux != adcmux:
                 print('Warning: mismatch in slow ADC, reading channel %d' %  checkadcmux)
             # convert ADU to V or mA (for current sources)
-            value *=  self.adcconvert[adcmux]
+            value *=  self.hardwareconvert[adcmux]
 
         else:
             raise ValueError('No slow ADC rules for this hardware type: %s' % self.hardware)
