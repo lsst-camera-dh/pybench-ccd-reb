@@ -98,6 +98,10 @@ def powerup_CCD(self):
     # TODO: wait until complete
     logging.info("CCD start-up sequence is complete")
 
+    #configure default frame and starts waiting sequence
+    self.reb.set_window(on=False)
+    self.reb.start_waiting_sequence()
+
 Bench.powerup_CCD = powerup_CCD
 
 
@@ -107,6 +111,7 @@ def shutdown_CCD(self):
     :return:
     """
     logging.info("Starting CCD shut-down sequence")
+    self.reb.stop_waiting_sequence()  # in case it was in waiting loops
     self.reb.wait_end_sequencer()
     # Back-substrate first
     self.bss.disable()
@@ -147,8 +152,6 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True
     # Here execute, for all instruments, the post_exposure functions
     self.post_exposure()
 
-    # self.PhD.read_measurement() -> transfered in post exposure hook
-
     # delay for readout
     time.sleep(4.0)
     
@@ -181,7 +184,7 @@ def append_kvc(exthdu, keys, values, comments):
         exthdu.header[key] = (values[key], comments[key])
 
 
-def conv_to_fits(self, channels=None, borders=False, imgname=None):
+def conv_to_fits(self, channels=None, borders=False, imgname=None, cleanup=False):
     """
     Converts the given raw image to FITS data.
     :rtype: pyfits.HDUlist
@@ -195,6 +198,9 @@ def conv_to_fits(self, channels=None, borders=False, imgname=None):
         logging.info("Did not find the expected raw file: %s " % rawfile)
 
     hdulist = self.reb.conv_to_fits(rawfile, channels, displayborders=borders)
+
+    if cleanup:
+        os.remove(rawfile)
 
     return hdulist
 

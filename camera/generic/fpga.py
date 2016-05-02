@@ -1366,7 +1366,7 @@ class FPGA(object):
         self.set_trigger(st | 0x10)
         # trigger will stop autonomously when done
         while self.get_state() & 0x10:
-            time.sleep(0.05)
+            time.sleep(0.08)  # slight increase to avoid some failures of communication
 
         raw = self.read(0x600010, self.n_sensors_boardtemp)
         tempkeys = []
@@ -1391,7 +1391,7 @@ class FPGA(object):
         self.set_trigger(st | 0x08)
         # trigger will stop when done
         while self.get_state() & 8:
-            time.sleep(0.05)
+            time.sleep(0.08)
         raw = self.read(0x600000, len(self.supplies) * 2)
 
         voltages = {}

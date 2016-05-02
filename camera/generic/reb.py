@@ -149,8 +149,9 @@ def get_extension_header(imgcols, imglines, CCDchan, fitshdu, detstring, channel
 
     if channels:  # put them in a row
         pdet = parstringlow
-        si = colwidth * CCDchan +1
-        sf = colwidth * (CCDchan + 1)
+        spos = channels.index(CCDchan)
+        si = colwidth * spos +1
+        sf = colwidth * (spos + 1)
     else:
         numCCD = CCDchan / 16
         chan = CCDchan - numCCD * 16
