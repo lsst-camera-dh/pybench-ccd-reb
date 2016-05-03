@@ -370,8 +370,9 @@ static PyObject *PyGigE_write(PyGigE *self, PyObject *args)
 }
 
 inline uint32_t sign_extend_18bpp(uint32_t word) {
-    uint32_t ret = (word & (1 << 17)) >> 17 ? word | 0xfffc0000 : word & 0x0003ffff;
-    ret = (ret * -1) + 131072;
+    //uint32_t ret = (word & (1 << 17)) >> 17 ? word | 0xfffc0000 : word & 0x0003ffff;
+    //ret = (ret * -1) + 131072;
+    uint32_t ret = word ^ 0x1ffff
     return ret;
 }
 
@@ -698,155 +699,11 @@ bail:
 
 }
 
-static PyObject *ccd_segment(PyGigE *self, PyObject *args)
-{
-    int       segment_num, ccd_stripe;
-    stripe_t *current_stripe;
-
-    if (!PyArg_ParseTuple(args, "ii", &ccd_stripe, &segment_num))
-        return NULL;
-
-    if (!(segment_num >= 0 && segment_num < CHANNELS)) {
-        return NULL;
-    }
-
-    ccd_stripe = ret_stripe_idx(ccd_stripe);
-    current_stripe = &(self->stripes[ccd_stripe]);
-
-    if (!current_stripe->enabled) {
-        return NULL;
-    }
-
-    npy_intp dim[2]      = { (int)current_stripe->height, (int)current_stripe->width };
-    PyArrayObject *array = (PyArrayObject *)PyArray_SimpleNew(2, dim, PyArray_INT);
-    int32_t *buffer      = (int32_t *)array->data;
-    Py_INCREF(array);
-
-    uint32_t x = 0, y = 0, idx;
-    for (idx = segment_num; idx < current_stripe->length; idx += CHANNELS) {
-        if (x >= current_stripe->width) {
-            x = 0;
-            y++;
-        }
-        memcpy(&buffer[x++ * current_stripe->height + y], &current_stripe->data[idx], sizeof(uint32_t));
-    }
-    Py_DECREF(array);
-    return PyArray_Return(array);
-}
-
-static PyObject *adc_channel(PyGigE *self, PyObject *args)
-{
-    int32_t  idx;
-    int      adc_chan, stripe;
-    stripe_t *current_stripe;
-
-    if (!PyArg_ParseTuple(args, "ii", &stripe, &adc_chan))
-        return NULL;
-
-    if (!(adc_chan >=0 && adc_chan < CHANNELS))
-        return NULL;
-
-    stripe = ret_stripe_idx(stripe);
-    current_stripe = &(self->stripes[stripe]);
-    if (!current_stripe->enabled) {
-        return NULL;
-    }
-
-    npy_intp dim[1]      = {(int)current_stripe->length/CHANNELS};
-    PyArrayObject *array = (PyArrayObject *)PyArray_SimpleNew(1, dim, PyArray_INT);
-    int32_t *buffer      = (int32_t *)PyArray_DATA(array);
-    Py_INCREF(array);
-
-    for (idx = adc_chan; idx < current_stripe->length; idx += CHANNELS) {
-      *buffer++ = current_stripe->data[idx];
-    }
-
-    Py_DECREF(array);
-    return PyArray_Return(array);
-}
-
-static PyObject *noddy_numpy(PyObject *self, PyObject *args) {
-    npy_intp dim[1]      = {10};
-    PyArrayObject *array = (PyArrayObject *)PyArray_SimpleNew(1, dim, PyArray_INT);
-    int32_t *buffer      = (int32_t *)PyArray_DATA(array);
-    Py_INCREF(array);
-
-    for (int i = 0; i < 10; i++) {
-        buffer[i] = i * 2;
-    }
-
-    Py_DECREF(array);
-    return PyArray_Return(array);
-}
-
-static PyObject *noddy_listy(PyObject *self, PyObject *args) {
-    PyObject *list = NULL;
-    if ( ! PyArg_ParseTuple(args, "O", &list))
-        return NULL;
-
-    Py_ssize_t size = PyList_Size(list);
-
-    printf("size = %i\n", size);
-
-    while (--size >= 0) {
-        PyObject *item = PyList_GetItem(list, size);
-        if (PyTuple_Check(item)) {
-            int i, j;
-            PyArg_ParseTuple(item, "ii", &i, &j);
-            printf("  %i, %i \n", i, j);
-        }
-        else {
-            PyObject_Print(item, stdout, 0);
-            printf("\n");
-        }
-    }
-
-    return Py_BuildValue("I", 0);
-}
-
-static PyObject *noddy_dicty(PyObject *self, PyObject *args) {
-    PyObject *dict = NULL;
-    if ( ! PyArg_ParseTuple(args, "O", &dict))
-        return NULL;
-
-    PyObject *key, *value;
-    Py_ssize_t pos = 0;
-
-    while (PyDict_Next(dict, &pos, &key, &value)) {
-        if (PyString_Check(key) && PyString_Check(value)) {
-        const char *ckey = PyString_AsString(key);
-        const char *cvalue = PyString_AsString(value);
-        printf(" %s : %s\n", ckey, cvalue);
-        }
-    }
-    return Py_BuildValue("");
-}
-
-static PyObject *noddy_fitskeywords(PyGigE *self, PyObject *args) {
-    PyObject *key, *value;
-    Py_ssize_t pos = 0;
-
-    while (PyDict_Next(self->fits_keywords, &pos, &key, &value)) {
-        if (PyString_Check(key) && PyString_Check(value)) {
-        const char *ckey = PyString_AsString(key);
-        const char *cvalue = PyString_AsString(value);
-        printf("%s : %s\n", ckey, cvalue);
-        }
-    }
-    return Py_BuildValue("");
-}
 
 static PyMethodDef PyGigE_methods[] = {
     {"read",        (PyCFunction)PyGigE_read,  METH_VARARGS, "Read a register. Requires address."},
     {"write",       (PyCFunction)PyGigE_write, METH_VARARGS, "Write a register. Requires address, value."},
     {"get_image",   (PyCFunction)PyGigE_get_image, METH_VARARGS, "Write a register. Requires address, value."},
-    {"ccd_segment",   (PyCFunction)ccd_segment, METH_VARARGS, "Write a register. Requires address, value."},
-    {"adc_channel",   (PyCFunction)adc_channel, METH_VARARGS, "Write a register. Requires address, value."},
-    {"save_fits",   (PyCFunction)PyGigE_save_fits, METH_VARARGS, "Write a register. Requires address, value."},
-    {"numpy",        noddy_numpy,        METH_VARARGS, "Read a register. Requires address."},
-    {"listy",        noddy_listy,        METH_VARARGS, "eh"},
-    {"dicty",        noddy_dicty,        METH_VARARGS, "eh"},
-    {"fitskeywords", (PyCFunction)noddy_fitskeywords, METH_NOARGS, "eh"},
     { NULL }  /* Sentinel */
 };
 

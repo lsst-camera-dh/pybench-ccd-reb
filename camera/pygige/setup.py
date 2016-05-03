@@ -5,7 +5,7 @@ import shutil
 
 module1 = Extension('gige',
           sources = ['PyGige_module.cpp'],
-          include_dirs = ['../../../include/', numpy.get_include()],
+          include_dirs = ['.include/', numpy.get_include()],
           library_dirs = ['../../../lib'],
           libraries    = ["gige", "regcli", "pthread", 'cfitsio', "zmq"],
         #define_macros = [("tgt_board_i386", None), ("tgt_os_linux", None)]
