@@ -59,6 +59,21 @@
          50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
       constants:     P2=1, P3=1
 
+    ReadPixelNoRG:  # Single pixel read, no RG activation
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 0,  0,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         RampBuffer  = 0,  0,  0,  1,  0,  0,  1,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  1,  0,  0
+         ISO2        = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
+      constants:     P2=1, P3=1
+
 [subroutines]
     WindowLine:  # Line readout with option for read function (overwrites parent file)
         CALL    SerialFlush       repeat(@PreCols)
@@ -73,6 +88,7 @@
     SerialReverseBlock:  # creates artificial stripes of light and empty pixels
         CALL    ReadPixel         repeat(20)
         CALL    ReadReverse       repeat(10)
+        RTS
 
     SerialReverseLine:
         CALL    SerialFlush         repeat(@PreCols)
@@ -91,9 +107,28 @@
         JSR     FlushLine         repeat(@PostRows)
         RTS
 
+    LineRG:  # Line readout with RG trigger
+        CALL    TransferLine
+        CALL    ReadPixelNoRG     repeat(20)
+        CALL    ReadPixel       repeat(530)
+        RTS
+
+    ReadFrameTrigger:  # Readout and acquisition of a CCD frame (window)
+        JSR     WarmUp
+        CALL    StartOfImage
+        JSR     LineRG      repeat(2020)
+        CALL    EndOfImage
+        RTS
+
 [mains]
-    Memory:
+    Memory:  # Trying to measure memory effect with clocking
         JSR     AcquireFrame
         JSR     MemoryFrame
         END
+
+    TriggerRG:  # One acquisition with RG as trigger (or not)
+        JSR     AcquireFrame
+        JSR     ReadFrameTrigger
+        END
+
 

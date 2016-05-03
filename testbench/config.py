@@ -65,11 +65,11 @@ config = {
     'reb2': {
          'driver'      : 'ccd_reb',
          'hardware'    : 'REB4',
-         'reb_id'      : 0x2,
+         'reb_id'      : 0x0,
          'stripe'      : 2,
          'xmlfile'     : 'sequencer-reb3.txt',
-         'bcfile'      : 'reb3.bcf',
-         'version'     : 0xb0200103
+         'bcfile'      : 'reb4.bcf',
+         'version'     : 0xb0200200
          },
     # ---------------------------------------------------------------------
     # =====================================================================

@@ -21,12 +21,11 @@ B.register('attenuator')
 B.register('Vkeithley')
 B.Vkeithley.setup(1)
 
-#load_sequencer(self, filename=None):
-# B.reb2.load_sequencer(filename)
-
 # def initialize_REB(self):
 #B.reb2.REBpowerup()
 
+#load_sequencer(self, filename=None):
+# B.reb2.load_sequencer(filename)
 
 # def shutdown_REB(self):
 # B.reb2.REBshutdown()
@@ -237,15 +236,13 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
 Bench.linearity_scan = linearity_scan
 
 
-def stability_monitor(self, iterate, channels):
+def stability_monitor(self, iterate, channels, listdB):
     """
     Acquires repetitive data to monitor the stability.
-    :param self:
-    :param iterate:
     :return:
     """
     self.reb2.set_testtype('STABILITY')
-    self.reb2.config_sequence('Acquisition', exptime=15.0)
+    self.reb2.config_sequence('TriggerRG', exptime=15.0)
     self.reb2.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
 
     fitsdir = os.path.join(self.reb2.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), 'stability')
@@ -254,35 +251,38 @@ def stability_monitor(self, iterate, channels):
 
     memfile = os.path.join(fitsdir, 'log.txt')
     f = open(memfile, 'a')
-    f.write('File\tVoltPre\tVoltPost\tTaspicT\tTaspicB\n')
+    f.write('File\tVoltPre\tVoltPost\tTREB7\tTREB8\n')
 
     for irepeat in xrange(iterate):
-        m = self.execute_reb_sequence(delaytime=0, withmeta=True)
-        rawfile = self.reb2.make_img_name()
-        i = self.conv_to_fits(channels=channels, borders=True, imgname=rawfile, cleanup=True)  # need to manage disk space
+        for att in listdB:
+            self.attenuator.set_attenuation(att)
+            m = self.execute_reb_sequence(delaytime=0, withmeta=True)
+            rawfile = self.reb2.make_img_name()
+            i = self.conv_to_fits(channels=channels, borders=True, imgname=rawfile, cleanup=True)  # need to manage disk space
 
-        k1 = self.Vkeithley.v1
-        i[0].header['VOLT1'] = k1
-        k2 = self.Vkeithley.v2
-        i[0].header['VOLT2'] = k2
-        s = '%d' % self.reb2.stripe
-        try:
-            ttop = m['reb_ope']['values']['T_ASPT_' + s]
-            tbottom = m['reb_ope']['values']['T_ASPB_' + s]
-        except:
-            ttop = 0
-            tbottom = 0
+            k1 = self.Vkeithley.v1
+            i[0].header['VOLT1'] = k1
+            k2 = self.Vkeithley.v2
+            i[0].header['VOLT2'] = k2
+            s = '%d' % self.reb2.stripe
+            try:
+                ttop = m['reb_ope']['values']['TREB_7']
+                tbottom = m['reb_ope']['values']['TREB_8']
+            except:
+                ttop = 0
+                tbottom = 0
 
-        self.save_to_fits(i, m, fitsname=self.reb2.make_fits_name(imgstr=rawfile, compressed=True, fitsdir=fitsdir))
+            self.save_to_fits(i, m, fitsname=self.reb2.make_fits_name(imgstr=rawfile, compressed=True, fitsdir=fitsdir))
 
-        f.write('%s\t%f\t%f\t%f\t%f\t' % (i[0].header['FILENAME'], k1, k2, ttop, tbottom))
-        for name in find_channels(i, selectchannels=channels):
-            img = i[name].data
-            # stats on whole frame plus on 'stable' section
-            light = img[500:, 20:]
-            f.write('%10.2f\t%4.2f\t%10.2f\t%4.2f\t' % (img.mean(), img.std(), light.mean(), light.std()))
-        f.write('\n')
-        i.close()
+            f.write('%s\t%d\t%f\t%f\t%f\t%f\t' % (i[0].header['FILENAME'], att, k1, k2, ttop, tbottom))
+            for name in find_channels(i, selectchannels=channels):
+                img = i[name].data
+                # stats on whole frame plus on 'stable' section
+                light = img[50:, 50:]
+                dark = img[:, :20]
+                f.write('%10.2f\t%4.2f\t%10.2f\t%4.2f\t' % (dark.mean(), dark.std(), light.mean(), light.std()))
+            f.write('\n')
+            i.close()
 
     f.close()
 
