@@ -21,20 +21,14 @@ B.register('attenuator')
 B.register('Vkeithley')
 B.Vkeithley.setup(1)
 
-# def initialize_REB(self):
 #B.reb2.REBpowerup()
 
-#load_sequencer(self, filename=None):
-# B.reb2.load_sequencer(filename)
+# B.reb2.load_sequencer('sequencer-experiment.txt')
+# B.reb2.set_stripe(2)
 
-# def shutdown_REB(self):
-# B.reb2.REBshutdown()
-
-# def powerup_CCD(self):
 # B.reb2.CCDpowerup()
 # B.reb2.set_parameter('RGU', 5)
 
-#def shutdown_CCD(self):
 # B.reb2.wait_end_sequencer()
 # B.reb2.CCDshutdown()
 
@@ -243,6 +237,8 @@ def stability_monitor(self, iterate, channels, listdB):
     """
     self.reb2.set_testtype('STABILITY')
     self.reb2.config_sequence('TriggerRG', exptime=15.0)
+    self.reb2.reb.imgcols = 550
+    self.reb2.reb.imglines = 2020
     self.reb2.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
 
     fitsdir = os.path.join(self.reb2.reb.fitstopdir, time.strftime('%Y%m%d', time.gmtime()), 'stability')
