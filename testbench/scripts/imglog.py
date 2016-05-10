@@ -44,10 +44,10 @@ B.register('lakeshore1')
 from lsst.testbench.bench import Bench
 B = Bench()
 import lsst.testbench.scripts.ccd.functions
-from lsst.camera.generic import rebxml
-B.reb.reb.seq = rebxml.fromxmlfile('/home/lsst/git/py/camera/reb1/sequencer-soi.xml')
+#from lsst.camera.generic import rebxml
+#B.reb.reb.seq = rebxml.fromxmlfile('/home/lsst/git/py/camera/reb1/sequencer-soi.xml')
+# obsolete with B.reb.reb.seq now loaded in REB.__init__()
+# TODO: need to recover pointers
 B.reb.reb.exptime = B.reb.reb.get_exposure_time()
-
-# should be obsolete with B.reb.reb.seq now loaded in REB.__init__()
 
 

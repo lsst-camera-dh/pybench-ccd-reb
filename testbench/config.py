@@ -69,7 +69,7 @@ config = {
          'stripe'      : 2,
          'xmlfile'     : 'sequencer-reb3.txt',
          'bcfile'      : 'reb3.bcf',
-         'version'     : 0xb0200104
+         'version'     : 0xb0200103
          },
     #
     # ---------------------------------------------------------------------
