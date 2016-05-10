@@ -218,9 +218,6 @@ def eotest_header(hdulist):
     testhdu = pyfits.ImageHDU(name='TEST_COND')
     primaryhdu = hdulist[0]
 
-    obstime = primaryhdu.header["DATE-OBS"]
-    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
-
     if 'BSS' in hdulist:
         if hdulist['BSS'].header['VOLTSRC']:  # if it is activated
             hdulist['CCD_COND'].header['V_BSS'] = (hdulist['BSS'].header['VOLTAGE'], '[V] Keithley Back-Substrate voltage')
@@ -272,6 +269,8 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
     # appending more keywords to header
     primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
     primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
+    obstime = primaryhdu.header["DATE-OBS"]
+    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
 
     # one extension per instrument
     for identifier in meta:

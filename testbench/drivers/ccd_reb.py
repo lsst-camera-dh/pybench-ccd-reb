@@ -342,7 +342,7 @@ class Instrument(Driver):
         Sets CS gate DACs.
         :param dac: int
         """
-        self.reb.fpga.set_current_source(dac)
+        self.reb.fpga.set_current_source(dac, self.stripe)
         logging.info("Setting current source DACs to %d" % dac)
 
     # --------------------------------------------------------------------

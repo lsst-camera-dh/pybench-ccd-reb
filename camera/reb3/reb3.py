@@ -84,7 +84,7 @@ class REB3(REBplus):
             rails = {"SL": 0, "SU": 0, "RGL": 0, "RGU": 0, "PL": 0, "PU": 0}
         self.fpga.set_clock_voltages(rails)
 
-    def set_parameter(self, param, value, stripe = 0, location = 3):
+    def set_parameter(self, param, value, stripe = None, location = 3):
         """
         Generic interface to set any single parameter of the REB, and check the readback if possible.
         :type param: basestring
@@ -94,23 +94,29 @@ class REB3(REBplus):
         :param value:
         :return:
         """
-        if param in ["GAIN", "RC", "AF1", "TM", "CLS"]:
-            self.fpga.set_aspic_value(param, value, stripe, location)
-            time.sleep(0.1)
-            self.fpga.get_aspic_config(stripe, check=True)
-
-        elif param in self.fpga.groups['CLOCKS']:
-            self.fpga.set_clock_voltages({param: value})
-
-        elif param in self.fpga.groups['BIASES']:
-            self.fpga.set_bias_voltages({param: value}, stripe)
-
-        elif param == "CS":
-            self.fpga.set_current_source(value, stripe)
-
+        if stripe is None:
+            liststripes = self.stripes
         else:
-            print("Warning: unidentified parameter for the REB: %s" % param)
-    # TODO: make it default to the current stripe(s)
+            liststripes = [stripe]
+
+        for s in liststripes:
+            if param in ["GAIN", "RC", "AF1", "TM", "CLS"]:
+                self.fpga.set_aspic_value(param, value, s, location)
+                time.sleep(0.1)
+                self.fpga.get_aspic_config(s, check=True)
+
+            elif param in self.fpga.groups['CLOCKS']:
+                self.fpga.set_clock_voltages({param: value})
+
+            elif param in self.fpga.groups['BIASES']:
+                self.fpga.set_bias_voltages({param: value}, s)
+
+            elif param == "CS":
+                self.fpga.set_current_source(value, s)
+
+            else:
+                print("Warning: unidentified parameter for the REB: %s" % param)
+
     # --------------------------------------------------------------------
 
     def REBpowerup(self):

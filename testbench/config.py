@@ -36,14 +36,14 @@ config = {
     # REB (version 1)
     # 
     #
-    'reb': {
-       'driver'      : 'ccd_reb',
-       'hardware'    : 'REB1',
-       'reb_id'      : 2,
-       'stripe'      : 0,
-       'xmlfile'     : 'sequencer-soi.xml',
-       'version'     : 0xb01c0008  
-       },
+    #'reb': {
+    #   'driver'      : 'ccd_reb',
+    #   'hardware'    : 'REB1',
+    #   'reb_id'      : 2,
+    #   'stripe'      : 0,
+    #   'xmlfile'     : 'sequencer-soi.xml',
+    #   'version'     : 0xb01c0008
+    #   },
     #
     # ---------------------------------------------------------------------
     # WREB (version 1)
@@ -62,6 +62,20 @@ config = {
     # REB (version 3 and more)
     #
     #
+    'reb': {
+         'driver'      : 'ccd_reb',
+         'hardware'    : 'REB3',
+         'reb_id'      : 0x2,
+         'stripe'      : 2,
+         'xmlfile'     : 'sequencer-reb3.txt',
+         'bcfile'      : 'reb3.bcf',
+         'version'     : 0xb0200104
+         },
+    #
+    # ---------------------------------------------------------------------
+    # REB (version 3 and more)
+    #
+    #
     'reb2': {
          'driver'      : 'ccd_reb',
          'hardware'    : 'REB4',
@@ -71,7 +85,7 @@ config = {
          'bcfile'      : 'reb4.bcf',
          'version'     : 0xb0200200
          },
-    # ---------------------------------------------------------------------
+    #
     # =====================================================================
     #  Image display
     # =====================================================================

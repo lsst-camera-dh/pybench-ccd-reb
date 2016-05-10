@@ -10,6 +10,7 @@ import os
 import time
 import datetime
 import astropy.io.fits as pyfits
+from astropy.time import Time
 
 from lsst.testbench.bench import Bench
 from lsst.testbench.scripts.ccd.analysis import *
@@ -130,6 +131,8 @@ def save_to_fits(self, hdulist, meta={}, fitsname=''):
     # appending more keywords to header
     primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
     primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
+    obstime = primaryhdu.header["DATE-OBS"]
+    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
 
     # one extension per instrument
     for identifier in meta:
@@ -252,7 +255,12 @@ def stability_monitor(self, iterate, channels, listdB):
     for irepeat in xrange(iterate):
         for att in listdB:
             self.attenuator.set_attenuation(att)
-            m = self.execute_reb_sequence(delaytime=0, withmeta=True)
+            try:
+                m = self.execute_reb_sequence(delaytime=0, withmeta=True)
+            except:
+                # breakup in communication
+                time.sleep(60)
+                m = self.execute_reb_sequence(delaytime=0, withmeta=True)
             rawfile = self.reb2.make_img_name()
             i = self.conv_to_fits(channels=channels, borders=True, imgname=rawfile, cleanup=True)  # need to manage disk space
 
