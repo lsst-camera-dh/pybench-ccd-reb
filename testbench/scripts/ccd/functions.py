@@ -39,6 +39,12 @@ def initialize_REB(self):
     :return:
     """
     # TODO : add power supplies here for controlled power-up
+
+    # replicate some operations done at object initialization
+    # (covers cases when REB has been rebooted but not Python)
+    self.reb.set_stripe(self.reb.stripe)
+    self.reb.update_filetag()
+
     if not self.bss.voltageStatus():
         self.reb.REBpowerup()
     else:
