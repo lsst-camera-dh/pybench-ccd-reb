@@ -266,23 +266,23 @@ def save_to_fits(self, hdulist, meta={}, fitsname='', LSSTstyle = True):
 
     primaryhdu = hdulist[0]
 
-    # appending more keywords to header
-    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
-    primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
-    obstime = primaryhdu.header["DATE-OBS"]
-    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
-
     # one extension per instrument
     for identifier in meta:
         instrumentmeta = meta[identifier]
         extname = instrumentmeta['extname']
         values = instrumentmeta['values']
-        if extname == 'REB':
+        if extname in ['REB', 'REB2']:
             append_kvc(primaryhdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
         else:
             exthdu = pyfits.ImageHDU(data=instrumentmeta['data'], name=extname)
             append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
             hdulist.append(exthdu)
+            
+    # appending more keywords to primary header
+    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
+    primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
+    obstime = primaryhdu.header["DATE-OBS"]
+    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
 
     # if LSSTstyle,
     if LSSTstyle and meta:

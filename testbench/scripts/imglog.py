@@ -2,9 +2,10 @@ from lsst.testbench.bench import Bench
 B = Bench()
 import lsst.testbench.scripts.ccd.functions
 
-# BEFORE connecting to CCD
+# for REB1: BEFORE connecting to CCD
+# for REB3 : anytime the REB is powered on
 B.initialize_REB()
-# AFTER connecting to CCD
+# for REB1: AFTER connecting to CCD
 B.powerup_CCD()
 B.reb.set_testtype('TEST')
 m = B.execute_reb_sequence('Acquisition', 2)
@@ -20,7 +21,7 @@ i = B.conv_to_fits([4,5])
 B.save_to_fits(i, m) 
 
 # between exposures TO BE TESTED
-p = B.reb.start_waiting_sequence()
+B.reb.start_waiting_sequence()
 B.reb.stop_waiting_sequence(p)
 
 # when finished

@@ -128,23 +128,23 @@ def save_to_fits(self, hdulist, meta={}, fitsname=''):
 
     primaryhdu = hdulist[0]
 
-    # appending more keywords to header
-    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
-    primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
-    obstime = primaryhdu.header["DATE-OBS"]
-    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
-
     # one extension per instrument
     for identifier in meta:
         instrumentmeta = meta[identifier]
         extname = instrumentmeta['extname']
         values = instrumentmeta['values']
-        if extname == 'REB':
+        if extname in ['REB', 'REB2']:
             append_kvc(primaryhdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
         else:
             exthdu = pyfits.ImageHDU(data=instrumentmeta['data'], name=extname)
             append_kvc(exthdu, instrumentmeta['keys'], values, instrumentmeta['comments'])
             hdulist.append(exthdu)
+
+    # appending more keywords to header
+    primaryhdu.header["FILENAME"] = (os.path.basename(fitsname), 'Original name of the file')
+    primaryhdu.header["DATE"] = (datetime.datetime.utcnow().isoformat(), 'FITS file creation date')
+    obstime = primaryhdu.header["DATE-OBS"]
+    primaryhdu.header["MJD-OBS"] = (Time(obstime).mjd, 'Modified Julian Date of image acquisition')
 
     #if LSSTstyle and meta:
     #    testhdu = eotest_header(hdulist)
@@ -186,11 +186,16 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
         memfile = os.path.join(fitsdir, 'xtalk_memory_ch%d.txt' % sourcechan)
     f = open(memfile, 'a')
     f.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
+
+    self.reb2.config_sequence('TriggerRG', exptime=1.0)
+    self.reb2.reb.imgcols = 550
+    self.reb2.reb.imglines = 2020
+    self.reb2.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
     
     for att in listdB:
         self.attenuator.set_attenuation(att)
         #m = self.execute_reb_sequence(name='Bias', delaytime=4, withmeta=True)
-        m = self.execute_reb_sequence(name='Window', delaytime=4, withmeta=True)
+        m = self.execute_reb_sequence(delaytime=0, withmeta=True)
         i = self.conv_to_fits(borders=True)
 
         i[0].header['ATT'] = att
@@ -209,14 +214,15 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
         k0 = self.Vkeithley.get_voltage_median(5)
         i[0].header['ATT0'] = k0
 
-        self.save_to_fits(i, m, fitsname=os.path.join(fitsdir, 'reb3-dB%d.fz' % att))
+        self.save_to_fits(i, m, fitsname=os.path.join(fitsdir, 'reblinearity-dB%d.fz' % att))
 
         f.write('%d\t%f\t%f\t%f\t%f\t' % (att, k1, k2, k0, k127))
         if sourcechan is None:
             for name in find_channels(i):
                 img = i[name].data
-                light = img[500:, 20:]
-                f.write('%10.2f\t%4.2f\t' % (light.mean(), light.std()))
+                light = img[50:, 60:95]
+                dark = img[50:, 5:45]
+                f.write('%10.2f\t%4.2f\t%10.2f\t%4.2f\t' % (dark.mean(), dark.std(), light.mean(), light.std()))
             f.write('\n')
         else:
             f.write('\n')
@@ -250,7 +256,7 @@ def stability_monitor(self, iterate, channels, listdB):
 
     memfile = os.path.join(fitsdir, 'log.txt')
     f = open(memfile, 'a')
-    f.write('File\tVoltPre\tVoltPost\tTREB7\tTREB8\n')
+    f.write('File\tVoltPre\tVoltPost\tTREB7\tTREB9\n')
 
     for irepeat in xrange(iterate):
         for att in listdB:
@@ -271,7 +277,7 @@ def stability_monitor(self, iterate, channels, listdB):
             s = '%d' % self.reb2.stripe
             try:
                 ttop = m['reb_ope']['values']['TREB_7']
-                tbottom = m['reb_ope']['values']['TREB_8']
+                tbottom = m['reb_ope']['values']['TREB_9']
             except:
                 ttop = 0
                 tbottom = 0
@@ -282,8 +288,8 @@ def stability_monitor(self, iterate, channels, listdB):
             for name in find_channels(i, selectchannels=channels):
                 img = i[name].data
                 # stats on whole frame plus on 'stable' section
-                light = img[50:, 50:]
-                dark = img[:, :20]
+                light = img[50:, 60:95]
+                dark = img[50:, 5:45]
                 f.write('%10.2f\t%4.2f\t%10.2f\t%4.2f\t' % (dark.mean(), dark.std(), light.mean(), light.std()))
             f.write('\n')
             i.close()

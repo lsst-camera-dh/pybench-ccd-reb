@@ -62,6 +62,20 @@ config = {
     # REB (version 3 and more)
     #
     #
+    'reb2': {
+         'driver'      : 'ccd_reb',
+         'hardware'    : 'REB4',
+         'reb_id'      : 0x0,
+         'stripe'      : 1,
+         'xmlfile'     : 'sequencer-reb3.txt',
+         'bcfile'      : 'reb4.bcf',
+         'version'     : 0xb0200200
+         },
+    #
+    # ---------------------------------------------------------------------
+    # REB (version 3 and more)
+    #
+    #
     'reb': {
          'driver'      : 'ccd_reb',
          'hardware'    : 'REB3',
@@ -70,20 +84,6 @@ config = {
          'xmlfile'     : 'sequencer-reb3.txt',
          'bcfile'      : 'reb3.bcf',
          'version'     : 0xb0200103
-         },
-    #
-    # ---------------------------------------------------------------------
-    # REB (version 3 and more)
-    #
-    #
-    'reb2': {
-         'driver'      : 'ccd_reb',
-         'hardware'    : 'REB4',
-         'reb_id'      : 0x0,
-         'stripe'      : 2,
-         'xmlfile'     : 'sequencer-reb3.txt',
-         'bcfile'      : 'reb4.bcf',
-         'version'     : 0xb0200200
          },
     #
     # =====================================================================
