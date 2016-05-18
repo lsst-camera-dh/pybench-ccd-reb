@@ -59,7 +59,7 @@ config = {
     #    },
     #
     # ---------------------------------------------------------------------
-    # REB (version 3 and more)
+    # REB (version 3 and more) for REB test bench
     #
     #
     'reb2': {
@@ -67,13 +67,13 @@ config = {
          'hardware'    : 'REB4',
          'reb_id'      : 0x0,
          'stripe'      : 1,
-         'xmlfile'     : 'sequencer-reb3.txt',
+         'xmlfile'     : 'sequencer-experiment.txt',
          'bcfile'      : 'reb4.bcf',
          'version'     : 0xb0200200
          },
     #
     # ---------------------------------------------------------------------
-    # REB (version 3 and more)
+    # REB (version 3 and more) for CCD bench
     #
     #
     'reb': {

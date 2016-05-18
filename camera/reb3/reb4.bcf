@@ -12,9 +12,9 @@ id = 0
 iface = eth0
 row = 2020
 col = 550
-ssf = sequencer-reb3.txt
+ssf = sequencer-experiment.txt
 hardware = REB4
-stripes_enabled = a,b,c
+stripes_enabled = c
 
 ;===============================================================================
 [global]
