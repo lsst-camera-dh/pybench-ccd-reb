@@ -7,7 +7,10 @@ import lsst.testbench.scripts.ccd.functions
 B.initialize_REB()
 # for REB1: AFTER connecting to CCD
 B.powerup_CCD()
+
+
 B.reb.set_testtype('TEST')
+B.reb.stop_waiting_sequence()
 m = B.execute_reb_sequence('Acquisition', 2)
 # to execute again the same sequence :
 m = B.execute_reb_sequence()
@@ -20,9 +23,17 @@ i = B.conv_to_fits([4,5])
 # to save FITS HDU with headers
 B.save_to_fits(i, m) 
 
-# between exposures TO BE TESTED
+# between exposures 
 B.reb.start_waiting_sequence()
-B.reb.stop_waiting_sequence(p)
+# before beginning exposures again
+B.reb.stop_waiting_sequence()
+
+# scan mode
+B.reb.start_adc_increment()
+m = B.execute_reb_sequence('Acquisition', 2)
+i = B.conv_to_fits()
+B.save_to_fits(i, m) 
+B.reb.stop_adc_increment()
 
 # when finished
 B.shutdown_CCD()

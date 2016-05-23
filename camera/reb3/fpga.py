@@ -506,6 +506,7 @@ class FPGA3(FPGA):
             extmux, adcmux = muxtuple
             # includes enable bit on 8-channel mux
             self.write(0x600101, ((extmux & 7) << 5) + (1 << 4) + (adcmux & 0xf))
+            time.sleep(0.01)
             raw = self.read(0x601010, 1)[0x601010]
             value = raw & 0xfff
             checkextmux = (raw >> 21) & 7
@@ -521,6 +522,7 @@ class FPGA3(FPGA):
             muxsam, muxselect, adcmux = muxtuple
             # write to muxes and ADC channel select
             self.write(0x600101, ((muxsam & 7) << 19) + ((muxselect & 7) << 16) + (1 << 8) + ((adcmux & 0x3) << 5))
+            time.sleep(0.01)
             raw = self.read(0x601010, 1)[0x601010]
             value = raw & 0xfff
             checkadcmux = (raw >> 13) & 0x3
