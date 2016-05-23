@@ -59,7 +59,21 @@ config = {
     #    },
     #
     # ---------------------------------------------------------------------
-    # REB (version 3 and more)
+    # REB (version 3 and more) for REB test bench
+    #
+    #
+    'reb2': {
+         'driver'      : 'ccd_reb',
+         'hardware'    : 'REB4',
+         'reb_id'      : 0x0,
+         'stripe'      : 1,
+         'xmlfile'     : 'sequencer-experiment.txt',
+         'bcfile'      : 'reb4.bcf',
+         'version'     : 0xb0200200
+         },
+    #
+    # ---------------------------------------------------------------------
+    # REB (version 3 and more) for CCD bench
     #
     #
     'reb': {
@@ -69,21 +83,7 @@ config = {
          'stripe'      : 2,
          'xmlfile'     : 'sequencer-reb3.txt',
          'bcfile'      : 'reb3.bcf',
-         'version'     : 0xb0200104
-         },
-    #
-    # ---------------------------------------------------------------------
-    # REB (version 3 and more)
-    #
-    #
-    'reb2': {
-         'driver'      : 'ccd_reb',
-         'hardware'    : 'REB4',
-         'reb_id'      : 0x0,
-         'stripe'      : 2,
-         'xmlfile'     : 'sequencer-reb3.txt',
-         'bcfile'      : 'reb4.bcf',
-         'version'     : 0xb0200200
+         'version'     : 0xb0200103
          },
     #
     # =====================================================================
@@ -346,7 +346,7 @@ config = {
     #
     'Vkeithley' : {
         # 'host'        : 'lpnp405.in2p3.fr',
-        'host'        : '134.158.155.200',
+        'host'        : '134.158.155.245',
         'devices'     : ['/dev/ttyUSB1'],
         'driver'      : 'keithley_volt',
         'port'        : 8087,
@@ -376,7 +376,7 @@ config = {
     #
     'attenuator' : {
         # 'host'        : 'lpnp405.in2p3.fr',
-        'host'        : '134.158.155.200',
+        'host'        : '134.158.155.245',
         'devices'     : ['/dev/ttyUSB0'],
         'driver'      : 'attenuator',
         'port'        : 8888,

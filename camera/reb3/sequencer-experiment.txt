@@ -109,15 +109,29 @@
 
     LineRG:  # Line readout with RG trigger
         CALL    TransferLine
-        CALL    ReadPixelNoRG     repeat(20)
-        CALL    ReadPixel       repeat(530)
+        CALL    ReadPixelNoRG     repeat(50)
+        CALL    ReadPixel       repeat(50)
+        CALL    ReadPixelNoRG     repeat(50)
+        CALL    ReadPixel       repeat(50)
+        CALL    ReadPixelNoRG     repeat(50)
+        CALL    ReadPixel       repeat(50)
+        CALL    ReadPixelNoRG     repeat(50)
+        CALL    ReadPixel       repeat(50)
+        CALL    ReadPixelNoRG     repeat(50)
+        CALL    ReadPixel       repeat(50)
+        CALL    ReadPixelNoRG     repeat(50)
         RTS
 
-    ReadFrameTrigger:  # Readout and acquisition of a CCD frame (window)
+    ReadFrameTrigger:  # Readout and acquisition of a CCD frame with RG trigger
         JSR     WarmUp
         CALL    StartOfImage
         JSR     LineRG      repeat(2020)
         CALL    EndOfImage
+        RTS
+
+    FakeFrameTrigger:  # Readout of a CCD frame (window) with RG trigger
+        JSR     WarmUp
+        JSR     LineRG      repeat(2020)
         RTS
 
 [mains]
@@ -129,6 +143,11 @@
     TriggerRG:  # One acquisition with RG as trigger (or not)
         JSR     AcquireFrame
         JSR     ReadFrameTrigger
+        END
+
+    PseudoTriggerRG:  # One acquisition with RG as trigger (or not), no saving data
+        JSR     AcquireFrame
+        JSR     FakeFrameTrigger
         END
 
 

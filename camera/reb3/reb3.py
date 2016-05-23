@@ -204,7 +204,7 @@ class REB3(REBplus):
         self.set_biases(['OD', 'RD', 'GD'], on=False)
 
         time.sleep(0.5)
-        print('CCD shutdown complete on REB3.')
+        print('CCD shutdown complete on REB.')
 
     def REBshutdown(self):
         """

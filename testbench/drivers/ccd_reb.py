@@ -419,14 +419,14 @@ class Instrument(Driver):
         Window coordinates are only loaded if pointers are implemented, otherwise they will be loaded from the
         XML file anyway.
         """
-        if issubclass(self.reb, rebplus.REBplus):
+        if self.hardware == 'REB1':
+            self.reb.window_sequence(on)
+
+        else:
             if on:
                 self.reb.set_window(precols, cols, postcols, prerows, rows, postrows)
             else:
                 self.reb.window_sequence(False)
-
-        else:
-            self.reb.window_sequence(on)
 
     def get_amplifier_size(self):
         """
@@ -437,13 +437,13 @@ class Instrument(Driver):
         """
         # Note : still have not found if this is used anywhere
 
-        if issubclass(self.reb, rebplus.REBplus):
-            cols = self.reb.get_pointer('ReadCols')
-            lines = self.reb.get_pointer('ReadRows')
-
-        else:
+        if self.hardware == 'REB1':
             lines = self.reb.imglines
             cols = self.reb.imgcols
+
+        else:
+            cols = self.reb.get_pointer('ReadCols')
+            lines = self.reb.get_pointer('ReadRows')
 
         return cols, lines
 
@@ -549,8 +549,8 @@ class Instrument(Driver):
             'DATE-OBS': self.reb.tstamp,
             'ORIGIN': 'LPNHE',
             'TSTAND': 'ISO7',
-            'INSTRUME': 'LSST',
-            'CONTROLL': 'LSST',
+            'INSTRUME': self.hardware,
+            'CONTROLL': self.hardware,
             'CTRL_SYS': 'CCD_REB',
             'CONTNUM': self.boardID,
             'FIRMWARE': self.version,
