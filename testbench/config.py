@@ -346,7 +346,7 @@ config = {
     #
     'Vkeithley' : {
         # 'host'        : 'lpnp405.in2p3.fr',
-        'host'        : '134.158.155.245',
+        'host'        : '134.158.155.200',
         'devices'     : ['/dev/ttyUSB1'],
         'driver'      : 'keithley_volt',
         'port'        : 8087,
@@ -376,7 +376,7 @@ config = {
     #
     'attenuator' : {
         # 'host'        : 'lpnp405.in2p3.fr',
-        'host'        : '134.158.155.245',
+        'host'        : '134.158.155.200',
         'devices'     : ['/dev/ttyUSB0'],
         'driver'      : 'attenuator',
         'port'        : 8888,
