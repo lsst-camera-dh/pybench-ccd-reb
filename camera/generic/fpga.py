@@ -1376,10 +1376,12 @@ class FPGA(object):
         for i in xrange(self.n_sensors_boardtemp):
             tempkey = 'TREB_%d' % i
             tempkeys.append(tempkey)
-            answer = raw[0x600010 + i]
-            temperatures[tempkey] = (answer & 0xffff) * 0.0078
+            answer = raw[0x600010 + i] 
             if answer & 0x10000:
                 print("Warning: error on board temperature measurement %d" % i)
+            answer=answer & 0xffff
+            #            temperatures[tempkey] = (answer & 0xffff) * 0.0078
+            temperatures[tempkey] = (answer-0xFFFF*(answer>>15))*0.0078  
             comments[tempkey] = '[C] REB board temperature sensor %d' % i
 
         return MetaData(tempkeys, temperatures, comments)
