@@ -187,7 +187,7 @@ def linearity_scan(self, start=0, start6=30, end=50, localdir='linearity', sourc
     f = open(memfile, 'a')
     f.write('dB\tVoltPre\tVoltPost\tVolt0\tVolt127\n')
 
-    self.reb2.config_sequence('TriggerRG', exptime=1.0)
+    self.reb2.config_sequence('TriggerRG', exptime=15.0)
     self.reb2.reb.imgcols = 550
     self.reb2.reb.imglines = 2020
     self.reb2.reb.set_pointer('CleaningNumber', 0)  # works only on REBplus variants
