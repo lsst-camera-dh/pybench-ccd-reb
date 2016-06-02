@@ -3,26 +3,21 @@
 # Author: Laurent Le Guillou
 #
 """
-Testbench driver for the Oriel lamps (through Edo 'oriel' software and XML-RPC)
+Testbench driver for the Phytron motor holding the 55Fe X-ray source.
+(through Edo 'phytron' software and XML-RPC)
 """
 
 # XML-RPC interface:
 #
-# connect() returns [int, string] 1:ok  0:failed 2:port already opened
+# connect() returns [int] 1:ok  0:failed
 # close() returns 1 on error 0 otherwise
 # checkConnection() returns a NULL string or the model name
 # status() returns instrument status [connected, on/off, ramping, controlling]
 
-# getPresetCurrent() returns double
-# setPresetCurrent(double)
-# getPresetPower() returns double
-# setPresetPower(double)
-# setFluxControl(int) 1:on 0:off (QTH lamp must be on)
-# getAmps() returns a double
-# getVolts() returns a double
-# getWatts() returns a double
-# getHours() returns a double
-# power(int)  1:power on 0:power off WARNING: wait 20 seconds to complete
+# getPosition() returns double 
+# park() 
+# goCCD()
+# stop()
 # help() this info !
 
 
@@ -80,16 +75,11 @@ class Instrument(Driver):
         if answer == "":
             return False
 
-        # QTH -> '69931'
-        # XeHg -> '69911'
-
-        if answer not in ['69931','69911']:
+        if answer not in ['1']:
             return False
 
-        if answer == '69931':
-            self._model = 'QTH 69931'
-        elif answer == '69911':
-            self._model = 'XeHg 69911'
+        # self._model = ???
+        self._model = "Phytron motor (?)"
 
         return True
 
@@ -106,7 +96,7 @@ class Instrument(Driver):
         time.sleep(2)
         connected = self.is_connected()
         if not(connected):
-            raise IOError("Oriel lamp not connected.")
+            raise IOError("Phytron motor controller not connected.")
 
         Driver.register(self, bench)
         
@@ -126,115 +116,54 @@ class Instrument(Driver):
 
     def status(self):
         """
-        Return [ connected, on/off, ramping, controlling ]
+        Return [ Connected,
+                 True = at target / False = moving, 
+                 True = parked / False = on CCD ]
         """
         return self.xmlrpc.status()
 
-    def getPresetPower(self):
+
+    def isMoving(self):
         """
-        Returns the preset power for the lamp in mW (???).
+        Returns True if moving, False otherwise.
         """
-        return self.xmlrpc.getPresetPower() 
+        return not(self.xmlrpc.status()[1])
 
 
-    def setPresetPower(self, power):
+    def isParked(self):
         """
-        Set the power for the lamp in mW (???).
+        Returns True if moving, False otherwise.
         """
-        return self.xmlrpc.setPresetPower(float(power))
+        return not(self.xmlrpc.status()[2])
 
-
-    def getPresetCurrent(self):
+    
+    def getPosition(self):
         """
-        Returns the preset current for the lamp in mA (???).
+        Returns the motor position.
         """
-        return self.xmlrpc.getPresetCurrent() 
+        return self.xmlrpc.getPosition()
 
 
-    def setPresetCurrent(self, power):
+    def park(self, wait=True):
         """
-        Set the current for the lamp in mA (???).
+        Park the 55Fe X-ray source.
         """
-        return self.xmlrpc.setPresetCurrent(float(power))
-
-
-    def isRamping(self):
-        """
-        Return True if the lamp is ramping up or down.
-        """
-        status = self.status()
-        if len(status) < 4:
-            return False
-
-        if status[2] == 1:
-            return True
-
-        return False
-
-    def setFluxControl(self, flag):
-        """
-        Activate/deactivate the flux control (QTH only).
-        """
-        query = 0
-        if flag: query = 1
-
-        return self.xmlrpc.setFluxControl(query)
-
-    def isFluxControlled(self):
-        """
-        Return True if the flux is controlled, False otherwise.
-        """
-        status = self.status()
-        if len(status) < 4:
-            return False
-
-        if status[3] == 1:
-            return True
-
-        return False
-
-    def power(self, flag, wait=False):
-        """
-        Turn on/off the lamp. 
-        WARNING: wait 20 seconds to complete.
-        """
-        query = 0
-        if flag: query = 1
-
-        answer = self.xmlrpc.power(query)
+        answer = self.xmlrpc.park()
         if wait:
-            while self.isRamping():
+            while self.isMoving():
                 time.sleep(0.5)
-
         return answer
 
-    def on(self, wait=False):
-        return self.power(True, wait)
 
-    def off(self, wait=False):
-        return self.power(False, wait)
-
-    def isOn(self):
-        status = self.status()
-        if len(status) < 4:
-            return False
-
-        if status[1] == 1:
-            return True
-
-        return False
-
-    def getAmps(self):
-        return self.xmlrpc.getAmps()
-
-    def getVolts(self):
-        return self.xmlrpc.getVolts()
-
-    def getWatts(self):
-        return self.xmlrpc.getWatts()
-
-    def getHours(self):
-        return self.xmlrpc.getHours()
+    def goCCD(self, wait=True):
+        """
+        Put the 55Fe X-ray source in front of the CCD.
+        """
+        answer = self.xmlrpc.goCCD()
+        if wait:
+            while self.isMoving():
+                time.sleep(0.5)
+        return answer
 
     # ===================================================================
     #  Meta data / state of the instrument 
@@ -251,34 +180,25 @@ class Instrument(Driver):
         # keys : specify the key order
         keys = ['MODEL',
                 'DRIVER',
-                'ON',
-                'CONTROL',
-                'CURRENT',
-                'VOLTAGE',
-                'POWER',
-                'TIME']
+                'MOVING',
+                'PARKED',
+                'POS']
 
         # comments : meaning of the keys
         comments = {
             'MODEL'  : 'Instrument model',
             'DRIVER' : 'Instrument software driver', 
-            'ON'     : '1 = power on, 0 = power off',
-            'CONTROL': '1 = regulated flux, 0 otherwise',
-            'CURRENT': '[A] lamp current',
-            'VOLTAGE': '[V] lamp voltage',
-            'POWER'  : '[W] lamp power',
-            'TIME'   : '[hours] lamp life duration'
+            'MOVING' : '1 = moving, 0 = on target',
+            'PARKED' : '1 = parked, 0 otherwise',
+            'POS'    : 'Xray arm position'
             }
 
         values = {
-            'MODEL'  : 'ORIEL ' + self._model,
-            'DRIVER' : 'oriel / lamp_oriel', 
-            'ON'     : int(self.isOn()),
-            'CONTROL': int(self.isFluxControlled()),
-            'CURRENT': self.getAmps(),
-            'VOLTAGE': self.getVolts(),
-            'POWER'  : self.getWatts(),
-            'TIME'   : self.getHours()
+            'MODEL'  : 'Phytron motor ' + self._model,
+            'DRIVER' : 'phytron / xray_phytron', 
+            'MOVING' : int(self.isMoving()),
+            'PARKED' : int(self.isParked()),
+            'POS'    : float(self.getPosition())
             }
 
         data = []
