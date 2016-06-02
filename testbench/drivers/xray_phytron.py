@@ -14,7 +14,7 @@ Testbench driver for the Phytron motor holding the 55Fe X-ray source.
 # checkConnection() returns a NULL string or the model name
 # status() returns instrument status [connected, on/off, ramping, controlling]
 
-# getPosition() returns double 
+# getPosition() returns int
 # park() 
 # goCCD()
 # stop()
@@ -198,7 +198,7 @@ class Instrument(Driver):
             'DRIVER' : 'phytron / xray_phytron', 
             'MOVING' : int(self.isMoving()),
             'PARKED' : int(self.isParked()),
-            'POS'    : float(self.getPosition())
+            'POS'    : int(self.getPosition())
             }
 
         data = []
