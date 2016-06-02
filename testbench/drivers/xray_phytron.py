@@ -134,7 +134,7 @@ class Instrument(Driver):
         """
         Returns True if moving, False otherwise.
         """
-        return not(self.xmlrpc.status()[2])
+        return self.xmlrpc.status()[2]
 
     
     def getPosition(self):
