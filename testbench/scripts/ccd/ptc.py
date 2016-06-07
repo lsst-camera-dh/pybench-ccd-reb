@@ -29,7 +29,7 @@ CCD must be powered up BEFORE running the script
 
 """
 
-validamps = [2, 3, 4, 5, 6, 11, 12, 13, 14, 15]
+validamps = [9, 10, 11, 12, 13, 14]
 serno = '100-00'
 eodir = os.path.join('/data/eotest/', serno, 'ptc/ptc-v0/', time.strftime('%Y%m%d'))
 if not os.path.isdir(eodir):
@@ -65,7 +65,8 @@ def ptc_acquisition(self, explow=0.1, exphigh=2, expdelta=0.1, laserchannel = 2,
     effpow = self.laser.getPower(laserchannel)
     # First take bias frames
     self.log("Taking bias")
-    m = self.execute_reb_sequence('ClearBias', 0, 20, True )
+    self.reb.reb.set_pointer('CleaningNumber', 5)
+    m = self.execute_reb_sequence('Bias', 0, 10, True)
     #to have only useful channels:
     fname = "%s_ptc_bias_%s.fits" % (serno, self.reb.reb.imgtag)
     i = self.conv_to_fits(channels=validamps)
