@@ -293,6 +293,23 @@ config = {
         },
 
 
+    # =====================================================================
+    #  X-ray source arm Phytron motor
+    # =====================================================================
+    #
+    # phytronmotor (8765) /dev/ttyS15
+    # xyz-server -d
+    #
+    'xray' : {
+        # 'host'        : 'lpnlsstbench',
+        'host'        : '134.158.155.98', ### CRITICAL: put the IP here!
+        # 'devices'     : ['/dev/ttyS16', '/dev/ttyS17', '/dev/ttyS18'],
+        'devices'     : ['/dev/ttyS15'], 
+        'driver'      : 'xray_phytron',
+        'port'        : 8765,
+        'commandline' : 'phytronmotor'
+        },
+
     #
     # =====================================================================
     #  Multimeters / Photodiodes
