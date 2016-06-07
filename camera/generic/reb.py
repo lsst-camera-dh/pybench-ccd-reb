@@ -157,12 +157,12 @@ def get_extension_header(imgcols, imglines, CCDchan, fitshdu, detstring, channel
         chan = CCDchan - numCCD * 16
         if chan < 8:
             pdet = parstringlow
-            si = colwidth * (CCDchan - 8 * numCCD + 1)
-            sf = colwidth * (CCDchan - 8 * numCCD) + 1
+            si = colwidth * (CCDchan - 8 * numCCD) + 1
+            sf = colwidth * (CCDchan - 8 * numCCD + 1)
         else:
             pdet = parstringhigh
-            si = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
-            sf = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
+            si = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
+            sf = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
 
     extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 

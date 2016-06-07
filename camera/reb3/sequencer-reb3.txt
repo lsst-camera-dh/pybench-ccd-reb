@@ -9,7 +9,7 @@
     SerCols:         522    # Size of serial register
     DetectorCols:    550    # Total number of columns in a full readout
     DetectorRows:   2020    # Total number of rows in a full readout
-    TimeP:            2000 ns   # Base time element of parallel transfers
+    TimeP:            5000 ns   # Base time element of parallel transfers
     BufferP:          1000 ns   # Parallel transfer buffer time
     ISO2:             200 ns    # Time between ASPIC ramps
     TimeS:            300 ns    # Base element of serial transfers

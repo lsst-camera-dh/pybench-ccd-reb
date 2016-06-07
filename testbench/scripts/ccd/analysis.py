@@ -151,8 +151,8 @@ def area_stats(hdulist, logtofile=False, selectchannels=None):
         colstart = 10
         imglines = 2002
         light = img[:imglines, colstart:colstart+imgcols].flatten()
-        dark = img[:imglines, colstart+imgcols:].flatten()
-        overp = img[imglines+2:, colstart:].flatten()
+        dark = img[:imglines, colstart+imgcols+5:].flatten()
+        overp = img[imglines+5:, colstart:].flatten()
         
         hdr['AVLIGHT'] = light.mean()
         hdr['STDLIGHT'] = light.std()
