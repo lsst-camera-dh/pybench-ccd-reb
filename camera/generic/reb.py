@@ -156,17 +156,17 @@ def get_extension_header(imgcols, imglines, CCDchan, fitshdu, detstring, channel
         numCCD = CCDchan / 16
         chan = CCDchan - numCCD * 16
         if chan < 8:
-            pdet = parstringlow
+            pdet = parstringhigh
             si = colwidth * (CCDchan - 8 * numCCD) + 1
             sf = colwidth * (CCDchan - 8 * numCCD + 1)
         else:
-            pdet = parstringhigh
+            pdet = parstringlow
             si = colwidth * (CCDchan - 8 * (numCCD + 1) + 1)
             sf = colwidth * (CCDchan - 8 * (numCCD + 1)) + 1
 
     extheader['DETSEC'] = '[%d:%d,%s]' % (si, sf, pdet)
 
-    # this is valid in any case with a CCD
+    # this is valid in most cases with a CCD
     extheader['BIASSEC'] = ('[523:544,1:2002]', 'Serial overscan region')
 
 

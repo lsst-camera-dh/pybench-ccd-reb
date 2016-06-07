@@ -31,7 +31,7 @@ B.reb.stop_waiting_sequence()
 # scan mode
 B.reb.start_adc_increment()
 m = B.execute_reb_sequence('Acquisition', 2)
-i = B.conv_to_fits()
+i = B.conv_to_fits(borders=True)
 B.save_to_fits(i, m) 
 B.reb.stop_adc_increment()
 
