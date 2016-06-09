@@ -56,9 +56,9 @@ def stability_monitor(self, iterate, channels, listexp):
             try:
                 ttop = m['reb_ope']['values']['TREB_7']
                 tbottom = m['reb_ope']['values']['TREB_9']
-                m['LASER']['values']['POW_CH2']
-                taspict = m['reb_ope']['values']['T_ASPT_2']
-                taspicb = m['reb_ope']['values']['T_ASPB_2']
+                plaser = m['LASER']['values']['POW_CH2']
+                taspict = m['reb_ope']['values']['T_ASPT_' + s]
+                taspicb = m['reb_ope']['values']['T_ASPB_' + s]
             except:
                 ttop = 0
                 tbottom = 0
@@ -68,7 +68,8 @@ def stability_monitor(self, iterate, channels, listexp):
 
             self.save_to_fits(i, m, fitsname=self.reb.make_fits_name(imgstr=rawfile, compressed=True, fitsdir=fitsdir))
 
-            f.write('%s\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t' % (i[0].header['FILENAME'], att, k1, plaser, taspict, taspicb, ttop, tbottom))
+            f.write('%s\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t' %
+                    (i[0].header['FILENAME'], att, k1, plaser, taspict, taspicb, ttop, tbottom))
             for name in find_channels(i, selectchannels=channels):
                 img = i[name].data
                 # stats on whole frame plus on 'stable' section
