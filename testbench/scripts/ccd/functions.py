@@ -107,6 +107,9 @@ def powerup_CCD(self):
     #configure default frame and starts waiting sequence
     self.reb.set_window(on=False)
     self.reb.start_waiting_sequence()
+    
+    # check current in BSS
+    print(self.bss.read_current_measure())
 
 Bench.powerup_CCD = powerup_CCD
 

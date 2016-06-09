@@ -1,11 +1,14 @@
+# Sample of commands for running a CCD on the test bench with a LSST REB
+
 from lsst.testbench.bench import Bench
 B = Bench()
 import lsst.testbench.scripts.ccd.functions
 
 # for REB1: BEFORE connecting to CCD
-# for REB3 : anytime the REB is powered on
+# for REB3/4 : anytime the REB is powered on
 B.initialize_REB()
 # for REB1: AFTER connecting to CCD
+# for REB3/4 : anytime after the REB has been initialized
 B.powerup_CCD()
 
 
@@ -23,9 +26,15 @@ i = B.conv_to_fits([4,5])
 # to save FITS HDU with headers
 B.save_to_fits(i, m) 
 
+# to display straight from the HDU
+B.register('ds9')
+B.ds9.load_hdulist(i)
+# see also:
+# import lsst.testbench.scripts.ccd.display
+
 # between exposures 
 B.reb.start_waiting_sequence()
-# before beginning exposures again
+# before beginning exposures again (now included in execute_reb_sequence())
 B.reb.stop_waiting_sequence()
 
 # scan mode
@@ -38,12 +47,12 @@ B.reb.stop_adc_increment()
 # when finished
 B.shutdown_CCD()
 
+# auxiliary instruments
 B.register('laser')
 B.laser.select(2)
 B.laser.setCurrent(2,45.0)
 B.laser.enable()
 B.laser.disable()
-
 
 B.register("PhD")
 B.PhD.setup_current_measurements(2e-6)
