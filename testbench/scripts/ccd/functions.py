@@ -100,7 +100,7 @@ def powerup_CCD(self):
 
     self.setup_BSS()
     # starts Keithley backsubstrate voltage
-    self.bss.enable(delay=20.0)
+    self.bss.enable(delay=10.0)
     # TODO: wait until complete
     logging.info("CCD start-up sequence is complete")
 
@@ -117,12 +117,10 @@ def shutdown_CCD(self):
     :return:
     """
     logging.info("Starting CCD shut-down sequence")
-    self.reb.stop_waiting_sequence()  # in case it was in waiting loops
+    self.reb.stop_waiting_sequence()  # in case it was in waiting loop
     self.reb.wait_end_sequencer()
     # Back-substrate first
     self.bss.disable()
-    # extra wait time for safety
-    time.sleep(10)
     self.reb.CCDshutdown()
     logging.info("CCD shut-down sequence is complete")
 
@@ -136,13 +134,15 @@ def execute_reb_sequence(self, name='', exptime=None, delaytime=4, withclap=True
     Acquires meta parameters if withmeta is True.
     :return: dict
     """
+    self.reb.stop_waiting_sequence()  # in case it was in waiting loop
+    
     if name and exptime:
         self.reb.config_sequence(name, exptime)
     elif name:
         self.reb.config_sequence(name)
-       
-    # this waits until the sequencer stops...
-    self.reb.wait_end_sequencer()
+    else:
+        # waits until the sequencer stops (included when configuring the sequence)
+        self.reb.wait_end_sequencer()
 
     # Here execute, for all instruments, the pre_exposure functions
     self.pre_exposure(exptime)
