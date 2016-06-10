@@ -715,7 +715,7 @@ class Sequencer(object):
                 break
 
             # print here to get total after breakout for calls to subroutines
-            print('%s%s  run time: %f us  run total: %f us' % (strlevel, instr.__repr__(), instr_time, total_time))
+            print('%s%s  run time: %.2f us  run total: %.2f us' % (strlevel, instr.__repr__(), instr_time, total_time))
             current_address += 1
 
         return total_time
@@ -731,6 +731,7 @@ class Sequencer(object):
 
         if subr not in self.program.subroutines:
             print('Unknown subroutine name: %s' % subr)
+            return ''
 
         start_address = self.program.subroutines[subr]
         return self.recurse_time(start_address, p)

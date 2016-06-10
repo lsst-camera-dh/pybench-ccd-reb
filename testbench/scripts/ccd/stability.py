@@ -57,7 +57,7 @@ def stability_monitor(self, iterate, channels, listexp):
             try:
                 ttop = m['reb_ope']['values']['TREB_7']
                 tbottom = m['reb_ope']['values']['TREB_9']
-                plaser = m['LASER']['values']['POW_CH2']
+                plaser = m['laser']['values']['POW_CH2']
                 taspict = m['reb_ope']['values']['T_ASPT_' + s]
                 taspicb = m['reb_ope']['values']['T_ASPB_' + s]
             except:

@@ -13,7 +13,7 @@ B.powerup_CCD()
 
 
 B.reb.set_testtype('TEST')
-B.reb.stop_waiting_sequence()
+#B.reb.stop_waiting_sequence()
 m = B.execute_reb_sequence('Acquisition', 2)
 # to execute again the same sequence :
 m = B.execute_reb_sequence()
@@ -38,10 +38,15 @@ B.reb.start_waiting_sequence()
 B.reb.stop_waiting_sequence()
 
 # scan mode
+B.reb.set_testtype('SCAN')
 B.reb.start_adc_increment()
 m = B.execute_reb_sequence('Acquisition', 2)
 i = B.conv_to_fits(borders=True)
 B.save_to_fits(i, m) 
+# to put ASPIC in Transparent Mode and see the raw waveform
+B.reb.set_parameter('TM', 1)
+# to remove Transparent Mode
+B.reb.set_parameter('TM', 0)
 B.reb.stop_adc_increment()
 
 # when finished

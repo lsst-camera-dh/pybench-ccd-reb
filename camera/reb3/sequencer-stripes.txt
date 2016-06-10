@@ -11,10 +11,8 @@
 [clocks]  # clock channels
 
 [pointers]  # can define a pointer to a function or to a repetition number (for subroutines or functions)
-    PTR_FUNC    ReadoutPixel    ReadPixel  # Points to the readout function we want to use
 
 [functions]
-
     ReadReverse:  # Clocks in reverse direction and reads as usual
       clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
       slices:
@@ -31,27 +29,16 @@
       constants:     P2=1, P3=1
 
 [subroutines]
-    WindowLine:  # Line readout with option for read function (overwrites parent file)
-        CALL    SerialFlush       repeat(@PreCols)
-        CALL    @ReadoutPixel     repeat(@ReadCols)
-        CALL    SerialFlush       repeat(@PostCols)
-        RTS
-
-    WarmUp:  # Warms up analog electronics and ADCs
-        CALL    @ReadoutPixel       repeat(256)  # any other value will mess up the scanning mode
-        RTS
-
     SerialReverseBlock:  # creates artificial stripes of light and empty pixels
         CALL    ReadReverse       repeat(50)
         CALL    ReadPixel         repeat(100)
         RTS
 
     SerialReverseLine:
-        CALL    SerialFlush         repeat(@PreCols)
+        CALL    TransferLine
         CALL    ReadPixel           repeat(100)
         JSR     SerialReverseBlock  repeat(3)
         CALL    SerialFlush         repeat(300)
-        CALL    SerialFlush         repeat(@PostCols)
         RTS
 
     MemoryFrame:
