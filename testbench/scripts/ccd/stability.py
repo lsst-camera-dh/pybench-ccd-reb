@@ -22,6 +22,7 @@ def stability_monitor(self, iterate, channels, listexp):
     Acquires repetitive data to monitor the stability.
     :return:
     """
+    self.reb.stop_waiting_sequence()
     self.reb.set_testtype('STABILITY')
     self.reb.set_window(on=False)
     self.reb.reb.set_pointer('CleaningNumber', 2)  # works only on REBplus variants
@@ -80,6 +81,7 @@ def stability_monitor(self, iterate, channels, listexp):
             i.close()
 
     f.close()
+    self.reb.start_waiting_sequence()
     self.laser.disable()
     
 Bench.stability_monitor = stability_monitor
