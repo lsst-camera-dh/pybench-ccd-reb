@@ -71,15 +71,16 @@ class SequencerPointer(object):
     Exec_pointers = ['PTR_FUNC', 'PTR_SUBR', 'MAIN']
     Repeat_pointers = ['REP_FUNC', 'REP_SUBR']
 
-    Execute_Address = 0x340000
-    # these should be incremented when a pointer is added
-    Ptr_Func_Base = 0x350000
-    Rep_Func_Base = 0x360000
-    Ptr_Subr_Base = 0x370000
-    Rep_Subr_Base = 0x380000
+    # we are using the dictionary instead
+    #Execute_Address = 0x340000
+    # these four should be incremented when a pointer is added
+    #Ptr_Func_Base = 0x350000
+    #Rep_Func_Base = 0x360000
+    #Ptr_Subr_Base = 0x370000
+    #Rep_Subr_Base = 0x380000
 
-    Mapping_Ptr = dict(zip(Pointer_types, [Execute_Address, Ptr_Func_Base, Rep_Func_Base, Ptr_Subr_Base,
-                                           Rep_Subr_Base]))
+    Mapping_Ptr = dict(zip(Pointer_types,
+                           [0x340000, 0x350000, 0x360000, 0x370000, 0x380000]))
 
     def __init__(self, pointertype, name, value=None, target=''):
         """
@@ -99,15 +100,17 @@ class SequencerPointer(object):
         self.name = name
 
         if self.pointer_type == 'MAIN':
-            self.address = self.Execute_Address
+            self.address = self.Mapping_Ptr['MAIN']
         else:
             ptr_address = self.Mapping_Ptr[self.pointer_type]
             self.address = ptr_address
-            if (ptr_address & 0xF) < 15:
+
+            if (ptr_address & 0xFF) < 16:
                 # this increments the base address for the next instance of the class
                 self.Mapping_Ptr[self.pointer_type] += 1
             else:
                 raise ValueError('Error: registry for pointers %s is full' % self.pointer_type)
+
         if value is not None:
             self.value = value
             self.target = target
@@ -141,10 +144,10 @@ class SequencerPointer(object):
         Initialize addresses for all pointers to the base values.
         :return:
         """
-        cls.Ptr_Func_Base = 0x350000
-        cls.Rep_Func_Base = 0x360000
-        cls.Ptr_Subr_Base = 0x370000
-        cls.Rep_Subr_Base = 0x380000
+
+        cls.Mapping_Ptr = dict(zip(cls.Pointer_types,
+                           [0x340000, 0x350000, 0x360000, 0x370000, 0x380000]))
+
 
 class Instruction(object):
 
