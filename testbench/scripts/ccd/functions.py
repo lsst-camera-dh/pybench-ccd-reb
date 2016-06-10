@@ -109,7 +109,7 @@ def powerup_CCD(self):
     self.reb.start_waiting_sequence()
     
     # check current in BSS
-    print(self.bss.read_current_measure())
+    print("Current in BSS: " + self.bss.read_current_measure())
 
 Bench.powerup_CCD = powerup_CCD
 

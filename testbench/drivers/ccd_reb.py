@@ -204,6 +204,17 @@ class Instrument(Driver):
         self.reb.config_sequence(subname, exptime, shutdelay)
         logging.info("Configured subroutine %s with exposure time %f and shutter delay %f"
                      % (self.reb.seqname, self.reb.exptime, self.reb.shutdelay))
+                     
+    def list_pointers(self):
+        """
+        Outputs a list of sequencer pointers that can be used.
+        :return:
+        """
+        if self.hardware == 'REB1':
+            logging.info("ADC increment not implemented in this version")
+            return {}
+        
+        return self.reb.seq.pointers
 
     # --------------------------------------------------------------------
 
@@ -480,6 +491,7 @@ class Instrument(Driver):
         self.testID['TESTTYPE'] = name
 
     def set_imgtype(self, name):
+        # currently moved to use sequence name
         self.testID['IMGTYPE'] = name
 
     def set_seqnum(self, num):
@@ -559,7 +571,7 @@ class Instrument(Driver):
             'CCD_SERN': self.sensorID['CCD_SERN'],
             'LSST_NUM': self.sensorID['LSST_NUM'],
             'TESTTYPE': self.testID['TESTTYPE'],
-            'IMGTYPE': self.testID['IMGTYPE'],
+            'IMGTYPE': self.reb.seqname,
             'SEQNUM': self.testID['SEQNUM'],
             'EXPTIME': self.reb.exptime,
             'SHUT_DEL': self.reb.shutdelay,
