@@ -446,7 +446,6 @@ class Instrument(Driver):
         :param window:
         :return:
         """
-        # Note : still have not found if this is used anywhere
 
         if self.hardware == 'REB1':
             lines = self.reb.imglines
