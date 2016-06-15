@@ -1,0 +1,37 @@
+# REB3 timing for E2V CCD, in new REB sequencer format
+# option for shorter ramp times (matching RC on ASPIC must be set separately to 0x15)
+# (C. Juramy, 20160615)
+
+[includes]  # inheritance from other files (in increasing priority order, current file last)
+    camera/reb3/sequencer-reb3.txt
+
+[constants]  # will be substituted in the code at compilation time
+    ISO2:             300 ns    # Time between ASPIC ramps
+    TimeS:            300 ns    # Base element of serial transfers
+    BufferS:          120 ns    # Buffer for serial clock crossing
+    RampTime:         320 ns    # ASPIC ramp time
+
+[clocks]  # clock channels
+
+[pointers]  # can define a pointer to a function or to a repetition number (for subroutines or functions)
+
+[functions]
+    ReadPixel:  # Single pixel read, replacing the same from the parent file
+      clocks:          RG, S1, S2, S3, CL, RST, RD, RU, TRG
+      slices:
+         TimeS       = 1,  0,  1,  0,  1,  1,  0,  0,  0
+         BufferS     = 1,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  1,  1,  1,  1,  0,  0,  0
+         BufferS     = 0,  0,  0,  1,  0,  0,  0,  0,  0
+         RampTime    = 0,  0,  0,  1,  0,  0,  1,  0,  0
+         BufferS     = 0,  1,  0,  1,  0,  0,  0,  0,  0
+         ISO2        = 0,  1,  0,  0,  0,  0,  0,  0,  0
+         RampTime    = 0,  1,  0,  0,  0,  0,  0,  1,  0
+         BufferS     = 0,  1,  1,  0,  0,  0,  0,  0,  0
+         50 ns       = 0,  0,  1,  0,  0,  0,  0,  0,  1
+      constants:     P2=1, P3=1
+
+[subroutines]
+
+[mains]
+

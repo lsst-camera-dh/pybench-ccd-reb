@@ -207,7 +207,7 @@ class Instrument(Driver):
                      
     def list_pointers(self):
         """
-        Outputs a list of sequencer pointers that can be used.
+        Outputs a dictionary of sequencer pointers that have been defined and their current values.
         :return:
         """
         if self.hardware == 'REB1':

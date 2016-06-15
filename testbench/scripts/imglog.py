@@ -32,6 +32,10 @@ B.ds9.load_hdulist(i)
 # see also:
 # import lsst.testbench.scripts.ccd.display
 
+# quick statistics on frame
+import lsst.testbench.scripts.ccd.analysis as analysis
+analysis.area_stats(i)
+
 # between exposures 
 B.reb.start_waiting_sequence()
 # before beginning exposures again (now included in execute_reb_sequence())
@@ -65,6 +69,12 @@ B.PhD.read_measurement()
 
 B.register('lakeshore1')
 
+# New timing file
+B.load_sequencer('sequencer-shortRC.txt')
+B.reb.set_parameter('RC', 15)
+B.reb.set_window(False)  # to read the full frame again (window by default)
+# Computes timing
+B.reb.reb.seq.timing('Bias')
 
 # to recover REB object after Python reboot without reloading the whole sequencer
 from lsst.testbench.bench import Bench

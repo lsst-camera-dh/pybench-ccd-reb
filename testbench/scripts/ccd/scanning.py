@@ -92,6 +92,7 @@ def scanning_frame(self, exptype='Acquisition' , exptime=0.2, tm=True, validamps
 # Attach this method to the Bench class / instance
 lsst.testbench.Bench.scanning_frame = scanning_frame
 
+# TODO: line plot with TM / non-TM superimposed
 
 def super_scan(self, tm=True, scanpoints=None, validamps = None):
     """

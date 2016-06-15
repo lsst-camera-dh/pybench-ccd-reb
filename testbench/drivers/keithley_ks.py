@@ -276,8 +276,8 @@ class Instrument(Driver):
             }
 
         values = {
-            'MODEL'  : self.get_serial()[:36],
-            'DRIVER' : 'keithley-server / keithley_ks', 
+            'MODEL'  : self.get_serial()[26:36],
+            'DRIVER' : 'keithley_ks', 
             'CURRENT': self.lastmeasure
             }
 

@@ -679,7 +679,7 @@ class Sequencer(object):
         """
         current_address = start_address
         total_time = 0
-        strlevel = '\t' * recurse_level
+        strlevel = '  ' * recurse_level
 
         while current_address in self.program.instructions:
             instr = self.program.instructions[current_address]
@@ -711,7 +711,7 @@ class Sequencer(object):
                 total_time += instr_time
 
             else:
-                print('%s%s  run total: %f us' % (strlevel, instr.__repr__(), total_time))
+                print('%s%s  run total: %.2f us' % (strlevel, instr.__repr__(), total_time))
                 break
 
             # print here to get total after breakout for calls to subroutines

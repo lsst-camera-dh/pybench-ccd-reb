@@ -228,7 +228,7 @@ class Instrument(Driver):
         }
 
         values = {
-            'MODEL'  : self.get_serial(),
+            'MODEL'  : self.get_serial()[26:36],
             'DRIVER' : 'keithley_volt',
             'RANGE'  : self.rangeV,
             'PREEXP' : self.v1,

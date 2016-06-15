@@ -11,11 +11,11 @@
     DetectorRows:   2020    # Total number of rows in a full readout
     TimeP:            5000 ns   # Base time element of parallel transfers
     BufferP:          1000 ns   # Parallel transfer buffer time
-    ISO2:             200 ns    # Time between ASPIC ramps
+    ISO2:             300 ns    # Time between ASPIC ramps
     TimeS:            300 ns    # Base element of serial transfers
-    BufferS:          100 ns    # Buffer for serial clock crossing
+    BufferS:          120 ns    # Buffer for serial clock crossing
     RampTime:         460 ns    # ASPIC ramp time
-    RampBuffer:       360 ns    # should be RampTime minus BufferS
+    RampBuffer:       340 ns    # should be RampTime minus BufferS
     clockperiod:      10 ns     # FPGA clock period (required by the interpreter)
     ElemExposure:     25 ms     # Duration of the elementary exposure subroutine
 
@@ -208,4 +208,10 @@
     InfiniteWait:  # Slow flushing on infinite loop
         CALL    SlowFlush   repeat(infinity)
         END
+        
+    Dark:  # copied from Acquisition, for compatibility with previous sequences
+        JSR     AcquireFrame
+        JSR     ReadFrame
+        END
+    
         

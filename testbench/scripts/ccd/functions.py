@@ -97,6 +97,7 @@ def powerup_CCD(self):
     logging.info("Starting CCD power-up sequence")
     self.reb.CCDpowerup()
     time.sleep(1)
+    # TODO: add more checks that it is done
 
     self.setup_BSS()
     # starts Keithley backsubstrate voltage
@@ -109,7 +110,7 @@ def powerup_CCD(self):
     self.reb.start_waiting_sequence()
     
     # check current in BSS
-    print("Current in BSS: " + self.bss.read_current_measure())
+    print("Current in BSS: %g A" % self.bss.read_current_measure())
 
 Bench.powerup_CCD = powerup_CCD
 
