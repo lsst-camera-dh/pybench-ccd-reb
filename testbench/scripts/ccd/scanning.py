@@ -1,16 +1,16 @@
 
 import os
-import lsst.testbench
+from lsst.testbench.bench import Bench
 import time
 import numpy as np
 from matplotlib import pyplot as plt
 
 import lsst.testbench.scripts.ccd.analysis as analysis
 
-B = lsst.testbench.Bench()
+B = Bench()
 
 B.register('laser')
-B.register('lakeshore1')
+#B.register('lakeshore1')
 B.register('ds9')
 #B.register("DKD")
 # done in ccd.functions:
@@ -20,7 +20,7 @@ B.register('ds9')
 
 #this should be done in higher level script
 #import lsst.testbench.scripts.ccd.functions
-B.PhD.setup_current_measurements(2e-8)
+#B.PhD.setup_current_measurements(2e-8)
 
 
 print """
@@ -44,7 +44,76 @@ if not os.path.isdir(eodir):
 
 # ==============================================================================
 
-def scanning_frame(self, exptype='Acquisition' , exptime=0.2, tm=True, validamps = None):
+def scan_scope(self, exptype='Acquisition' , exptime=0.2, selectline=200, saveframe=True, validamps = None):
+    """
+    Acquires frames in scanning mode with and without transparent mode.
+    Displays superimposed 'scope' plots.
+    """
+
+    if exptime>0:
+        self.laser.select(laserchannel)
+        self.laser.setCurrent(laserchannel, lasercurrent)
+        self.laser.enable()
+    else:
+        self.laser.disable()
+
+    self.reb.set_testtype('SCAN')
+    self.reb.stop_waiting_sequence()
+    self.reb.reb.set_pointer('CleaningNumber', 2)
+
+    self.reb.start_adc_increment()
+
+    # First take normal mode frame
+    self.reb.set_parameter('TM', False)
+    self.log("Taking DSI frame for scanning")
+    m = self.execute_reb_sequence(exptype, exptime)
+    rawfile = self.reb.make_img_name()
+    idsi = self.conv_to_fits(channels=validamps, borders=True, imgname=rawfile)
+    self.ds9.load_hdulist(idsi)
+    if saveframe:
+        fname = "dsi_scan_%s.fits" % rawfile[:-4]
+        self.save_to_fits(idsi, m, fitsname=os.path.join(eodir, fname))
+
+    # Then TM scan
+    self.reb.set_parameter('TM', True)
+    self.log("Taking TM frame for scanning")
+    m = self.execute_reb_sequence(exptype, exptime)
+    rawfile = self.reb.make_img_name()
+    itm = self.conv_to_fits(channels=validamps, borders=True, imgname=rawfile)
+    self.ds9.load_hdulist(itm)
+    if saveframe:
+        fname = "tm_scan_%s.fits" % rawfile[:-4]
+        self.save_to_fits(itm, m, fitsname=os.path.join(eodir, fname))
+
+    # returns to normal
+    self.reb.stop_adc_increment()
+    self.reb.set_parameter('TM', False)
+    self.reb.start_waiting_sequence()
+
+    # display results
+    if validamps is not None:
+        displayamps = validamps
+    else:
+        displayamps = range(16)
+
+    plt.figure(figsize=(8,5))
+    plt.xlabel('Scan increment (10 ns)')
+    for c in displayamps:
+        # TODO
+        np.append()
+    plt.plot(dsiscope)
+    plt.plot(tmscope)
+    plt.show()
+
+    idsi.close()
+    itm.close()
+
+
+# Attach this method to the Bench class / instance
+Bench.scan_scope = scan_scope
+
+
+def scan_pair(self, exptype='Acquisition' , exptime=0.2, tm=True, validamps = None):
     """
      Will take two pairs of exposures as defined, one pair in scanning mode and one pair in normal mode.
     """
@@ -64,8 +133,9 @@ def scanning_frame(self, exptype='Acquisition' , exptime=0.2, tm=True, validamps
     for numpair in [1, 2]:
         self.log("Taking reference frame %d for scanning" % numpair)
         m = self.execute_reb_sequence(exptype, exptime)
-        fname = "acq_frame%d_%s.fits" % (numpair, self.reb.reb.imgtag)
-        i = self.conv_to_fits(channels=validamps)
+        rawfile = self.reb.make_img_name()
+        fname = "acq_frame%d_%s.fits" % (numpair, rawfile[:-4])
+        i = self.conv_to_fits(channels=validamps, imgname=rawfile)
         self.ds9.load_hdulist(i)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
@@ -76,8 +146,9 @@ def scanning_frame(self, exptype='Acquisition' , exptime=0.2, tm=True, validamps
     for numpair in [1, 2]:
         self.log("Taking scanning frame %d" % numpair)
         m = self.execute_reb_sequence(exptype, exptime)
-        fname = "acq_scan%d_%s.fits" % (numpair, self.reb.reb.imgtag)
-        i = self.conv_to_fits(channels=validamps, borders=True)
+        rawfile = self.reb.make_img_name()
+        fname = "acq_scan%d_%s.fits" % (numpair, rawfile[:-4])
+        i = self.conv_to_fits(channels=validamps, borders=True, imgname=rawfile)
         self.ds9.load_hdulist(i)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
         if numpair == 2:
@@ -90,9 +161,8 @@ def scanning_frame(self, exptype='Acquisition' , exptime=0.2, tm=True, validamps
 
 
 # Attach this method to the Bench class / instance
-lsst.testbench.Bench.scanning_frame = scanning_frame
+Bench.scan_pair = scan_pair
 
-# TODO: line plot with TM / non-TM superimposed
 
 def super_scan(self, tm=True, scanpoints=None, validamps = None):
     """
@@ -132,8 +202,9 @@ def super_scan(self, tm=True, scanpoints=None, validamps = None):
         # writes offset value but does not activate increment on ADC
         self.reb.write(0x330001, offset & 0xff, check=False)
         m = self.execute_reb_sequence()
-        fname = "scantime_%d_%s.fits" % (offset, self.reb.reb.imgtag)
-        i = self.conv_to_fits(channels=validamps, borders=True, cleanup=True)
+        rawfile = self.reb.make_img_name()
+        fname = "scantime_%d_%s.fits" % (offset, rawfile[:-4])
+        i = self.conv_to_fits(channels=validamps, borders=True, imgname=rawfile, cleanup=True)
         self.save_to_fits(i, m, fitsname=os.path.join(eodir, fname))
 
         #stacks in arrays
@@ -172,5 +243,5 @@ def super_scan(self, tm=True, scanpoints=None, validamps = None):
 
     plt.show()
 
-
+Bench.super_scan = super_scan
 
